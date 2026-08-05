@@ -80,7 +80,7 @@ html[data-theme="legendaryGold"]{
     radial-gradient(circle at 90% 15%, rgba(255,181,69,.12), transparent 45%),
     radial-gradient(circle at 50% 100%, rgba(230,149,0,.08), transparent 50%);
 }
-/* life city — 4 time-of-day phases */
+/* life city — 7 real-time phases across the day */
 .city-frame{
   --city-sky-top:#5fb3ea; --city-sky-bottom:#cdeeff;
   --city-ground-top:#7bd68a; --city-ground-bottom:#4fa85f;
@@ -88,19 +88,51 @@ html[data-theme="legendaryGold"]{
   --city-bld:#7f8aa8; --city-bld-future:#4a5578;
   --city-mtn-1:#8fa6c9; --city-mtn-2:#a9bcd9;
 }
-.city-frame[data-phase="morning"]{
+/* 03:00–06:00 — deep night fading, moon gone, sky just starting to lighten */
+.city-frame[data-phase="predawn1"]{
+  --city-sky-top:#141c3a; --city-sky-bottom:#2a3560;
+  --city-ground-top:#182635; --city-ground-bottom:#0e1822;
+  --city-window:#ffd76b; --city-bird:#2b3550;
+  --city-bld:#333c5c; --city-bld-future:#262c4c;
+  --city-mtn-1:#141a34; --city-mtn-2:#1f2744;
+}
+/* 06:00–07:00 — pre-dawn, still no sun */
+.city-frame[data-phase="predawn2"]{
+  --city-sky-top:#3a4570; --city-sky-bottom:#9099be;
+  --city-ground-top:#5a7a68; --city-ground-bottom:#37503f;
+  --city-window:#7a6a3a; --city-bird:#2b3550;
+  --city-bld:#565f84; --city-bld-future:#3c4468;
+  --city-mtn-1:#3c4470; --city-mtn-2:#565f8c;
+}
+/* 07:00–10:00 — sunrise, sun behind the mountain climbing up */
+.city-frame[data-phase="sunrise"]{
   --city-sky-top:#7fa8d8; --city-sky-bottom:#ffd9a0;
   --city-ground-top:#8fd08f; --city-ground-bottom:#549462;
   --city-window:#7a6a3a; --city-bird:#2b3550;
   --city-mtn-1:#7387ad; --city-mtn-2:#96a7c6;
 }
-.city-frame[data-phase="evening"]{
-  --city-sky-top:#3d4d82; --city-sky-bottom:#ff8a5c;
-  --city-ground-top:#4a6b52; --city-ground-bottom:#2e4a38;
-  --city-window:#ffd76b; --city-bird:#2b3550;
-  --city-bld:#5a5f80; --city-bld-future:#3a3f66;
-  --city-mtn-1:#4a4f78; --city-mtn-2:#6a5f82;
+/* 10:00–16:00 — midday, sun high */
+.city-frame[data-phase="midday"]{
+  --city-sky-top:#5fb3ea; --city-sky-bottom:#cdeeff;
+  --city-ground-top:#7bd68a; --city-ground-bottom:#4fa85f;
 }
+/* 16:00–17:00 — sunset transition, orange sky, sun already gone, moon not yet */
+.city-frame[data-phase="sunset"]{
+  --city-sky-top:#5a4a6e; --city-sky-bottom:#ff9a5c;
+  --city-ground-top:#5a5a4a; --city-ground-bottom:#3a3a30;
+  --city-window:#ffd76b; --city-bird:#2b3550;
+  --city-bld:#6a5f80; --city-bld-future:#453f66;
+  --city-mtn-1:#5a4a70; --city-mtn-2:#7a5a72;
+}
+/* 17:00–19:00 — deeper orange, moon behind the mountain climbing up */
+.city-frame[data-phase="moonrise"]{
+  --city-sky-top:#3d3a68; --city-sky-bottom:#e8734a;
+  --city-ground-top:#3a3a4a; --city-ground-bottom:#241e2e;
+  --city-window:#ffd76b; --city-bird:#2b3550;
+  --city-bld:#4c4670; --city-bld-future:#332e58;
+  --city-mtn-1:#332a54; --city-mtn-2:#4a3a5c;
+}
+/* 19:00–03:00 — full night, moon high, stars, crickets */
 .city-frame.city-night{
   --city-sky-top:#0b1030; --city-sky-bottom:#243357;
   --city-ground-top:#1c2b3a; --city-ground-bottom:#101a26;
@@ -319,12 +351,15 @@ body{
 
 .city-frame{
   position:relative; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line);
-  box-shadow:var(--shadow); background:#0b1030;
+  box-shadow:var(--shadow); background:#0b1030; perspective:1200px;
   transition: --city-sky-top 3s ease, --city-sky-bottom 3s ease, --city-ground-top 3s ease,
     --city-ground-bottom 3s ease, --city-mtn-1 3s ease, --city-mtn-2 3s ease,
     --city-bld 3s ease, --city-bld-future 3s ease, --city-window 3s ease;
 }
-#citySvg{display:block; width:100%; height:auto; aspect-ratio:800/450;}
+#citySvg{
+  display:block; width:100%; height:auto; aspect-ratio:800/450;
+  transform-origin:50% 62%; transform:rotateX(7deg) scale(1.045);
+}
 .city-hint{position:absolute; bottom:10px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.45); color:#fff; font-size:11px; padding:5px 12px; border-radius:20px; pointer-events:none; opacity:.85;}
 
 /* structures: hidden by default, shown per data-stage */
@@ -352,28 +387,36 @@ body{
 
 /* sun / moon rig — position + visibility animate smoothly across phases */
 #citySunMoonRig{transition:transform 3s ease;}
-.city-frame[data-phase="morning"] #citySunMoonRig,
-.city-frame[data-phase="evening"] #citySunMoonRig{transform:translateY(150px);}
+.city-frame[data-phase="sunrise"] #citySunMoonRig,
+.city-frame[data-phase="moonrise"] #citySunMoonRig{transform:translateY(150px);}
 .city-frame[data-phase="midday"] #citySunMoonRig,
 .city-frame.city-night #citySunMoonRig{transform:translateY(0px);}
+.city-frame[data-phase="predawn1"] #citySunMoonRig,
+.city-frame[data-phase="predawn2"] #citySunMoonRig,
+.city-frame[data-phase="sunset"] #citySunMoonRig{transform:translateY(220px);}
 
-#citySun, #citySunGlow{opacity:1; transition:opacity 2.5s ease;}
+#citySun, #citySunGlow{opacity:0; transition:opacity 2.5s ease;}
 #cityMoon{opacity:0; transition:opacity 2.5s ease;}
-.city-frame[data-phase="evening"] #citySun, .city-frame[data-phase="evening"] #citySunGlow,
-.city-frame.city-night #citySun, .city-frame.city-night #citySunGlow{opacity:0;}
-.city-frame[data-phase="evening"] #cityMoon,
+.city-frame[data-phase="sunrise"] #citySun, .city-frame[data-phase="sunrise"] #citySunGlow,
+.city-frame[data-phase="midday"] #citySun, .city-frame[data-phase="midday"] #citySunGlow{opacity:1;}
+.city-frame[data-phase="moonrise"] #cityMoon,
 .city-frame.city-night #cityMoon{opacity:1;}
-.city-frame.city-night #cityBirds{display:none;}
+.city-frame.city-night #cityBirds,
+.city-frame[data-phase="predawn1"] #cityBirds,
+.city-frame[data-phase="moonrise"] #cityBirds{display:none;}
 
 /* mountains — always visible, colors shift with phase via @property transition */
 #cityMountains{opacity:.95;}
 
+#cityStars{opacity:0; transition:opacity 2.5s ease;}
+.city-frame.city-night #cityStars, .city-frame[data-phase="predawn1"] #cityStars{opacity:1;}
+.city-frame[data-phase="predawn2"] #cityStars, .city-frame[data-phase="moonrise"] #cityStars{opacity:.4;}
 #cityStars circle{animation:twinkle 2.6s ease-in-out infinite;}
 @keyframes twinkle{0%,100%{opacity:.25;} 50%{opacity:1;}}
 
 /* clouds drifting */
-.cloud{opacity:.92;}
-.city-frame.city-night .cloud{opacity:.18;}
+.cloud{opacity:.92; transition:opacity 2.5s ease;}
+.city-frame.city-dark .cloud{opacity:.22;}
 .cloud1{animation:driftA 46s linear infinite;}
 .cloud2{animation:driftB 60s linear infinite;}
 .cloud3{animation:driftA 38s linear infinite reverse;}
@@ -405,9 +448,15 @@ body{
 @keyframes sway{0%,100%{transform:rotate(-2.5deg);} 50%{transform:rotate(2.5deg);}}
 
 /* campfire flicker */
-.flame{transform-box:fill-box; transform-origin:50% 100%; animation:flicker 0.9s ease-in-out infinite alternate;}
+.flame{transform-box:fill-box; transform-origin:50% 100%; animation:flicker 0.9s ease-in-out infinite alternate; opacity:1; transition:opacity 1.8s ease;}
 .flame2{animation-duration:.6s;}
 @keyframes flicker{from{transform:scaleY(.85) scaleX(1.05);} to{transform:scaleY(1.1) scaleX(.92);}}
+.city-frame.city-rain-active .flame{opacity:0;}
+.campfire-steam{opacity:0; transition:opacity 2s ease 1s;}
+.city-frame.city-rain-active .campfire-steam{opacity:.5;}
+.campfire-steam .puff{fill:#cfd6e8; opacity:0; animation:puffUp 3s ease-out infinite;}
+.campfire-steam .p1{animation-delay:.2s;}
+.campfire-steam .p2{animation-delay:1.4s;}
 
 /* chimney smoke */
 .smoke .puff{fill:#cfd6e8; opacity:0; animation:puffUp 3.2s ease-out infinite;}
@@ -419,11 +468,11 @@ body{
   15%{opacity:.55;}
   100%{opacity:0; transform:translateY(-34px) scale(1.5);}
 }
-.city-frame:not(.city-night) .smoke{opacity:.5;}
+.city-frame:not(.city-dark) .smoke{opacity:.5;}
 
 /* lit windows only at night */
 .lit-window{fill:#5c4a2a;}
-.city-frame.city-night .lit-window{fill:var(--city-window); filter:drop-shadow(0 0 4px rgba(255,215,107,.7));}
+.city-frame.city-dark .lit-window{fill:var(--city-window); filter:drop-shadow(0 0 4px rgba(255,215,107,.7));}
 
 /* dog walking */
 #cityDog{animation:dogWalk 7s ease-in-out infinite;}
@@ -438,7 +487,7 @@ body{
 /* city stage: lit windows grid + moving cars */
 .bld{opacity:.96;}
 #cityWindowsSmall rect{fill:#4a5470;}
-.city-frame.city-night #cityWindowsSmall rect.lit{fill:#ffd76b; filter:drop-shadow(0 0 2px rgba(255,215,107,.8));}
+.city-frame.city-dark #cityWindowsSmall rect.lit{fill:#ffd76b; filter:drop-shadow(0 0 2px rgba(255,215,107,.8));}
 .car-mini1{animation:carLoop1 9s linear infinite;}
 .car-mini2{animation:carLoop2 13s linear infinite reverse;}
 @keyframes carLoop1{from{transform:translate(-40px,404px);} to{transform:translate(840px,404px);}}
@@ -870,6 +919,30 @@ textarea{resize:vertical; min-height:70px;}
               <stop offset="0%" stop-color="#fff3c4" stop-opacity="0.9"/>
               <stop offset="100%" stop-color="#fff3c4" stop-opacity="0"/>
             </radialGradient>
+            <linearGradient id="tentGrad" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stop-color="#a95a29"/>
+              <stop offset="100%" stop-color="#dd8a4f"/>
+            </linearGradient>
+            <linearGradient id="cabinRoofGrad" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stop-color="#3f2712"/>
+              <stop offset="100%" stop-color="#6f4726"/>
+            </linearGradient>
+            <linearGradient id="cabinWallGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#744e2c"/>
+              <stop offset="100%" stop-color="#9c6c40"/>
+            </linearGradient>
+            <linearGradient id="houseRoofGrad" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stop-color="#7c3220"/>
+              <stop offset="100%" stop-color="#c65a3d"/>
+            </linearGradient>
+            <linearGradient id="houseWallGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#cfc4a8"/>
+              <stop offset="100%" stop-color="#f2e9d2"/>
+            </linearGradient>
+            <radialGradient id="groundShadow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#000" stop-opacity="0.32"/>
+              <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+            </radialGradient>
           </defs>
 
           <rect x="0" y="0" width="800" height="330" fill="url(#skyGrad)"/>
@@ -917,27 +990,33 @@ textarea{resize:vertical; min-height:70px;}
           </g>
 
           <g id="forestTrees" class="nature-only">
-            <g transform="translate(90,318)"><g class="tree tree-a"><rect x="-4" y="0" width="8" height="34" fill="#6b4a2b"/><circle cx="0" cy="-14" r="26" fill="#3fae6a"/><circle cx="-16" cy="0" r="18" fill="#399b5f"/><circle cx="16" cy="2" r="16" fill="#399b5f"/></g></g>
-            <g transform="translate(730,330)"><g class="tree tree-b"><rect x="-4" y="0" width="8" height="30" fill="#6b4a2b"/><circle cx="0" cy="-12" r="22" fill="#3fae6a"/><circle cx="-14" cy="0" r="15" fill="#399b5f"/></g></g>
-            <g transform="translate(670,340)"><g class="tree tree-c"><rect x="-3" y="0" width="6" height="24" fill="#6b4a2b"/><circle cx="0" cy="-10" r="18" fill="#3fae6a"/></g></g>
+            <g transform="translate(90,318)"><ellipse cx="0" cy="36" rx="30" ry="7" fill="url(#groundShadow)"/><g class="tree tree-a"><rect x="-4" y="0" width="8" height="34" fill="#6b4a2b"/><circle cx="0" cy="-14" r="26" fill="#3fae6a"/><circle cx="-16" cy="0" r="18" fill="#399b5f"/><circle cx="16" cy="2" r="16" fill="#399b5f"/></g></g>
+            <g transform="translate(730,330)"><ellipse cx="0" cy="32" rx="24" ry="6" fill="url(#groundShadow)"/><g class="tree tree-b"><rect x="-4" y="0" width="8" height="30" fill="#6b4a2b"/><circle cx="0" cy="-12" r="22" fill="#3fae6a"/><circle cx="-14" cy="0" r="15" fill="#399b5f"/></g></g>
+            <g transform="translate(670,340)"><ellipse cx="0" cy="26" rx="18" ry="5" fill="url(#groundShadow)"/><g class="tree tree-c"><rect x="-3" y="0" width="6" height="24" fill="#6b4a2b"/><circle cx="0" cy="-10" r="18" fill="#3fae6a"/></g></g>
           </g>
 
           <!-- TENT STAGE -->
           <g class="struct struct-tent" transform="translate(400,360)">
-            <polygon points="-70,0 0,-90 70,0" fill="#c9723a"/>
-            <polygon points="-20,0 0,-90 20,0" fill="#a95a29"/>
+            <ellipse cx="0" cy="4" rx="78" ry="14" fill="url(#groundShadow)"/>
+            <polygon points="-70,0 0,-90 70,0" fill="url(#tentGrad)"/>
+            <polygon points="-20,0 0,-90 20,0" fill="#8a4a20"/>
             <line x1="-70" y1="0" x2="70" y2="0" stroke="#7a4520" stroke-width="4"/>
             <g class="campfire" transform="translate(110,-4)">
               <ellipse cx="0" cy="6" rx="16" ry="4" fill="#6b4a2b"/>
               <polygon class="flame flame1" points="-5,4 0,-16 5,4" fill="#ff9b3d"/>
               <polygon class="flame flame2" points="-3,4 0,-10 3,4" fill="#ffd76b"/>
+              <g class="campfire-steam">
+                <circle class="puff p1" cx="0" cy="0" r="4"/>
+                <circle class="puff p2" cx="2" cy="-6" r="5"/>
+              </g>
             </g>
           </g>
 
           <!-- CABIN STAGE -->
           <g class="struct struct-cabin" transform="translate(400,360)">
-            <rect x="-60" y="-70" width="120" height="70" fill="#8b5e34"/>
-            <polygon points="-70,-70 0,-120 70,-70" fill="#5c3b1e"/>
+            <ellipse cx="0" cy="4" rx="78" ry="14" fill="url(#groundShadow)"/>
+            <rect x="-60" y="-70" width="120" height="70" fill="url(#cabinWallGrad)"/>
+            <polygon points="-70,-70 0,-120 70,-70" fill="url(#cabinRoofGrad)"/>
             <rect x="-12" y="-40" width="24" height="40" fill="#3c2513"/>
             <rect x="18" y="-52" width="20" height="18" fill="var(--city-window)" class="lit-window"/>
             <rect x="-46" y="-100" width="10" height="24" fill="#5c3b1e"/>
@@ -948,8 +1027,9 @@ textarea{resize:vertical; min-height:70px;}
 
           <!-- HOUSE (base for house/car/garden stages) -->
           <g class="struct struct-house" transform="translate(390,360)">
-            <rect x="-90" y="-95" width="180" height="95" fill="#e8dfc8"/>
-            <polygon points="-100,-95 0,-155 100,-95" fill="#a6432f"/>
+            <ellipse cx="0" cy="4" rx="108" ry="16" fill="url(#groundShadow)"/>
+            <rect x="-90" y="-95" width="180" height="95" fill="url(#houseWallGrad)"/>
+            <polygon points="-100,-95 0,-155 100,-95" fill="url(#houseRoofGrad)"/>
             <rect x="-16" y="-50" width="32" height="50" fill="#5c3b1e"/>
             <rect x="30" y="-70" width="26" height="24" fill="var(--city-window)" class="lit-window"/>
             <rect x="-70" y="-70" width="26" height="24" fill="var(--city-window)" class="lit-window"/>
@@ -959,6 +1039,7 @@ textarea{resize:vertical; min-height:70px;}
             </g>
           </g>
           <g class="acc acc-car" transform="translate(220,352)">
+            <ellipse cx="0" cy="2" rx="42" ry="8" fill="url(#groundShadow)"/>
             <rect x="-34" y="-18" width="68" height="18" rx="6" fill="#ff5470"/>
             <rect x="-24" y="-30" width="46" height="14" rx="5" fill="#ff8098"/>
             <circle cx="-18" cy="0" r="8" fill="#20242f"/>
@@ -1542,12 +1623,17 @@ function buildCityFlowers(){
 }
 function getCityPhase(){
   const h = new Date().getHours();
-  if(h>=6 && h<10) return 'morning';
+  if(h>=3 && h<6) return 'predawn1';
+  if(h>=6 && h<7) return 'predawn2';
+  if(h>=7 && h<10) return 'sunrise';
   if(h>=10 && h<16) return 'midday';
-  if(h>=16 && h<19) return 'evening';
-  return 'night';
+  if(h>=16 && h<17) return 'sunset';
+  if(h>=17 && h<19) return 'moonrise';
+  return 'night'; // 19:00–03:00
 }
+const CITY_DARK_PHASES = ['night','predawn1','predawn2','sunset','moonrise'];
 function isNightNow(){ return getCityPhase()==='night'; }
+function isCityDark(){ return CITY_DARK_PHASES.includes(getCityPhase()); }
 const CITY_BONUS_SLOTS = [
   {x:170,y:400}, {x:250,y:410}, {x:530,y:405}, {x:610,y:415},
   {x:690,y:400}, {x:110,y:410}, {x:460,y:412}, {x:380,y:415},
@@ -1582,9 +1668,13 @@ function renderCityScene(){
   const phase = getCityPhase();
   frame.setAttribute('data-phase', phase);
   frame.classList.toggle('city-night', phase==='night');
+  frame.classList.toggle('city-dark', CITY_DARK_PHASES.includes(phase));
   frame.classList.toggle('city-rain-active', cityRainOn);
 
-  const phaseLabel = {morning:'🌅 صبح', midday:'☀️ ظهر', evening:'🌇 غروب', night:'🌙 شب'}[phase];
+  const phaseLabel = {
+    predawn1:'🌌 قبل از سحر', predawn2:'🌄 نزدیک سحر', sunrise:'🌅 طلوع آفتاب',
+    midday:'☀️ ظهر', sunset:'🌇 غروب آفتاب', moonrise:'🌆 طلوع ماه', night:'🌙 شب',
+  }[phase];
   document.getElementById('cityStageSub').textContent = `Level ${DB.level} — ${stage.icon} ${stage.name} · ${phaseLabel}`;
   document.getElementById('cityHint').textContent = citySoundOn ? '🔊 صدای طبیعت داره پخش می‌شه' : 'برای پخش صدای طبیعت روی 🔇 بزن';
 
