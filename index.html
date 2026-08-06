@@ -2055,24 +2055,33 @@ function fmtMMSS(ms){
   return String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
 }
 
-function playBeep(){
+function playPomoChime(){
   try{
     const ctx = new (window.AudioContext||window.webkitAudioContext)();
     const now = ctx.currentTime;
-    [0, 0.28, 0.56].forEach((t,i)=>{
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6 — bell-like ascending chime
+    notes.forEach((freq,i)=>{
+      const t = now + i*0.14;
       const osc = ctx.createOscillator(); const gain = ctx.createGain();
-      osc.type = 'sine'; osc.frequency.value = i%2===0 ? 880 : 660;
-      gain.gain.setValueAtTime(0.0001, now+t);
-      gain.gain.exponentialRampToValueAtTime(0.35, now+t+0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now+t+0.25);
+      const shimmer = ctx.createOscillator(); const shimmerGain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      shimmer.type = 'sine'; shimmer.frequency.value = freq*2.01;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.24, t+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t+0.9);
+      shimmerGain.gain.setValueAtTime(0.0001, t);
+      shimmerGain.gain.exponentialRampToValueAtTime(0.05, t+0.02);
+      shimmerGain.gain.exponentialRampToValueAtTime(0.0001, t+0.6);
       osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(now+t); osc.stop(now+t+0.26);
+      shimmer.connect(shimmerGain); shimmerGain.connect(ctx.destination);
+      osc.start(t); osc.stop(t+0.95);
+      shimmer.start(t); shimmer.stop(t+0.65);
     });
-    setTimeout(()=>ctx.close(), 1200);
+    setTimeout(()=>{ try{ ctx.close(); }catch(e){} }, 1700);
   }catch(e){ /* audio unavailable, ignore silently */ }
 }
 
-const POMO_XP_PER_MIN = 5;
+const POMO_XP_PER_MIN = 2;
 function addPomoMinutes(kind, minutes){
   if(minutes<=0) return;
   const d = todayISO();
@@ -2153,8 +2162,10 @@ function completePomoSession(){
   const mins = mode==='focus' ? DB.pomodoro.settings.focusMin : DB.pomodoro.settings.breakMin;
   addPomoMinutes(mode, mins);
   if(mode==='focus'){ checkPomoGoalBonus(); checkPerfectDay(); }
-  playBeep();
-  sendNotification(mode==='focus' ? '🔔 فوکوس تموم شد!' : '🔔 استراحت تموم شد!', mode==='focus' ? 'وقت استراحته ☕' : 'برگردیم فوکوس 💪');
+  playPomoChime();
+  setTimeout(()=>{
+    sendNotification(mode==='focus' ? '🔔 فوکوس تموم شد!' : '🔔 استراحت تموم شد!', mode==='focus' ? 'وقت استراحته ☕' : 'برگردیم فوکوس 💪');
+  }, 900);
   toast(mode==='focus' ? '🔔 فوکوس تموم شد! وقت استراحته ☕' : '🔔 استراحت تموم شد! برگردیم فوکوس 💪');
   if(mode==='focus') startBreak(); else startFocus();
 }
