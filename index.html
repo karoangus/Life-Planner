@@ -315,6 +315,33 @@ body{
 .theme-name{font-size:12.5px; font-weight:800;}
 .theme-cost{font-size:13px; font-weight:900; color:#ffcc33; margin-top:6px;}
 
+/* skill tree */
+.skill-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px;}
+.skill-top{display:flex; align-items:center; gap:12px;}
+.skill-ic{width:42px; height:42px; border-radius:12px; background:rgba(46,230,166,.12); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;}
+.skill-name{font-size:13.5px; font-weight:800;}
+.skill-desc{font-size:11.5px; color:var(--txt-dim); margin-top:2px; line-height:1.7;}
+.skill-tiers{display:flex; gap:5px; margin-top:12px;}
+.skill-tier-dot{flex:1; height:7px; border-radius:10px; background:var(--track);}
+.skill-tier-dot.filled{background:var(--grad);}
+.skill-maxed{font-size:11px; color:var(--ok); font-weight:800; margin-top:10px; text-align:center;}
+
+/* boss fight */
+.boss-trigger-modal{max-width:340px; text-align:center; border:1px solid rgba(255,84,112,.4); background:linear-gradient(160deg, rgba(255,84,112,.08), var(--panel2) 60%);}
+.boss-card{background:linear-gradient(150deg, rgba(255,84,112,.08), var(--panel) 55%); border:1px solid rgba(255,84,112,.3); border-radius:var(--radius); padding:20px;}
+.boss-name{font-size:17px; font-weight:900; text-align:center;}
+.boss-hp-track{height:22px; border-radius:12px; background:var(--track); overflow:hidden; margin-top:14px; position:relative;}
+.boss-hp-fill{height:100%; background:linear-gradient(90deg,#ff5470,#ff8098); border-radius:12px; transition:width .6s ease;}
+.boss-hp-text{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:900; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.5);}
+.boss-task-row{display:flex; align-items:center; gap:10px; padding:9px 8px;}
+.boss-task-row .st{font-size:15px;}
+.boss-countdown-box{text-align:center; padding:40px 20px;}
+.boss-countdown-val{font-size:26px; font-weight:900; color:var(--danger); font-family:'Consolas','JetBrains Mono',monospace; margin-top:10px;}
+.boss-task-pick-row{display:flex; align-items:center; gap:10px; padding:9px 8px; border-radius:10px; cursor:pointer;}
+.boss-task-pick-row.sel{background:rgba(0,229,255,.08);}
+.boss-task-pick-row .chk-box{width:18px; height:18px; border-radius:6px; border:2px solid var(--line2); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px;}
+.boss-task-pick-row.sel .chk-box{background:var(--grad); border-color:transparent; color:#04121a;}
+
 /* pomodoro */
 .pomo-pane{display:none;}
 .pomo-pane.active{display:block;}
@@ -577,7 +604,7 @@ textarea{resize:vertical; min-height:70px;}
   position:absolute; pointer-events:auto; box-sizing:border-box; overflow:hidden;
   background:linear-gradient(160deg,rgba(0,229,255,.28),rgba(139,107,255,.28));
   border:1px solid rgba(0,229,255,.5); border-radius:10px; padding:7px 9px; cursor:pointer;
-  color:#eafeff; box-shadow:0 4px 16px rgba(0,229,255,.18); display:flex; align-items:center; justify-content:center; text-align:center; transition:.15s;
+  color:var(--txt); box-shadow:0 4px 16px rgba(0,229,255,.18); display:flex; align-items:center; justify-content:center; text-align:center; transition:.15s;
 }
 .ev-block:hover{border-color:var(--neon); box-shadow:0 6px 20px rgba(0,229,255,.3);}
 .ev-block .ev-title{font-size:11.5px; font-weight:800; line-height:1.35;}
@@ -621,6 +648,9 @@ textarea{resize:vertical; min-height:70px;}
     <div class="nav-item" data-view="pomodoro"><span class="ic">🍅</span> پومودورو</div>
     <div class="nav-item" data-view="profile"><span class="ic">👤</span> پروفایل</div>
     <div class="nav-item" data-view="shop"><span class="ic">🛍️</span> XP Shop</div>
+    <div class="nav-item" data-view="skills"><span class="ic">🌳</span> درخت مهارت</div>
+    <div class="nav-item" data-view="boss"><span class="ic">⚔️</span> باس هفتگی</div>
+    <div class="nav-item" data-view="yvy"><span class="ic">🪞</span> You VS You</div>
     <div class="nav-sep"></div>
     <div class="nav-item" id="themeToggleBtn"><span class="ic" id="themeIcon">🌙</span> <span id="themeLabel">تم تاریک</span></div>
     <div class="nav-item" id="exportBtn"><span class="ic">⬇️</span> خروجی پشتیبان</div>
@@ -1148,20 +1178,27 @@ textarea{resize:vertical; min-height:70px;}
         <div id="xpShopStatus"></div>
       </div>
 
-      <div class="grid g2" style="margin-top:16px;">
+      <div class="grid g3" style="margin-top:16px;">
         <div class="card shop-item-card">
           <div class="shop-item-ic">⚡</div>
           <h3>XP Boost</h3>
           <div class="muted" style="font-size:12.5px; margin:8px 0; line-height:1.8;">به مدت ۳۰ دقیقه، هر XP که از هر جای برنامه می‌گیری دوبرابر می‌شه</div>
-          <div class="shop-item-cost num">100 XP</div>
+          <div class="shop-item-cost num" id="costBoost">100 XP</div>
           <button class="btn" style="width:100%; justify-content:center; margin-top:12px;" onclick="buyXPBoost()">خرید</button>
         </div>
         <div class="shop-item-card mystery-card">
           <div class="shop-item-ic">🎁</div>
           <h3>Mystery Box</h3>
           <div class="muted" style="font-size:12.5px; margin:8px 0; line-height:1.8;">یه جایزه‌ی رندوم — از XP کوچیک تا جکپات ۲۰۰ تایی و آیتم Life City!</div>
-          <div class="shop-item-cost num">200 XP</div>
+          <div class="shop-item-cost num" id="costMystery">200 XP</div>
           <button class="btn" style="width:100%; justify-content:center; margin-top:12px;" onclick="buyMysteryBox()">باز کردن جعبه</button>
+        </div>
+        <div class="shop-item-card">
+          <div class="shop-item-ic">🛡️</div>
+          <h3>Streak Shield</h3>
+          <div class="muted" style="font-size:12.5px; margin:8px 0; line-height:1.8;">یه روز عادتی رو یادت رفت؟ این جلوی از دست رفتن استریکت رو می‌گیره</div>
+          <div class="shop-item-cost num" id="costShield">200 XP</div>
+          <button class="btn" style="width:100%; justify-content:center; margin-top:12px;" onclick="buyStreakShield()">خرید</button>
         </div>
       </div>
 
@@ -1173,6 +1210,40 @@ textarea{resize:vertical; min-height:70px;}
       <div class="card" style="margin-top:16px;">
         <div class="card-head"><h3>🎒 دارایی‌های ویژه</h3></div>
         <div id="shopInventory"></div>
+      </div>
+    </div>
+
+    <!-- SKILL TREE -->
+    <div class="view" id="view-skills">
+      <div class="topbar">
+        <div><h1>🌳 درخت مهارت</h1><div class="sub">هر بار لول‌آپ می‌شی، یه امتیاز مهارت می‌گیری</div></div>
+      </div>
+      <div class="card" style="text-align:center; background:linear-gradient(120deg, rgba(46,230,166,.10), var(--panel) 60%); border-color:rgba(46,230,166,.3);">
+        <div style="font-size:12px; color:var(--txt-dim); font-weight:700;">امتیاز مهارت در دسترس</div>
+        <div class="wallet-val num" id="skillPointsVal" style="color:#2ee6a6;">0</div>
+      </div>
+      <div class="grid g2" style="margin-top:16px;" id="skillTreeGrid"></div>
+    </div>
+
+    <!-- WEEKLY BOSS FIGHT -->
+    <div class="view" id="view-boss">
+      <div class="topbar">
+        <div><h1>⚔️ باس هفتگی</h1><div class="sub">یه هدف بزرگ رو به یه نبرد تبدیل کن</div></div>
+      </div>
+      <div id="bossContent"></div>
+    </div>
+
+    <!-- YOU VS YOU -->
+    <div class="view" id="view-yvy">
+      <div class="topbar">
+        <div><h1>🪞 You VS You</h1><div class="sub">رقابت با نسخه‌ی قبلی خودت</div></div>
+      </div>
+      <div class="card" style="text-align:center; padding:50px 20px;">
+        <div style="font-size:44px;">🪞</div>
+        <h3 style="margin-top:14px; font-size:16px;">به‌زودی...</h3>
+        <p class="muted" style="margin-top:8px; font-size:13px; line-height:1.9; max-width:360px; margin-left:auto; margin-right:auto;">
+          این بخش قراره بشه جایی که با رکوردهای خودت رقابت کنی — نه با کس دیگه‌ای، فقط با نسخه‌ی دیروز، هفته‌ی پیش و ماه پیش خودت.
+        </p>
       </div>
     </div>
 
@@ -1292,6 +1363,38 @@ textarea{resize:vertical; min-height:70px;}
   </div>
 </div></div>
 
+<div class="modal-bg" id="bossTriggerModalBg"><div class="modal boss-trigger-modal">
+  <div style="text-align:center; font-size:46px;">⚔️</div>
+  <h2 style="text-align:center; font-size:19px; margin-top:6px;">وقت باس فایته!</h2>
+  <p style="text-align:center; color:var(--txt-dim); font-size:13px; margin-top:8px; line-height:1.9;">
+    یه هدف بزرگ این هفته داری؟ بذار به یه باس تبدیلش کنیم و باهم شکستش بدیم.
+  </p>
+  <div class="modal-actions" style="flex-direction:column;">
+    <button class="btn" style="width:100%; justify-content:center;" onclick="closeModal('bossTriggerModalBg'); openBossSetup();">⚔️ بزن بریم شکستش بدیم!</button>
+    <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="declineBossFight()">فعلاً باس مشخصی ندارم</button>
+  </div>
+</div></div>
+
+<div class="modal-bg" id="bossSetupModalBg"><div class="modal">
+  <h2>⚔️ باس این هفته رو بساز</h2>
+  <div class="field"><label>اسم باس (مثلاً: مطالعه فصل ۳ ریاضی)</label><input type="text" id="bossNameInput" placeholder="اسم هدف بزرگت..."></div>
+  <div class="field">
+    <label>۴ تا تسک انتخاب کن که هرکدوم بهش ضربه بزنه <span id="bossTaskCount" class="num">(0/4)</span></label>
+    <div id="bossTaskPicker" style="max-height:260px; overflow-y:auto;"></div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn ghost" onclick="closeModal('bossSetupModalBg')">انصراف</button>
+    <button class="btn" onclick="confirmBossSetup()">شروع نبرد!</button>
+  </div>
+</div></div>
+
+<div class="modal-bg" id="bossVictoryModalBg"><div class="modal boss-trigger-modal">
+  <div style="text-align:center; font-size:50px;">🏆</div>
+  <h2 style="text-align:center; font-size:19px; margin-top:6px;">باس رو شکست دادی!</h2>
+  <p id="bossVictoryText" style="text-align:center; color:var(--neon); font-weight:800; font-size:14px; margin-top:8px;"></p>
+  <button class="btn" style="width:100%; justify-content:center; margin-top:16px;" onclick="closeModal('bossVictoryModalBg')">عالی بود! 🎉</button>
+</div></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1359,6 +1462,9 @@ if(DB.streakShields===undefined) DB.streakShields = 0;
 if(!DB.cityBonusItems) DB.cityBonusItems = [];
 if(!DB.themes) DB.themes = { owned:['dark','light'] };
 if(DB.lastBackupReminder===undefined) DB.lastBackupReminder = Date.now();
+if(DB.skillPoints===undefined) DB.skillPoints = 0;
+if(!DB.skillTiers) DB.skillTiers = { pomoXp:0, questXp:0, shopDiscount:0, luckyBox:0, criticalBonus:0, streakGuard:0 };
+if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
 function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); renderAll(); }
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function todayISO(){ return new Date().toISOString().slice(0,10); }
@@ -1387,6 +1493,8 @@ function showView(v){
   if(v==='pomodoro') setTimeout(()=>{ renderPomoStats(); if(pomoTab==='stats') renderPomoChart(); }, 50);
   if(v==='city') setTimeout(renderCityScene, 30);
   if(v==='shop') setTimeout(renderXPShop, 30);
+  if(v==='skills') setTimeout(renderSkillTree, 30);
+  if(v==='boss') setTimeout(renderBossContent, 30);
   if(v!=='city' && citySoundOn){ citySoundOn=false; stopCityAmbience(); const b=document.getElementById('citySoundBtn'); if(b) b.textContent='🔇'; }
 }
 setInterval(()=>{ if(document.getElementById('view-city')?.classList.contains('active')) renderCityScene(); }, 60000);
@@ -1437,8 +1545,9 @@ function addXP(n){
     const need = DB.level*100;
     if(DB.xp >= need){
       DB.xp -= need; DB.level++;
+      DB.skillPoints = (DB.skillPoints||0) + 1;
       const t = getLevelTitle(DB.level);
-      toast(`🎉 تبریک! رسیدی به سطح ${DB.level} — ${t.icon} ${t.title}`);
+      toast(`🎉 تبریک! رسیدی به سطح ${DB.level} — ${t.icon} ${t.title} · +۱ امتیاز مهارت 🌳`);
     }
   } else {
     DB.xp = Math.max(0, DB.xp + n);
@@ -1968,8 +2077,10 @@ function completeQuest(){
   DB.stats.questsCompleted = (DB.stats.questsCompleted||0) + 1;
   const d = todayISO();
   DB.stats.questsCompletedByDate[d] = (DB.stats.questsCompletedByDate[d]||0) + 1;
-  addXP(q.xp);
-  toast(`✅ آفرین! +${q.xp} XP گرفتی`);
+  const bonus = 1 + 0.1*(DB.skillTiers.questXp||0);
+  const xpGain = Math.round(q.xp * bonus);
+  addXP(xpGain);
+  toast(`✅ آفرین! +${xpGain} XP گرفتی`);
   checkPerfectDay();
 }
 function skipQuest(){
@@ -2087,7 +2198,8 @@ function addPomoMinutes(kind, minutes){
   const d = todayISO();
   DB.pomodoro.history[d] = DB.pomodoro.history[d] || {focus:0, break:0};
   DB.pomodoro.history[d][kind] = (DB.pomodoro.history[d][kind]||0) + minutes;
-  addXP(minutes * POMO_XP_PER_MIN);
+  const bonus = 1 + 0.1*(DB.skillTiers.pomoXp||0);
+  addXP(Math.round(minutes * POMO_XP_PER_MIN * bonus));
 }
 const POMO_GOAL_BONUS_XP = 30;
 function checkPomoGoalBonus(){
@@ -2315,6 +2427,173 @@ function pomoHoldCancel(){
   c.addEventListener('contextmenu', e=>e.preventDefault());
 })();
 
+/* ============ WEEKLY BOSS FIGHT ============ */
+const BOSS_WEEK_MS = 7*24*60*60*1000;
+function checkBossTrigger(){
+  if(DB.boss.active) return;
+  if(Date.now() >= DB.boss.nextAvailableAt){
+    openModal('bossTriggerModalBg');
+  }
+}
+function declineBossFight(){
+  closeModal('bossTriggerModalBg');
+  DB.boss.nextAvailableAt = Date.now() + BOSS_WEEK_MS;
+  save();
+  renderBossContent();
+  toast('باشه، هفته‌ی بعد دوباره می‌پرسیم ⏳');
+}
+let bossSetupSelected = [];
+function openBossSetup(){
+  bossSetupSelected = [];
+  document.getElementById('bossNameInput').value = '';
+  renderBossTaskPicker();
+  openModal('bossSetupModalBg');
+}
+function renderBossTaskPicker(){
+  const list = DB.tasks.filter(t=>!t.done);
+  const el = document.getElementById('bossTaskPicker');
+  if(!list.length){
+    el.innerHTML = `<div class="empty" style="padding:16px;">تسک انجام‌نشده‌ای نداری — اول چندتا تسک بساز</div>`;
+  } else {
+    el.innerHTML = list.map(t=>{
+      const sel = bossSetupSelected.includes(t.id);
+      return `<div class="boss-task-pick-row ${sel?'sel':''}" onclick="toggleBossTaskPick('${t.id}')">
+        <div class="chk-box">${sel?'✓':''}</div>
+        <div style="font-size:13px;">${esc(t.title)}</div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('bossTaskCount').textContent = `(${bossSetupSelected.length}/4)`;
+}
+function toggleBossTaskPick(taskId){
+  const idx = bossSetupSelected.indexOf(taskId);
+  if(idx>=0){ bossSetupSelected.splice(idx,1); }
+  else {
+    if(bossSetupSelected.length>=4){ toast('⚠️ حداکثر ۴ تا تسک می‌تونی انتخاب کنی'); return; }
+    bossSetupSelected.push(taskId);
+  }
+  renderBossTaskPicker();
+}
+function confirmBossSetup(){
+  const name = document.getElementById('bossNameInput').value.trim();
+  if(!name){ toast('⚠️ اول اسم باس رو بنویس'); return; }
+  if(bossSetupSelected.length!==4){ toast('⚠️ دقیقاً باید ۴ تا تسک انتخاب کنی'); return; }
+  DB.boss.active = { name, hp:100, maxHp:100, taskIds:[...bossSetupSelected], hitTaskIds:[] };
+  closeModal('bossSetupModalBg');
+  save();
+  renderBossContent();
+  toast(`⚔️ نبرد با «${name}» شروع شد!`);
+}
+function hitBossFromTask(taskId){
+  const b = DB.boss.active;
+  if(!b || !b.taskIds.includes(taskId) || b.hitTaskIds.includes(taskId)) return;
+  const dmg = Math.round(b.maxHp / b.taskIds.length);
+  b.hp = Math.max(0, b.hp - dmg);
+  b.hitTaskIds.push(taskId);
+  if(b.hp<=0){
+    const name = b.name;
+    DB.boss.active = null;
+    DB.boss.nextAvailableAt = Date.now() + BOSS_WEEK_MS;
+    addXP(100);
+    document.getElementById('bossVictoryText').textContent = `«${name}» شکست خورد! +۱۰۰ XP`;
+    openModal('bossVictoryModalBg');
+  } else {
+    toast(`⚔️ ضربه زدی! HP باس: ${b.hp}%`);
+  }
+  renderBossContent();
+}
+function fmtBossCountdown(ms){
+  if(ms<0) ms=0;
+  const totalHours = Math.floor(ms/3600000);
+  const days = Math.floor(totalHours/24);
+  const hours = totalHours%24;
+  return `${days} روز و ${hours} ساعت`;
+}
+function renderBossContent(){
+  const el = document.getElementById('bossContent');
+  if(!el) return;
+  const b = DB.boss.active;
+  if(b){
+    const pct = Math.round((b.hp/b.maxHp)*100);
+    el.innerHTML = `<div class="boss-card">
+      <div class="boss-name">☠️ ${esc(b.name)}</div>
+      <div class="boss-hp-track"><div class="boss-hp-fill" style="width:${pct}%"></div><div class="boss-hp-text">${b.hp} / ${b.maxHp} HP</div></div>
+      <div style="margin-top:16px;">
+        ${b.taskIds.map(id=>{
+          const t = DB.tasks.find(x=>x.id===id);
+          const hit = b.hitTaskIds.includes(id);
+          return `<div class="boss-task-row"><span class="st">${hit?'⚔️':'🛡️'}</span><span style="font-size:12.5px; ${hit?'text-decoration:line-through; color:var(--txt-dim2);':''}">${t?esc(t.title):'(تسک حذف شده)'}</span></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  } else if(Date.now() < DB.boss.nextAvailableAt){
+    el.innerHTML = `<div class="card boss-countdown-box">
+      <div style="font-size:36px;">⏳</div>
+      <div class="muted" style="margin-top:10px;">تا باس فایت بعدی</div>
+      <div class="boss-countdown-val num">${fmtBossCountdown(DB.boss.nextAvailableAt-Date.now())}</div>
+    </div>`;
+  } else {
+    el.innerHTML = `<div class="card" style="text-align:center; padding:40px 20px;">
+      <div style="font-size:36px;">⚔️</div>
+      <p class="muted" style="margin-top:10px; font-size:13px;">یه هدف بزرگ داری؟ بذار به یه باس تبدیلش کنیم</p>
+      <button class="btn" style="margin-top:14px;" onclick="openBossSetup()">شروع باس فایت</button>
+    </div>`;
+  }
+}
+setInterval(()=>{ if(document.getElementById('view-boss')?.classList.contains('active')) renderBossContent(); }, 60000);
+
+/* ============ SKILL TREE ============ */
+const SKILL_TREE = [
+  { key:'pomoXp',        icon:'⚡', name:'استاد فوکوس',   desc:'هر تیر +۱۰٪ XP پومودورو',                          maxTier:3 },
+  { key:'questXp',       icon:'🎯', name:'شکارچی کوئست',  desc:'هر تیر +۱۰٪ XP کوئست‌های رندوم',                    maxTier:3 },
+  { key:'shopDiscount',  icon:'💰', name:'چانه‌زن',        desc:'هر تیر ۱۰٪ تخفیف روی قیمت‌های XP Shop',            maxTier:2 },
+  { key:'luckyBox',      icon:'🍀', name:'شانس بلند',      desc:'هر تیر شانس جعبه‌ی رایگان توی Mystery Box بیشتر می‌شه', maxTier:3 },
+  { key:'criticalBonus', icon:'🔥', name:'قاتل بحران',     desc:'هر تیر +۵ XP برای هر تسک بحرانی که تموم می‌کنی',    maxTier:3 },
+  { key:'streakGuard',   icon:'🛡️', name:'محافظ استریک',  desc:'هر تیر همون لحظه ۱ Streak Shield رایگان می‌گیری',  maxTier:5 },
+];
+function skillTierCost(){ return 1; } // flat: 1 skill point per tier
+function buySkillTier(key){
+  const skill = SKILL_TREE.find(s=>s.key===key); if(!skill) return;
+  const current = DB.skillTiers[key]||0;
+  if(current>=skill.maxTier){ toast('این مهارت به حداکثر رسیده'); return; }
+  if((DB.skillPoints||0) < skillTierCost()){ toast('⚠️ امتیاز مهارت کافی نداری'); return; }
+  DB.skillPoints -= skillTierCost();
+  DB.skillTiers[key] = current+1;
+  if(key==='streakGuard'){ DB.streakShields = (DB.streakShields||0)+1; toast('🛡️ +۱ Streak Shield گرفتی!'); }
+  save();
+  renderSkillTree();
+  toast(`🌳 ${skill.name} به تیر ${DB.skillTiers[key]} رسید!`);
+}
+function renderSkillTree(){
+  const ptsEl = document.getElementById('skillPointsVal');
+  if(!ptsEl) return;
+  ptsEl.textContent = (DB.skillPoints||0).toLocaleString('en-US');
+  const grid = document.getElementById('skillTreeGrid');
+  grid.innerHTML = SKILL_TREE.map(s=>{
+    const tier = DB.skillTiers[s.key]||0;
+    const maxed = tier>=s.maxTier;
+    const dots = Array.from({length:s.maxTier}, (_,i)=> `<div class="skill-tier-dot ${i<tier?'filled':''}"></div>`).join('');
+    return `<div class="skill-card">
+      <div class="skill-top">
+        <div class="skill-ic">${s.icon}</div>
+        <div>
+          <div class="skill-name">${s.name}</div>
+          <div class="skill-desc">${s.desc}</div>
+        </div>
+      </div>
+      <div class="skill-tiers">${dots}</div>
+      ${maxed
+        ? `<div class="skill-maxed">✓ تکمیل شده (${tier}/${s.maxTier})</div>`
+        : `<button class="btn ${(DB.skillPoints||0)<1?'ghost':''} sm" style="width:100%; margin-top:12px;" onclick="buySkillTier('${s.key}')">تیر بعدی (${tier}/${s.maxTier}) — ۱ امتیاز</button>`
+      }
+    </div>`;
+  }).join('');
+}
+function applyShopDiscount(baseCost){
+  const tier = DB.skillTiers.shopDiscount||0;
+  return Math.max(1, Math.round(baseCost * (1 - 0.1*tier)));
+}
+
 /* ============ XP SHOP ============ */
 function spendXP(cost){
   if((DB.xpWallet||0) < cost) return false;
@@ -2322,12 +2601,20 @@ function spendXP(cost){
   return true;
 }
 function buyXPBoost(){
-  const cost = 100;
+  const cost = applyShopDiscount(100);
   if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
   DB.xpBoost = { activeUntil: Date.now() + 30*60*1000 };
   save();
   renderXPShop();
   toast('⚡ XP Boost ×۲ فعال شد! تا ۳۰ دقیقه همه‌ی XP هات دوبرابر می‌شه');
+}
+function buyStreakShield(){
+  const cost = applyShopDiscount(200);
+  if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
+  DB.streakShields = (DB.streakShields||0)+1;
+  save();
+  renderXPShop();
+  toast('🛡️ یه Streak Shield خریدی! یه روز از‌دست‌رفته‌ی عادت‌ها رو جبران می‌کنه');
 }
 const CITY_BONUS_ICONS = { tree:'🌳', bench:'🪑', lamp:'💡', fountain:'⛲', building:'🏢' };
 const CITY_BONUS_NAMES = { tree:'درخت', bench:'نیمکت', lamp:'چراغ', fountain:'فواره', building:'ساختمان کوچیک' };
@@ -2348,13 +2635,15 @@ const MYSTERY_REWARDS = [
   { key:'freebox', weight:3, label:'👑 یه جعبه‌ی شانس دیگه، رایگان!', apply:()=>{} },
 ];
 function pickWeightedReward(){
-  const total = MYSTERY_REWARDS.reduce((s,r)=>s+r.weight,0);
+  const luckyBonus = (DB.skillTiers.luckyBox||0) * 3;
+  const weights = MYSTERY_REWARDS.map(r=> r.key==='freebox' ? r.weight+luckyBonus : r.weight);
+  const total = weights.reduce((s,w)=>s+w,0);
   let r = Math.random()*total;
-  for(const item of MYSTERY_REWARDS){ if(r<item.weight) return item; r -= item.weight; }
+  for(let i=0;i<MYSTERY_REWARDS.length;i++){ if(r<weights[i]) return MYSTERY_REWARDS[i]; r -= weights[i]; }
   return MYSTERY_REWARDS[0];
 }
 function buyMysteryBox(){
-  const cost = 200;
+  const cost = applyShopDiscount(200);
   if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
   save();
   renderXPShop();
@@ -2401,7 +2690,8 @@ function buyTheme(theme){
   const meta = THEME_META[theme];
   if(!meta) return;
   if(DB.themes.owned.includes(theme)){ toast('این تم رو قبلاً خریدی'); return; }
-  if(!spendXP(meta.cost)){ toast('⚠️ XP کافی نداری'); return; }
+  const cost = applyShopDiscount(meta.cost);
+  if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
   DB.themes.owned.push(theme);
   save();
   renderXPShop();
@@ -2411,6 +2701,10 @@ function renderXPShop(){
   const walletEl = document.getElementById('xpWalletVal');
   if(!walletEl) return;
   walletEl.textContent = (DB.xpWallet||0).toLocaleString('en-US');
+
+  document.getElementById('costBoost').textContent = applyShopDiscount(100)+' XP';
+  document.getElementById('costMystery').textContent = applyShopDiscount(200)+' XP';
+  document.getElementById('costShield').textContent = applyShopDiscount(200)+' XP';
 
   const statusEl = document.getElementById('xpShopStatus');
   const boostLeft = DB.xpBoost ? DB.xpBoost.activeUntil - Date.now() : 0;
@@ -2429,7 +2723,7 @@ function renderXPShop(){
       <div class="theme-name">${meta.icon} ${meta.label}</div>
       ${owned
         ? `<button class="btn ${active?'ghost':''} sm" style="width:100%; margin-top:8px;" onclick="useTheme('${k}')" ${active?'disabled':''}>${active?'✓ در حال استفاده':'استفاده کن'}</button>`
-        : `<div class="theme-cost num">${meta.cost} XP</div><button class="btn sm" style="width:100%; margin-top:8px;" onclick="buyTheme('${k}')">خرید</button>`
+        : `<div class="theme-cost num">${applyShopDiscount(meta.cost)} XP</div><button class="btn sm" style="width:100%; margin-top:8px;" onclick="buyTheme('${k}')">خرید</button>`
       }
     </div>`;
   }).join('');
@@ -2485,10 +2779,12 @@ function toggleTask(id){
   t.done = !t.done;
   if(t.done){
     t.doneDate = todayISO();
-    addXP(t.priority==='critical'?25:t.priority==='high'?18:t.priority==='medium'?12:8);
+    const critBonus = t.priority==='critical' ? 5*(DB.skillTiers.criticalBonus||0) : 0;
+    addXP((t.priority==='critical'?25:t.priority==='high'?18:t.priority==='medium'?12:8) + critBonus);
     logHistory('tasks',1);
     DB.stats.tasksCompleted = (DB.stats.tasksCompleted||0) + 1;
     checkPerfectDay();
+    hitBossFromTask(id);
   }
   if(!DB.stats.weeklyPerfectUnlocked && isWeeklyPerfect()) DB.stats.weeklyPerfectUnlocked = true;
   save();
@@ -2959,6 +3255,8 @@ function renderAll(){
   renderProfile();
   renderPomoUI();
   renderPomoStats();
+  renderSkillTree();
+  renderBossContent();
 }
 checkStreakShields();
 renderAll();
@@ -2971,6 +3269,7 @@ function checkBackupReminder(){
   }
 }
 setTimeout(checkBackupReminder, 1800);
+setTimeout(checkBossTrigger, 2600);
 
 /* ============ PWA / OFFLINE ============ */
 if('serviceWorker' in navigator){
