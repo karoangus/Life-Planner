@@ -1313,7 +1313,7 @@ textarea{resize:vertical; min-height:70px;}
 </div></div>
 
 <div class="modal-bg" id="eventModalBg"><div class="modal">
-  <h2>📅 رویداد جدید</h2>
+  <h2 id="eventModalTitle">📅 رویداد جدید</h2>
   <div class="field"><label>عنوان</label><input type="text" id="eTitle" placeholder="مثلاً: کلاس زبان"></div>
   <div class="field"><label>روزهای هفته (می‌تونی چندتا انتخاب کنی)</label>
     <div class="chip-group" id="eDays">
@@ -1331,6 +1331,16 @@ textarea{resize:vertical; min-height:70px;}
     <div class="field"><label>ساعت پایان</label><input type="time" id="eHourEnd" value="12:00"></div>
   </div>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('eventModalBg')">انصراف</button><button class="btn" onclick="saveEvent()">ذخیره</button></div>
+</div></div>
+
+<div class="modal-bg" id="eventActionModalBg"><div class="modal">
+  <h2 id="eventActionTitle">📅 رویداد</h2>
+  <div class="modal-actions" style="flex-direction:column;">
+    <button class="btn" style="width:100%; justify-content:center;" onclick="startEditEvent()">✏️ ویرایش</button>
+    <button class="btn danger" id="deleteThisDayBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteEventDay()">🗑️ حذف فقط این روز</button>
+    <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteWholeEvent()">🗑️ حذف کل رویداد (همه‌ی روزها)</button>
+    <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="closeModal('eventActionModalBg')">انصراف</button>
+  </div>
 </div></div>
 
 <div class="modal-bg" id="perfectDayModalBg"><div class="modal perfect-day-modal">
@@ -1379,7 +1389,7 @@ textarea{resize:vertical; min-height:70px;}
   <h2>⚔️ باس این هفته رو بساز</h2>
   <div class="field"><label>اسم باس (مثلاً: مطالعه فصل ۳ ریاضی)</label><input type="text" id="bossNameInput" placeholder="اسم هدف بزرگت..."></div>
   <div class="field">
-    <label>۴ تا تسک انتخاب کن که هرکدوم بهش ضربه بزنه <span id="bossTaskCount" class="num">(0/4)</span></label>
+    <label>چندتا تسک انتخاب کن که هرکدوم بهش ضربه بزنه <span id="bossTaskCount" class="num">(۰ تسک)</span></label>
     <div id="bossTaskPicker" style="max-height:260px; overflow-y:auto;"></div>
   </div>
   <div class="modal-actions">
@@ -2463,21 +2473,18 @@ function renderBossTaskPicker(){
       </div>`;
     }).join('');
   }
-  document.getElementById('bossTaskCount').textContent = `(${bossSetupSelected.length}/4)`;
+  document.getElementById('bossTaskCount').textContent = `(${bossSetupSelected.length} تسک)`;
 }
 function toggleBossTaskPick(taskId){
   const idx = bossSetupSelected.indexOf(taskId);
   if(idx>=0){ bossSetupSelected.splice(idx,1); }
-  else {
-    if(bossSetupSelected.length>=4){ toast('⚠️ حداکثر ۴ تا تسک می‌تونی انتخاب کنی'); return; }
-    bossSetupSelected.push(taskId);
-  }
+  else { bossSetupSelected.push(taskId); }
   renderBossTaskPicker();
 }
 function confirmBossSetup(){
   const name = document.getElementById('bossNameInput').value.trim();
   if(!name){ toast('⚠️ اول اسم باس رو بنویس'); return; }
-  if(bossSetupSelected.length!==4){ toast('⚠️ دقیقاً باید ۴ تا تسک انتخاب کنی'); return; }
+  if(bossSetupSelected.length<1){ toast('⚠️ حداقل یک تسک انتخاب کن'); return; }
   DB.boss.active = { name, hp:100, maxHp:100, taskIds:[...bossSetupSelected], hitTaskIds:[] };
   closeModal('bossSetupModalBg');
   save();
@@ -3009,7 +3016,11 @@ function renderNotes(){
 
 /* ============ CALENDAR ============ */
 const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
+let editingEventId = null;
+let eventActionCtx = null; // {eventId, dayIdx}
 function openEventModal(){
+  editingEventId = null;
+  document.getElementById('eventModalTitle').textContent = '📅 رویداد جدید';
   document.getElementById('eTitle').value='';
   document.getElementById('eHourStart').value='09:00';
   document.getElementById('eHourEnd').value='12:00';
@@ -3024,11 +3035,60 @@ function saveEvent(){
   const startHour = parseInt(document.getElementById('eHourStart').value);
   const endHour = parseInt(document.getElementById('eHourEnd').value);
   if(isNaN(startHour) || isNaN(endHour) || endHour<=startHour){ toast('⚠️ ساعت پایان باید بعد از ساعت شروع باشه'); return; }
-  DB.events.push({id:uid(), title, days, startHour, endHour});
-  closeModal('eventModalBg'); save(); toast('📅 رویداد اضافه شد');
+  if(editingEventId){
+    const ev = DB.events.find(x=>x.id===editingEventId);
+    if(ev){ ev.title=title; ev.days=days; ev.startHour=startHour; ev.endHour=endHour; delete ev.day; }
+    toast('✏️ رویداد ویرایش شد');
+  } else {
+    DB.events.push({id:uid(), title, days, startHour, endHour});
+    toast('📅 رویداد اضافه شد');
+  }
+  editingEventId = null;
+  closeModal('eventModalBg'); save();
 }
 function deleteEvent(id){ DB.events = DB.events.filter(x=>x.id!==id); save(); }
 function eventDays(e){ return e.days || (e.day!==undefined ? [e.day] : []); }
+
+function onEventBlockClick(eventId, dayIdx){
+  const ev = DB.events.find(x=>x.id===eventId); if(!ev) return;
+  eventActionCtx = { eventId, dayIdx };
+  document.getElementById('eventActionTitle').textContent = `📅 ${ev.title}`;
+  const multiDay = eventDays(ev).length > 1;
+  document.getElementById('deleteThisDayBtn').style.display = multiDay ? 'flex' : 'none';
+  openModal('eventActionModalBg');
+}
+function startEditEvent(){
+  const ctx = eventActionCtx; if(!ctx) return;
+  const ev = DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
+  closeModal('eventActionModalBg');
+  editingEventId = ev.id;
+  document.getElementById('eventModalTitle').textContent = '✏️ ویرایش رویداد';
+  document.getElementById('eTitle').value = ev.title;
+  document.getElementById('eHourStart').value = String(ev.startHour).padStart(2,'0')+':00';
+  document.getElementById('eHourEnd').value = String(ev.endHour).padStart(2,'0')+':00';
+  const days = eventDays(ev);
+  document.querySelectorAll('#eDays .chip-opt').forEach(o=> o.classList.toggle('sel', days.includes(+o.dataset.v)));
+  openModal('eventModalBg');
+}
+function deleteEventDay(){
+  const ctx = eventActionCtx; if(!ctx) return;
+  const ev = DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
+  const days = eventDays(ev).filter(d=>d!==ctx.dayIdx);
+  if(days.length){ ev.days = days; delete ev.day; }
+  else { DB.events = DB.events.filter(x=>x.id!==ev.id); }
+  eventActionCtx = null;
+  closeModal('eventActionModalBg');
+  save();
+  toast('🗑️ اون روز حذف شد');
+}
+function deleteWholeEvent(){
+  const ctx = eventActionCtx; if(!ctx) return;
+  DB.events = DB.events.filter(x=>x.id!==ctx.eventId);
+  eventActionCtx = null;
+  closeModal('eventActionModalBg');
+  save();
+  toast('🗑️ کل رویداد حذف شد');
+}
 const ROW_H = 48, ROW_GAP = 1, HEADER_H = 40;
 const PITCH = ROW_H + ROW_GAP, HEADER_PITCH = HEADER_H + ROW_GAP;
 function renderCalendar(){
@@ -3049,7 +3109,7 @@ function renderCalendar(){
     return eventDays(e).map(d=>{
       const right = `calc(56px + ${colPct} * ${d} + 2px)`;
       const width = `calc(${colPct} - 4px)`;
-      return `<div class="ev-block" style="top:${top}px; height:${height}px; right:${right}; width:${width};" onclick="if(confirm('حذف این رویداد؟'))deleteEvent('${e.id}')">
+      return `<div class="ev-block" style="top:${top}px; height:${height}px; right:${right}; width:${width};" onclick="onEventBlockClick('${e.id}', ${d})">
         <span class="ev-title">${esc(e.title)}</span>
       </div>`;
     }).join('');
