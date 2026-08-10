@@ -340,6 +340,38 @@ body{
 .boss-task-pick-row{display:flex; align-items:center; gap:10px; padding:9px 8px; border-radius:10px; cursor:pointer;}
 .boss-task-pick-row.sel{background:rgba(0,229,255,.08);}
 .boss-task-pick-row .chk-box{width:18px; height:18px; border-radius:6px; border:2px solid var(--line2); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px;}
+
+/* crisis mode */
+.crisis-modal{border:1px solid rgba(255,84,112,.5); background:linear-gradient(160deg, rgba(255,84,112,.10), var(--panel2) 60%);}
+.crisis-banner{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  background:linear-gradient(90deg, rgba(255,84,112,.85), rgba(255,107,107,.85));
+  color:#fff; font-size:12.5px; font-weight:800; padding:9px 14px; position:sticky; top:0; z-index:90;
+  animation:crisisPulse 2.2s ease-in-out infinite;
+}
+@keyframes crisisPulse{0%,100%{opacity:1;} 50%{opacity:.82;}}
+html.crisis-mode body{
+  background-image: var(--body-glow), radial-gradient(circle at 50% 0%, rgba(255,60,60,.10), transparent 55%);
+}
+html.crisis-mode .sidebar{box-shadow:inset 3px 0 0 rgba(255,84,112,.35);}
+
+/* you vs you */
+.yvy-hero{text-align:center; padding:22px 16px; border-radius:var(--radius); background:linear-gradient(150deg, rgba(139,107,255,.10), var(--panel) 60%); border:1px solid rgba(139,107,255,.25);}
+.yvy-quote{font-size:17px; font-weight:900;}
+.yvy-subquote{font-size:12.5px; color:var(--txt-dim); margin-top:6px; font-weight:600;}
+.yvy-record-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 8px; border-bottom:1px solid var(--line);}
+.yvy-record-row:last-child{border-bottom:none;}
+.yvy-record-name{font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px;}
+.yvy-record-val{font-size:13.5px; font-weight:900; color:var(--neon); font-family:'Consolas','JetBrains Mono',monospace;}
+.yvy-week-row{display:flex; align-items:center; justify-content:space-between; padding:9px 4px; font-size:12.5px;}
+.yvy-week-row .lbl{color:var(--txt-dim); font-weight:600;}
+.yvy-week-row .vals{font-family:'Consolas','JetBrains Mono',monospace; font-weight:800;}
+.yvy-arrow-up{color:var(--ok);}
+.yvy-arrow-down{color:var(--txt-dim2);}
+.yvy-summary-msg{text-align:center; font-size:13.5px; font-weight:800; padding:12px; border-radius:12px; margin-bottom:12px;}
+.yvy-summary-msg.pos{background:rgba(46,230,166,.10); color:var(--ok);}
+.yvy-summary-msg.neu{background:rgba(255,255,255,.05); color:var(--txt-dim);}
+.yvy-new-record-badge{background:rgba(255,204,51,.14); color:#ffcc33; font-size:11px; font-weight:800; padding:3px 9px; border-radius:20px; margin-right:6px;}
 .boss-task-pick-row.sel .chk-box{background:var(--grad); border-color:transparent; color:#04121a;}
 
 /* pomodoro */
@@ -631,6 +663,9 @@ textarea{resize:vertical; min-height:70px;}
 </head>
 <body>
 
+<div class="crisis-banner" id="crisisBanner" style="display:none;">
+  🚨 وضعیت بحرانیه! <span id="crisisCountdown" class="num">۶۰:۰۰</span> تا از دست دادن فرصت
+</div>
 <div class="app">
   <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar">
@@ -869,6 +904,12 @@ textarea{resize:vertical; min-height:70px;}
             </div>
           </div>
           <button class="btn" style="width:100%; justify-content:center;" onclick="savePomoSettings()">💾 ذخیره تنظیمات</button>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="card-head"><h3>🔔 نوتیفیکیشن</h3></div>
+          <p class="muted" style="font-size:12px; line-height:1.9;">برای اینکه وقتی پومودورو تموم می‌شه یا کوئست جدید می‌رسه، حتی بیرون از تب، خبردار بشی</p>
+          <div id="pomoNotifyStatus" style="font-size:12.5px; font-weight:700; margin:10px 0;"></div>
+          <button class="btn ghost" style="width:100%; justify-content:center;" onclick="requestNotifyPermission()">🔔 فعال‌سازی نوتیفیکیشن</button>
         </div>
       </div>
     </div>
@@ -1238,12 +1279,25 @@ textarea{resize:vertical; min-height:70px;}
       <div class="topbar">
         <div><h1>🪞 You VS You</h1><div class="sub">رقابت با نسخه‌ی قبلی خودت</div></div>
       </div>
-      <div class="card" style="text-align:center; padding:50px 20px;">
-        <div style="font-size:44px;">🪞</div>
-        <h3 style="margin-top:14px; font-size:16px;">به‌زودی...</h3>
-        <p class="muted" style="margin-top:8px; font-size:13px; line-height:1.9; max-width:360px; margin-left:auto; margin-right:auto;">
-          این بخش قراره بشه جایی که با رکوردهای خودت رقابت کنی — نه با کس دیگه‌ای، فقط با نسخه‌ی دیروز، هفته‌ی پیش و ماه پیش خودت.
-        </p>
+
+      <div class="yvy-hero">
+        <div class="yvy-quote">رقیب تو دیروزت بود.</div>
+        <div class="yvy-subquote">امروز می‌تونی ازش بهتر باشی؟</div>
+      </div>
+
+      <div class="card yvy-featured-card" style="margin-top:16px;">
+        <div class="card-head"><h3>🎯 امروز در برابر بهترین رکوردت</h3></div>
+        <div id="yvyFeatured"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <div class="card-head"><h3>🏅 رکوردهای شخصی</h3></div>
+        <div id="yvyRecordsList"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <div class="card-head"><h3>📊 این هفته در برابر هفته‌ی قبل</h3></div>
+        <div id="yvyWeekCompare"></div>
       </div>
     </div>
 
@@ -1405,6 +1459,15 @@ textarea{resize:vertical; min-height:70px;}
   <button class="btn" style="width:100%; justify-content:center; margin-top:16px;" onclick="closeModal('bossVictoryModalBg')">عالی بود! 🎉</button>
 </div></div>
 
+<div class="modal-bg" id="crisisModalBg"><div class="modal crisis-modal">
+  <div style="text-align:center; font-size:48px;">🚨</div>
+  <h2 style="text-align:center; font-size:18px; margin-top:6px; color:#ff6b6b;">وضعیت بحرانیه!</h2>
+  <p style="text-align:center; color:var(--txt-dim); font-size:13.5px; margin-top:8px; line-height:1.9;">
+    بیشتر از ۳ تا تسک بحرانی روی زمین مونده. باید هرچه سریع‌تر یکی از تسک‌های بحرانی رو تموم کنیم.
+  </p>
+  <button class="btn" style="width:100%; justify-content:center; margin-top:16px; background:linear-gradient(135deg,#ff5470,#ff8098);" onclick="closeModal('crisisModalBg')">باشه</button>
+</div></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1463,8 +1526,9 @@ if(DB.stats.weeklyPerfectUnlocked===undefined) DB.stats.weeklyPerfectUnlocked = 
 if(!DB.dailyGoalProgress) DB.dailyGoalProgress = {};
 if(!DB.perfectDayHistory) DB.perfectDayHistory = {};
 if(!DB.pomodoro){
-  DB.pomodoro = { settings:{focusMin:25, breakMin:5, goalMinutes:0}, session:null, history:{} };
+  DB.pomodoro = { settings:{focusMin:25, breakMin:5, goalMinutes:0}, session:null, history:{}, pendingNext:null };
 }
+if(DB.pomodoro.pendingNext===undefined) DB.pomodoro.pendingNext = null;
 if(!DB.motivation) DB.motivation = { mood:'energize' };
 if(DB.xpWallet===undefined) DB.xpWallet = DB.stats.totalXPEarned||0;
 if(!DB.xpBoost) DB.xpBoost = { activeUntil:0 };
@@ -1475,6 +1539,8 @@ if(DB.lastBackupReminder===undefined) DB.lastBackupReminder = Date.now();
 if(DB.skillPoints===undefined) DB.skillPoints = 0;
 if(!DB.skillTiers) DB.skillTiers = { pomoXp:0, questXp:0, shopDiscount:0, luckyBox:0, criticalBonus:0, streakGuard:0 };
 if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
+if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
+if(!DB.newRecordFlags) DB.newRecordFlags = {};
 function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); renderAll(); }
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function todayISO(){ return new Date().toISOString().slice(0,10); }
@@ -1482,11 +1548,35 @@ function sendNotification(title, body){
   try{
     if(!('Notification' in window)) return;
     if(Notification.permission==='granted'){
-      new Notification(title, {body, icon:'icon-192.png'});
+      if('serviceWorker' in navigator && navigator.serviceWorker.controller){
+        navigator.serviceWorker.ready.then(reg=>{
+          reg.showNotification(title, { body, icon:'icon-192.png', badge:'icon-192.png', tag:'life-planner', renotify:true });
+        }).catch(()=>{
+          try{ new Notification(title, {body, icon:'icon-192.png'}); }catch(e2){}
+        });
+      } else {
+        new Notification(title, {body, icon:'icon-192.png'});
+      }
     } else if(Notification.permission!=='denied'){
       Notification.requestPermission();
     }
   }catch(e){ /* notifications unavailable, ignore silently */ }
+}
+function notifyPermissionStatus(){
+  if(!('Notification' in window)) return 'unsupported';
+  return Notification.permission;
+}
+function requestNotifyPermission(){
+  if(!('Notification' in window)){ toast('⚠️ مرورگرت از نوتیفیکیشن پشتیبانی نمی‌کنه'); return; }
+  if(Notification.permission==='granted'){ toast('✅ نوتیفیکیشن از قبل فعاله'); renderPomoNotifyStatus(); return; }
+  if(Notification.permission==='denied'){ toast('⚠️ نوتیفیکیشن مسدوده — باید از تنظیمات مرورگر/گوشی فعالش کنی'); return; }
+  Notification.requestPermission().then(()=>{ renderPomoNotifyStatus(); sendNotification('🔔 نوتیفیکیشن فعال شد!', 'از این به بعد وقتی پومودورو تموم بشه یا کوئست جدید بیاد، خبرت می‌کنیم'); });
+}
+function renderPomoNotifyStatus(){
+  const el = document.getElementById('pomoNotifyStatus');
+  if(!el) return;
+  const p = notifyPermissionStatus();
+  el.textContent = p==='granted' ? '✅ نوتیفیکیشن فعاله' : p==='denied' ? '⛔ نوتیفیکیشن مسدود شده (از تنظیمات گوشی/مرورگر بازش کن)' : '🔔 نوتیفیکیشن هنوز فعال نشده';
 }
 function toast(msg){
   const t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
@@ -1505,6 +1595,7 @@ function showView(v){
   if(v==='shop') setTimeout(renderXPShop, 30);
   if(v==='skills') setTimeout(renderSkillTree, 30);
   if(v==='boss') setTimeout(renderBossContent, 30);
+  if(v==='yvy') setTimeout(renderYVY, 30);
   if(v!=='city' && citySoundOn){ citySoundOn=false; stopCityAmbience(); const b=document.getElementById('citySoundBtn'); if(b) b.textContent='🔇'; }
 }
 setInterval(()=>{ if(document.getElementById('view-city')?.classList.contains('active')) renderCityScene(); }, 60000);
@@ -1552,6 +1643,9 @@ function addXP(n){
     DB.xp += amount;
     DB.stats.totalXPEarned = (DB.stats.totalXPEarned||0) + amount;
     DB.xpWallet = (DB.xpWallet||0) + amount;
+    const d = todayISO();
+    DB.history[d] = DB.history[d] || {};
+    DB.history[d].xp = (DB.history[d].xp||0) + amount;
     const need = DB.level*100;
     if(DB.xp >= need){
       DB.xp -= need; DB.level++;
@@ -1559,6 +1653,7 @@ function addXP(n){
       const t = getLevelTitle(DB.level);
       toast(`🎉 تبریک! رسیدی به سطح ${DB.level} — ${t.icon} ${t.title} · +۱ امتیاز مهارت 🌳`);
     }
+    checkNewRecords();
   } else {
     DB.xp = Math.max(0, DB.xp + n);
   }
@@ -2092,6 +2187,7 @@ function completeQuest(){
   addXP(xpGain);
   toast(`✅ آفرین! +${xpGain} XP گرفتی`);
   checkPerfectDay();
+  checkNewRecords();
 }
 function skipQuest(){
   if(!DB.quest.current) return;
@@ -2208,8 +2304,10 @@ function addPomoMinutes(kind, minutes){
   const d = todayISO();
   DB.pomodoro.history[d] = DB.pomodoro.history[d] || {focus:0, break:0};
   DB.pomodoro.history[d][kind] = (DB.pomodoro.history[d][kind]||0) + minutes;
+  if(kind==='focus'){ DB.pomodoro.history[d].sessions = (DB.pomodoro.history[d].sessions||0) + 1; }
   const bonus = 1 + 0.1*(DB.skillTiers.pomoXp||0);
   addXP(Math.round(minutes * POMO_XP_PER_MIN * bonus));
+  checkNewRecords();
 }
 const POMO_GOAL_BONUS_XP = 30;
 function checkPomoGoalBonus(){
@@ -2240,7 +2338,9 @@ function startInfinite(){
 }
 function pomoQuickStart(){
   if(DB.pomodoro.session) return;
-  startFocus();
+  const next = DB.pomodoro.pendingNext;
+  DB.pomodoro.pendingNext = null;
+  if(next==='break') startBreak(); else startFocus();
 }
 function pauseSession(){
   const s = DB.pomodoro.session; if(!s || s.status!=='running') return;
@@ -2286,10 +2386,12 @@ function completePomoSession(){
   if(mode==='focus'){ checkPomoGoalBonus(); checkPerfectDay(); }
   playPomoChime();
   setTimeout(()=>{
-    sendNotification(mode==='focus' ? '🔔 فوکوس تموم شد!' : '🔔 استراحت تموم شد!', mode==='focus' ? 'وقت استراحته ☕' : 'برگردیم فوکوس 💪');
+    sendNotification(mode==='focus' ? '🔔 فوکوس تموم شد!' : '🔔 استراحت تموم شد!', mode==='focus' ? 'برگرد به برنامه و استراحت رو شروع کن ☕' : 'برگرد به برنامه و فوکوس بعدی رو شروع کن 💪');
   }, 900);
-  toast(mode==='focus' ? '🔔 فوکوس تموم شد! وقت استراحته ☕' : '🔔 استراحت تموم شد! برگردیم فوکوس 💪');
-  if(mode==='focus') startBreak(); else startFocus();
+  toast(mode==='focus' ? '🔔 فوکوس تموم شد! هروقت آماده بودی استراحت رو شروع کن ☕' : '🔔 استراحت تموم شد! هروقت آماده بودی فوکوس بعدی رو شروع کن 💪');
+  DB.pomodoro.session = null;
+  DB.pomodoro.pendingNext = mode==='focus' ? 'break' : 'focus';
+  save();
 }
 function tickPomo(){
   const s = DB.pomodoro.session;
@@ -2311,10 +2413,15 @@ function renderPomoUI(){
   const s = DB.pomodoro.session;
   circle.classList.remove('running','break-mode','infinite-mode');
   if(!s){
-    modeLbl.textContent = '🎯 فوکوس';
-    timeTxt.textContent = fmtMMSS(DB.pomodoro.settings.focusMin*60000);
-    hint.textContent = 'برای شروع بزن، یا چند ثانیه روی تایمر نگه‌دار برای فوکوس بی‌نهایت ♾️';
-    actions.innerHTML = `<button class="btn" onclick="pomoQuickStart()">▶️ شروع</button>`;
+    const next = DB.pomodoro.pendingNext;
+    const isBreakNext = next==='break';
+    const nextMin = isBreakNext ? DB.pomodoro.settings.breakMin : DB.pomodoro.settings.focusMin;
+    modeLbl.textContent = isBreakNext ? '☕ استراحت' : '🎯 فوکوس';
+    timeTxt.textContent = fmtMMSS(nextMin*60000);
+    hint.textContent = next
+      ? (isBreakNext ? 'فوکوس تموم شد! هروقت آماده بودی استراحت رو شروع کن' : 'استراحت تموم شد! هروقت آماده بودی فوکوس بعدی رو شروع کن')
+      : 'برای شروع بزن، یا چند ثانیه روی تایمر نگه‌دار برای فوکوس بی‌نهایت ♾️';
+    actions.innerHTML = `<button class="btn" onclick="pomoQuickStart()">▶️ ${isBreakNext?'شروع استراحت':(next?'شروع فوکوس بعدی':'شروع')}</button>`;
     return;
   }
   if(s.mode==='focus' || s.mode==='break'){
@@ -2344,6 +2451,7 @@ function fillPomoSettingsForm(){
   document.getElementById('pomoSetBreak').value = DB.pomodoro.settings.breakMin;
   document.getElementById('pomoSetGoalH').value = Math.floor(DB.pomodoro.settings.goalMinutes/60);
   document.getElementById('pomoSetGoalM').value = DB.pomodoro.settings.goalMinutes%60;
+  renderPomoNotifyStatus();
 }
 function savePomoSettings(){
   const f = parseInt(document.getElementById('pomoSetFocus').value) || 25;
@@ -2436,6 +2544,182 @@ function pomoHoldCancel(){
   c.addEventListener('pointercancel', pomoHoldCancel);
   c.addEventListener('contextmenu', e=>e.preventDefault());
 })();
+
+/* ============ CRITICAL TASK CRISIS MODE ============ */
+const CRISIS_DURATION_MS = 60*60*1000; // 60 minutes
+const CRISIS_COOLDOWN_MS = 2*60*60*1000; // don't re-trigger for 2h after resolving
+function countCriticalOpen(){
+  return DB.tasks.filter(t=>!t.done && t.priority==='critical').length;
+}
+function applyCrisisTheme(on){
+  document.documentElement.classList.toggle('crisis-mode', on);
+  const banner = document.getElementById('crisisBanner');
+  if(banner) banner.style.display = on ? 'flex' : 'none';
+}
+function checkCriticalCrisis(){
+  if(DB.crisis.active) return;
+  if(Date.now() < (DB.crisis.cooldownUntil||0)) return;
+  if(countCriticalOpen() > 3){
+    DB.crisis.active = true;
+    DB.crisis.deadlineAt = Date.now() + CRISIS_DURATION_MS;
+    save();
+    applyCrisisTheme(true);
+    openModal('crisisModalBg');
+  }
+}
+function resolveCrisisSuccess(){
+  DB.crisis.active = false;
+  DB.crisis.cooldownUntil = Date.now() + CRISIS_COOLDOWN_MS;
+  applyCrisisTheme(false);
+  addXP(100);
+  toast('🎉 عالی! تسک بحرانی رو به‌موقع تموم کردی! +۱۰۰ XP');
+  save();
+}
+function resolveCrisisFailure(){
+  DB.crisis.active = false;
+  DB.crisis.cooldownUntil = Date.now() + CRISIS_COOLDOWN_MS;
+  applyCrisisTheme(false);
+  addXP(-10);
+  toast('😔 از دستش دادیم! اینم جریمه‌ات که دفعه‌ی بعد بهتر عمل کنی (-۱۰ XP)');
+  save();
+}
+function tickCrisis(){
+  if(!DB.crisis.active) return;
+  const remain = DB.crisis.deadlineAt - Date.now();
+  if(remain<=0){ resolveCrisisFailure(); return; }
+  const el = document.getElementById('crisisCountdown');
+  if(el) el.textContent = fmtMMSS(remain);
+}
+setInterval(tickCrisis, 1000);
+
+/* ============ YOU VS YOU ============ */
+const YVY_METRICS = [
+  { key:'xp',           label:'XP روزانه',            icon:'⚡', unit:'XP',        get:(d)=> (DB.history[d]?.xp)||0 },
+  { key:'tasks',        label:'تسک‌های انجام‌شده',    icon:'✅', unit:'تسک',       get:(d)=> (DB.history[d]?.tasks)||0 },
+  { key:'pomoMin',      label:'مدت مطالعه',           icon:'⏱️', unit:'دقیقه',     get:(d)=> (DB.pomodoro.history[d]?.focus)||0 },
+  { key:'pomoSessions', label:'تعداد پومودورو',       icon:'🍅', unit:'پومودورو',  get:(d)=> (DB.pomodoro.history[d]?.sessions)||0 },
+  { key:'quests',       label:'کوئست‌های انجام‌شده',  icon:'🎯', unit:'کوئست',     get:(d)=> (DB.stats.questsCompletedByDate?.[d])||0 },
+];
+function yvyAllDates(){
+  const dates = new Set();
+  Object.keys(DB.history||{}).forEach(d=>dates.add(d));
+  Object.keys(DB.pomodoro.history||{}).forEach(d=>dates.add(d));
+  Object.keys(DB.stats.questsCompletedByDate||{}).forEach(d=>dates.add(d));
+  return [...dates];
+}
+function yvyBestEver(metric, excludeDate){
+  let best = 0;
+  yvyAllDates().forEach(d=>{
+    if(d===excludeDate) return;
+    const v = metric.get(d);
+    if(v>best) best = v;
+  });
+  return best;
+}
+function checkNewRecords(){
+  const today = todayISO();
+  YVY_METRICS.forEach(m=>{
+    const todayVal = m.get(today);
+    if(todayVal<=0) return;
+    const bestExcl = yvyBestEver(m, today);
+    const flagKey = `${today}:${m.key}`;
+    if(todayVal>bestExcl && !DB.newRecordFlags[flagKey]){
+      DB.newRecordFlags[flagKey] = true;
+      toast(`🏆 رکورد شخصی جدید! ${m.icon} ${m.label}: ${todayVal} ${m.unit}`);
+    }
+  });
+}
+function yvyWeekRange(offsetWeeks){
+  const now = new Date();
+  const todayIdx = (now.getDay()+1)%7;
+  const sat = new Date(now); sat.setDate(now.getDate()-todayIdx-offsetWeeks*7);
+  const fri = new Date(sat); fri.setDate(sat.getDate()+6);
+  return [sat.toISOString().slice(0,10), fri.toISOString().slice(0,10)];
+}
+function yvySumRange(startISO, endISO, getter){
+  let sum=0;
+  yvyAllDates().forEach(d=>{ if(d>=startISO && d<=endISO) sum+=getter(d); });
+  return sum;
+}
+function yvyCountPerfectDays(startISO, endISO){
+  let c=0;
+  Object.keys(DB.perfectDayHistory||{}).forEach(d=>{ if(d>=startISO && d<=endISO && DB.perfectDayHistory[d]) c++; });
+  return c;
+}
+function renderYVYFeatured(){
+  const today = todayISO();
+  const candidates = YVY_METRICS.map(m=>({ ...m, todayVal:m.get(today), bestVal:yvyBestEver(m, today) }));
+  const withRecords = candidates.filter(c=>c.bestVal>0);
+  const featured = withRecords.length
+    ? withRecords.sort((a,b)=> (b.todayVal/b.bestVal) - (a.todayVal/a.bestVal))[0]
+    : candidates.find(c=>c.key==='tasks');
+  const broke = featured.bestVal>0 && featured.todayVal>featured.bestVal;
+  const brandNew = featured.bestVal===0 && featured.todayVal>0;
+  const pct = featured.bestVal>0 ? Math.min(100, Math.round((featured.todayVal/featured.bestVal)*100)) : (featured.todayVal>0?100:0);
+  let msg;
+  if(broke || brandNew){
+    msg = `<div class="yvy-summary-msg pos">🎉 رکورد شخصی جدید در ${featured.label}!</div>`;
+  } else if(featured.bestVal>0){
+    const remain = featured.bestVal - featured.todayVal;
+    msg = `<div class="yvy-summary-msg neu">${remain} ${featured.unit} تا شکستن رکوردت (${featured.bestVal} ${featured.unit}) مونده</div>`;
+  } else {
+    msg = `<div class="yvy-summary-msg neu">هنوز رکوردی برای ${featured.label} نداری — امروز اولینش رو بساز!</div>`;
+  }
+  document.getElementById('yvyFeatured').innerHTML = `
+    ${msg}
+    <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--txt-dim); margin-bottom:6px;">
+      <span>${featured.icon} ${featured.label}</span>
+      <span class="num">${featured.todayVal} / ${Math.max(featured.bestVal,featured.todayVal)} ${featured.unit}</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+  `;
+}
+function renderYVYRecords(){
+  const rows = YVY_METRICS.map(m=>{
+    const best = yvyBestEver(m, null);
+    return `<div class="yvy-record-row"><div class="yvy-record-name">${m.icon} ${m.label}</div><div class="yvy-record-val">${best} ${m.unit}</div></div>`;
+  }).join('');
+  const streakRow = `<div class="yvy-record-row"><div class="yvy-record-name">🔥 طولانی‌ترین استریک</div><div class="yvy-record-val">${DB.stats.bestStreak||0} روز</div></div>`;
+  document.getElementById('yvyRecordsList').innerHTML = rows + streakRow;
+}
+function renderYVYWeekCompare(){
+  const [thisStart, thisEnd] = yvyWeekRange(0);
+  const [lastStart, lastEnd] = yvyWeekRange(1);
+  const metrics = [
+    {label:'⏱️ مدت مطالعه', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.pomodoro.history[d]?.focus)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.pomodoro.history[d]?.focus)||0)},
+    {label:'✅ تسک‌ها', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.history[d]?.tasks)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.history[d]?.tasks)||0)},
+    {label:'🍅 پومودورو', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.pomodoro.history[d]?.sessions)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.pomodoro.history[d]?.sessions)||0)},
+    {label:'⚡ XP', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.history[d]?.xp)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.history[d]?.xp)||0)},
+    {label:'🎯 کوئست‌ها', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.stats.questsCompletedByDate?.[d])||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.stats.questsCompletedByDate?.[d])||0)},
+    {label:'🌟 Perfect Day', thisWk: yvyCountPerfectDays(thisStart,thisEnd), lastWk: yvyCountPerfectDays(lastStart,lastEnd)},
+  ];
+  const thisXP = metrics[3].thisWk, lastXP = metrics[3].lastWk;
+  let summaryHtml;
+  if(lastXP>0 && thisXP>lastXP){
+    const pctUp = Math.round(((thisXP-lastXP)/lastXP)*100);
+    summaryHtml = `<div class="yvy-summary-msg pos">🎉 این هفته ${pctUp}٪ بهتر از هفته‌ی قبل بودی!</div>`;
+  } else if(lastXP===0 && thisXP>0){
+    summaryHtml = `<div class="yvy-summary-msg pos">🎉 هفته‌ی قبل فعالیتی نداشتی، این هفته شروع کردی — عالیه!</div>`;
+  } else if(thisXP>0 && thisXP>=lastXP){
+    summaryHtml = `<div class="yvy-summary-msg pos">👍 همون سطح خوب هفته‌ی قبل رو حفظ کردی!</div>`;
+  } else {
+    summaryHtml = `<div class="yvy-summary-msg neu">هفته‌ی قبل یکم بهتر بود — هفته‌ی بعد دوباره تلاش کن 💪</div>`;
+  }
+  const rows = metrics.map(m=>{
+    const up = m.thisWk >= m.lastWk;
+    return `<div class="yvy-week-row">
+      <span class="lbl">${m.label}</span>
+      <span class="vals num">${m.thisWk} ${up?'<span class="yvy-arrow-up">▲</span>':'<span class="yvy-arrow-down">▼</span>'} <span style="color:var(--txt-dim2);">(قبل: ${m.lastWk})</span></span>
+    </div>`;
+  }).join('');
+  document.getElementById('yvyWeekCompare').innerHTML = summaryHtml + rows;
+}
+function renderYVY(){
+  if(!document.getElementById('yvyFeatured')) return;
+  renderYVYFeatured();
+  renderYVYRecords();
+  renderYVYWeekCompare();
+}
 
 /* ============ WEEKLY BOSS FIGHT ============ */
 const BOSS_WEEK_MS = 7*24*60*60*1000;
@@ -2780,6 +3064,7 @@ function saveTask(){
     DB.tasks.push({id:uid(), done:false, created:todayISO(), ...data});
   }
   closeModal('taskModalBg'); save(); toast('✅ تسک ذخیره شد');
+  checkCriticalCrisis();
 }
 function toggleTask(id){
   const t = DB.tasks.find(x=>x.id===id);
@@ -2792,11 +3077,14 @@ function toggleTask(id){
     DB.stats.tasksCompleted = (DB.stats.tasksCompleted||0) + 1;
     checkPerfectDay();
     hitBossFromTask(id);
+    checkNewRecords();
+    if(t.priority==='critical' && DB.crisis.active) resolveCrisisSuccess();
   }
   if(!DB.stats.weeklyPerfectUnlocked && isWeeklyPerfect()) DB.stats.weeklyPerfectUnlocked = true;
   save();
+  checkCriticalCrisis();
 }
-function deleteTask(id){ DB.tasks = DB.tasks.filter(x=>x.id!==id); save(); }
+function deleteTask(id){ DB.tasks = DB.tasks.filter(x=>x.id!==id); save(); checkCriticalCrisis(); }
 function logHistory(key,inc){
   const d = todayISO();
   DB.history[d] = DB.history[d] || {tasks:0, habits:0};
@@ -3317,6 +3605,7 @@ function renderAll(){
   renderPomoStats();
   renderSkillTree();
   renderBossContent();
+  renderYVY();
 }
 checkStreakShields();
 renderAll();
@@ -3330,6 +3619,8 @@ function checkBackupReminder(){
 }
 setTimeout(checkBackupReminder, 1800);
 setTimeout(checkBossTrigger, 2600);
+applyCrisisTheme(DB.crisis.active);
+checkCriticalCrisis();
 
 /* ============ PWA / OFFLINE ============ */
 if('serviceWorker' in navigator){
