@@ -372,6 +372,18 @@ html.crisis-mode .sidebar{box-shadow:inset 3px 0 0 rgba(255,84,112,.35);}
 .yvy-summary-msg.pos{background:rgba(46,230,166,.10); color:var(--ok);}
 .yvy-summary-msg.neu{background:rgba(255,255,255,.05); color:var(--txt-dim);}
 .yvy-new-record-badge{background:rgba(255,204,51,.14); color:#ffcc33; font-size:11px; font-weight:800; padding:3px 9px; border-radius:20px; margin-right:6px;}
+
+/* jalali date picker */
+.jalali-modal{max-width:340px;}
+.jalali-picker-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+#jalaliPickerTitle{font-size:14px; font-weight:800;}
+.jalali-weekdays{display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:11px; color:var(--txt-dim2); font-weight:700; margin-bottom:6px;}
+.jalali-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+.jalali-day{aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:'Consolas','JetBrains Mono',monospace; transition:.15s;}
+.jalali-day:hover{background:var(--hover);}
+.jalali-day.empty{cursor:default;}
+.jalali-day.today{box-shadow:0 0 0 2px var(--neon) inset;}
+.jalali-day.selected{background:var(--grad); color:#04121a;}
 .boss-task-pick-row.sel .chk-box{background:var(--grad); border-color:transparent; color:#04121a;}
 
 /* pomodoro */
@@ -445,7 +457,7 @@ html.crisis-mode .sidebar{box-shadow:inset 3px 0 0 rgba(255,84,112,.35);}
 .city-frame[data-ach-flowers="1"] .deco-flowers{display:block;}
 
 /* sun / moon rig — position + visibility animate smoothly across phases */
-#citySunMoonRig{transition:transform 3s ease;}
+#citySunMoonRig{transition:transform 65s linear;}
 .city-frame[data-phase="sunrise"] #citySunMoonRig,
 .city-frame[data-phase="moonrise"] #citySunMoonRig{transform:translateY(150px);}
 .city-frame[data-phase="midday"] #citySunMoonRig,
@@ -688,6 +700,7 @@ textarea{resize:vertical; min-height:70px;}
     <div class="nav-item" data-view="yvy"><span class="ic">🪞</span> You VS You</div>
     <div class="nav-sep"></div>
     <div class="nav-item" id="themeToggleBtn"><span class="ic" id="themeIcon">🌙</span> <span id="themeLabel">تم تاریک</span></div>
+    <div class="nav-item" id="shareBtn"><span class="ic">📤</span> ارسال پشتیبان به فضای ابری</div>
     <div class="nav-item" id="exportBtn"><span class="ic">⬇️</span> خروجی پشتیبان</div>
     <div class="nav-item" id="importBtn"><span class="ic">⬆️</span> بازیابی پشتیبان</div>
     <input type="file" id="importFile" accept=".json" style="display:none">
@@ -1312,7 +1325,10 @@ textarea{resize:vertical; min-height:70px;}
   <div class="field"><label>عنوان تسک</label><input type="text" id="tTitle" placeholder="مثلاً: مطالعه فصل ۳ ریاضی"></div>
   <div class="row2">
     <div class="field"><label>دسته‌بندی</label><input type="text" id="tCat" placeholder="درس، کار، شخصی..."></div>
-    <div class="field"><label>ددلاین</label><input type="date" id="tDate"></div>
+    <div class="field"><label>ددلاین</label>
+      <input type="text" id="tDateDisplay" readonly placeholder="انتخاب ددلاین" onclick="openJalaliPicker('tDate','tDateDisplay')">
+      <input type="hidden" id="tDate" value="">
+    </div>
   </div>
   <div class="field"><label>اولویت</label>
     <div class="chip-group" id="tPriority">
@@ -1417,13 +1433,14 @@ textarea{resize:vertical; min-height:70px;}
 
 <div class="modal-bg" id="backupReminderModalBg"><div class="modal">
   <div style="text-align:center; font-size:40px;">💾</div>
-  <h2 style="text-align:center; font-size:17px; margin-top:8px;">یادآوری هفتگی پشتیبان</h2>
+  <h2 style="text-align:center; font-size:17px; margin-top:8px;">یادآوری روزانه پشتیبان</h2>
   <p style="text-align:center; color:var(--txt-dim); font-size:13px; margin-top:8px; line-height:1.9;">
-    همه‌ی داده‌هات فقط توی همین مرورگر ذخیره می‌شن. برای اینکه چیزی رو از دست ندی، بهتره یه خروجی پشتیبان تازه بگیری.
+    همه‌ی داده‌هات فقط روی همین گوشی ذخیره می‌شن. اگه گوشی ریست بشه یا اپ پاک بشه، یه فایل که همین‌جا دانلود بشه هم از بین می‌ره — پس بهتره یه نسخه رو بفرستی بیرون از گوشی (گوگل‌درایو، ایمیل و...).
   </p>
-  <div class="modal-actions">
-    <button class="btn ghost" onclick="closeModal('backupReminderModalBg')">بعداً</button>
-    <button class="btn" onclick="exportBackup(); closeModal('backupReminderModalBg');">⬇️ دانلود پشتیبان</button>
+  <div class="modal-actions" style="flex-direction:column;">
+    <button class="btn" style="width:100%; justify-content:center;" onclick="shareBackup(); closeModal('backupReminderModalBg');">📤 ارسال پشتیبان به فضای ابری</button>
+    <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="exportBackup(); closeModal('backupReminderModalBg');">⬇️ فقط دانلود روی گوشی</button>
+    <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="closeModal('backupReminderModalBg')">بعداً</button>
   </div>
 </div></div>
 
@@ -1440,7 +1457,7 @@ textarea{resize:vertical; min-height:70px;}
 </div></div>
 
 <div class="modal-bg" id="bossSetupModalBg"><div class="modal">
-  <h2>⚔️ باس این هفته رو بساز</h2>
+  <h2 id="bossSetupTitle">⚔️ باس این هفته رو بساز</h2>
   <div class="field"><label>اسم باس (مثلاً: مطالعه فصل ۳ ریاضی)</label><input type="text" id="bossNameInput" placeholder="اسم هدف بزرگت..."></div>
   <div class="field">
     <label>چندتا تسک انتخاب کن که هرکدوم بهش ضربه بزنه <span id="bossTaskCount" class="num">(۰ تسک)</span></label>
@@ -1466,6 +1483,22 @@ textarea{resize:vertical; min-height:70px;}
     بیشتر از ۳ تا تسک بحرانی روی زمین مونده. باید هرچه سریع‌تر یکی از تسک‌های بحرانی رو تموم کنیم.
   </p>
   <button class="btn" style="width:100%; justify-content:center; margin-top:16px; background:linear-gradient(135deg,#ff5470,#ff8098);" onclick="closeModal('crisisModalBg')">باشه</button>
+</div></div>
+
+<div class="modal-bg" id="jalaliPickerModalBg"><div class="modal jalali-modal">
+  <div class="jalali-picker-header">
+    <button class="btn ghost sm" onclick="jalaliNextMonth()">ماه بعد ▶</button>
+    <div id="jalaliPickerTitle"></div>
+    <button class="btn ghost sm" onclick="jalaliPrevMonth()">◀ ماه قبل</button>
+  </div>
+  <div class="jalali-weekdays">
+    <span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span>
+  </div>
+  <div id="jalaliGrid" class="jalali-grid"></div>
+  <div class="modal-actions">
+    <button class="btn ghost" onclick="clearJalaliDate()">پاک کردن</button>
+    <button class="btn ghost" onclick="closeModal('jalaliPickerModalBg')">بستن</button>
+  </div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -1536,6 +1569,7 @@ if(DB.streakShields===undefined) DB.streakShields = 0;
 if(!DB.cityBonusItems) DB.cityBonusItems = [];
 if(!DB.themes) DB.themes = { owned:['dark','light'] };
 if(DB.lastBackupReminder===undefined) DB.lastBackupReminder = Date.now();
+if(DB.lastAutoBackupAt===undefined) DB.lastAutoBackupAt = Date.now();
 if(DB.skillPoints===undefined) DB.skillPoints = 0;
 if(!DB.skillTiers) DB.skillTiers = { pomoXp:0, questXp:0, shopDiscount:0, luckyBox:0, criticalBonus:0, streakGuard:0 };
 if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
@@ -1591,7 +1625,7 @@ function showView(v){
   document.getElementById('sidebar').classList.remove('open');
   if(v==='analytics') setTimeout(renderCharts, 50);
   if(v==='pomodoro') setTimeout(()=>{ renderPomoStats(); if(pomoTab==='stats') renderPomoChart(); }, 50);
-  if(v==='city') setTimeout(renderCityScene, 30);
+  if(v==='city'){ citySunMoonInited=false; setTimeout(renderCityScene, 30); }
   if(v==='shop') setTimeout(renderXPShop, 30);
   if(v==='skills') setTimeout(renderSkillTree, 30);
   if(v==='boss') setTimeout(renderBossContent, 30);
@@ -1848,6 +1882,53 @@ function getCityPhase(){
 const CITY_DARK_PHASES = ['night','predawn1','predawn2','sunset','moonrise'];
 function isNightNow(){ return getCityPhase()==='night'; }
 function isCityDark(){ return CITY_DARK_PHASES.includes(getCityPhase()); }
+
+/* continuous real-time sun/moon arc — synced to the device clock, no fixed jumps */
+const CITY_SUN_ARC = { start: 7*60, end: 16*60 };   // 07:00 → 16:00
+const CITY_MOON_ARC = { start: 17*60, end: 30*60 }; // 17:00 → 06:00 next day
+const CITY_ARC_LOW = 220; // translateY when rising/setting near the mountain
+function getCelestialState(){
+  const now = new Date();
+  const mins = now.getHours()*60 + now.getMinutes() + now.getSeconds()/60;
+  let sunVisible=false, sunProgress=0;
+  if(mins>=CITY_SUN_ARC.start && mins<=CITY_SUN_ARC.end){
+    sunVisible = true;
+    sunProgress = (mins-CITY_SUN_ARC.start)/(CITY_SUN_ARC.end-CITY_SUN_ARC.start);
+  }
+  const moonMins = mins < CITY_MOON_ARC.start ? mins+1440 : mins;
+  let moonVisible=false, moonProgress=0;
+  if(moonMins>=CITY_MOON_ARC.start && moonMins<=CITY_MOON_ARC.end){
+    moonVisible = true;
+    moonProgress = (moonMins-CITY_MOON_ARC.start)/(CITY_MOON_ARC.end-CITY_MOON_ARC.start);
+  }
+  return { sunVisible, sunProgress, moonVisible, moonProgress };
+}
+let citySunMoonInited = false;
+function updateCelestialPosition(instant){
+  const rig = document.getElementById('citySunMoonRig');
+  if(!rig) return;
+  const { sunVisible, sunProgress, moonVisible, moonProgress } = getCelestialState();
+  let translateY = CITY_ARC_LOW, sunOpacity = 0, moonOpacity = 0;
+  if(sunVisible){
+    translateY = CITY_ARC_LOW * (1 - Math.sin(Math.PI*sunProgress));
+    sunOpacity = 1;
+  } else if(moonVisible){
+    translateY = CITY_ARC_LOW * (1 - Math.sin(Math.PI*moonProgress));
+    moonOpacity = 1;
+  }
+  if(instant || !citySunMoonInited){
+    rig.style.transition = 'none';
+    citySunMoonInited = true;
+    requestAnimationFrame(()=>{ rig.style.transition = ''; });
+  }
+  rig.style.transform = `translateY(${translateY.toFixed(1)}px)`;
+  const sunEl = document.getElementById('citySun'), glowEl = document.getElementById('citySunGlow'), moonEl = document.getElementById('cityMoon');
+  if(sunEl) sunEl.style.opacity = sunOpacity;
+  if(glowEl) glowEl.style.opacity = sunOpacity;
+  if(moonEl) moonEl.style.opacity = moonOpacity;
+}
+setInterval(updateCelestialPosition, 60000);
+
 const CITY_BONUS_SLOTS = [
   {x:170,y:400}, {x:250,y:410}, {x:530,y:405}, {x:610,y:415},
   {x:690,y:400}, {x:110,y:410}, {x:460,y:412}, {x:380,y:415},
@@ -1867,6 +1948,7 @@ function renderCityScene(){
   if(!frame) return;
   buildCityStars(); buildCityRain(); buildCityWindows(); buildCityFlowers();
   renderCityBonusItems();
+  updateCelestialPosition();
 
   const stage = getCityStage(DB.level);
   frame.setAttribute('data-structure', stage.structureKey);
@@ -2737,14 +2819,26 @@ function declineBossFight(){
   toast('باشه، هفته‌ی بعد دوباره می‌پرسیم ⏳');
 }
 let bossSetupSelected = [];
+let bossEditMode = false;
 function openBossSetup(){
   bossSetupSelected = [];
+  bossEditMode = false;
+  document.getElementById('bossSetupTitle').textContent = '⚔️ باس این هفته رو بساز';
   document.getElementById('bossNameInput').value = '';
   renderBossTaskPicker();
   openModal('bossSetupModalBg');
 }
+function startEditBoss(){
+  const b = DB.boss.active; if(!b) return;
+  bossSetupSelected = [...b.taskIds];
+  bossEditMode = true;
+  document.getElementById('bossSetupTitle').textContent = '✏️ ویرایش باس';
+  document.getElementById('bossNameInput').value = b.name;
+  renderBossTaskPicker();
+  openModal('bossSetupModalBg');
+}
 function renderBossTaskPicker(){
-  const list = DB.tasks.filter(t=>!t.done);
+  const list = DB.tasks.filter(t=>!t.done || bossSetupSelected.includes(t.id));
   const el = document.getElementById('bossTaskPicker');
   if(!list.length){
     el.innerHTML = `<div class="empty" style="padding:16px;">تسک انجام‌نشده‌ای نداری — اول چندتا تسک بساز</div>`;
@@ -2769,11 +2863,35 @@ function confirmBossSetup(){
   const name = document.getElementById('bossNameInput').value.trim();
   if(!name){ toast('⚠️ اول اسم باس رو بنویس'); return; }
   if(bossSetupSelected.length<1){ toast('⚠️ حداقل یک تسک انتخاب کن'); return; }
-  DB.boss.active = { name, hp:100, maxHp:100, taskIds:[...bossSetupSelected], hitTaskIds:[] };
+  if(bossEditMode && DB.boss.active){
+    const b = DB.boss.active;
+    b.name = name;
+    b.taskIds = [...bossSetupSelected];
+    b.hitTaskIds = b.hitTaskIds.filter(id=>b.taskIds.includes(id));
+    b.hp = Math.max(0, Math.round(b.maxHp * (1 - b.hitTaskIds.length/b.taskIds.length)));
+    toast('✏️ باس ویرایش شد');
+  } else {
+    DB.boss.active = { name, hp:100, maxHp:100, taskIds:[...bossSetupSelected], hitTaskIds:[] };
+    toast(`⚔️ نبرد با «${name}» شروع شد!`);
+  }
+  bossEditMode = false;
   closeModal('bossSetupModalBg');
   save();
   renderBossContent();
-  toast(`⚔️ نبرد با «${name}» شروع شد!`);
+}
+function removeBossTaskRef(taskId){
+  const b = DB.boss.active;
+  if(!b || !b.taskIds.includes(taskId)) return;
+  b.taskIds = b.taskIds.filter(id=>id!==taskId);
+  b.hitTaskIds = b.hitTaskIds.filter(id=>id!==taskId);
+  if(b.taskIds.length===0){
+    DB.boss.active = null;
+    DB.boss.nextAvailableAt = Date.now();
+    toast('⚔️ چون همه‌ی تسک‌های باس پاک شدن، نبرد لغو شد');
+  } else {
+    b.hp = Math.max(0, Math.round(b.maxHp * (1 - b.hitTaskIds.length/b.taskIds.length)));
+    toast('⚔️ یکی از تسک‌های باس پاک شد — HP باس به‌روز شد');
+  }
 }
 function hitBossFromTask(taskId){
   const b = DB.boss.active;
@@ -2807,7 +2925,10 @@ function renderBossContent(){
   if(b){
     const pct = Math.round((b.hp/b.maxHp)*100);
     el.innerHTML = `<div class="boss-card">
-      <div class="boss-name">☠️ ${esc(b.name)}</div>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+        <div class="boss-name">☠️ ${esc(b.name)}</div>
+        <button class="btn ghost sm" onclick="startEditBoss()">✏️ ویرایش</button>
+      </div>
       <div class="boss-hp-track"><div class="boss-hp-fill" style="width:${pct}%"></div><div class="boss-hp-text">${b.hp} / ${b.maxHp} HP</div></div>
       <div style="margin-top:16px;">
         ${b.taskIds.map(id=>{
@@ -3030,6 +3151,137 @@ function renderXPShop(){
   invEl.innerHTML = rows.length ? rows.join('') : `<div class="empty" style="padding:16px;">هنوز چیزی نخریدی</div>`;
 }
 
+/* ============ JALALI (PERSIAN) CALENDAR ============ */
+function jDiv(a,b){ return ~~(a/b); }
+function jMod(a,b){ return a - ~~(a/b)*b; }
+function jalCal(jy){
+  const breaks = [-61,9,38,199,426,686,756,818,1111,1181,1210,1635,2060,2097,2192,2262,2324,2394,2456,3178];
+  const bl = breaks.length;
+  const gy = jy + 621;
+  let leapJ = -14, jp = breaks[0], jm, jump = 0, n, i;
+  for(i=1;i<bl;i++){
+    jm = breaks[i];
+    jump = jm - jp;
+    if(jy < jm) break;
+    leapJ = leapJ + jDiv(jump,33)*8 + jDiv(jMod(jump,33),4);
+    jp = jm;
+  }
+  n = jy - jp;
+  leapJ = leapJ + jDiv(n,33)*8 + jDiv(jMod(n,33)+3,4);
+  if(jMod(jump,33)===4 && jump-n===4) leapJ += 1;
+  const leapG = jDiv(gy,4) - jDiv((jDiv(gy,100)+1)*3,4) - 150;
+  const march = 20 + leapJ - leapG;
+  if(jump-n < 6) n = n - jump + jDiv(jump,33)*33;
+  let leap = jMod(jMod(n+1,33)-1,4);
+  if(leap===-1) leap = 4;
+  return { leap, gy, march };
+}
+function jG2d(gy,gm,gd){
+  let d = jDiv((gy+jDiv(gm-8,6)+100100)*1461,4) + jDiv(153*jMod(gm+9,12)+2,5) + gd - 34840408;
+  d = d - jDiv(jDiv(gy+100100+jDiv(gm-8,6),100)*3,4) + 752;
+  return d;
+}
+function jD2g(jdn){
+  let j = 4*jdn + 139361631;
+  j = j + jDiv(jDiv(4*jdn+183187720,146097)*3,4)*4 - 3908;
+  const i = jDiv(jMod(j,1461),4)*5 + 308;
+  const gd = jDiv(jMod(i,153),5) + 1;
+  const gm = jMod(jDiv(i,153),12) + 1;
+  const gy = jDiv(j,1461) - 100100 + jDiv(8-gm,6);
+  return { gy, gm, gd };
+}
+function toJalaali(gy,gm,gd){
+  const jdn = jG2d(gy,gm,gd);
+  const gy2 = jD2g(jdn).gy, jy0 = gy2 - 621;
+  const r = jalCal(jy0);
+  const jdn1f = jG2d(gy2,3,r.march);
+  let k = jdn - jdn1f, jy = jy0, jm, jd;
+  if(k>=0){
+    if(k<=185){ jm = 1+jDiv(k,31); jd = jMod(k,31)+1; return {jy,jm,jd}; }
+    k -= 186;
+  } else {
+    jy -= 1; k += 179;
+    if(r.leap===1) k += 1;
+  }
+  jm = 7 + jDiv(k,30); jd = jMod(k,30) + 1;
+  return { jy, jm, jd };
+}
+function toGregorian(jy,jm,jd){
+  const r = jalCal(jy);
+  const jdn = jG2d(r.gy,3,r.march) + (jm-1)*31 - jDiv(jm,7)*(jm-7) + jd - 1;
+  return jD2g(jdn);
+}
+function jalaaliMonthLength(jy,jm){
+  if(jm<=6) return 31;
+  if(jm<=11) return 30;
+  return jalCal(jy).leap===0 ? 30 : 29;
+}
+const JALALI_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+const FA_DIGITS = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+function toFaDigits(n){ return String(n).replace(/[0-9]/g, d=>FA_DIGITS[+d]); }
+function isoToJalaliText(iso){
+  if(!iso) return '';
+  const [gy,gm,gd] = iso.split('-').map(Number);
+  const j = toJalaali(gy,gm,gd);
+  return `${toFaDigits(j.jy)}/${toFaDigits(String(j.jm).padStart(2,'0'))}/${toFaDigits(String(j.jd).padStart(2,'0'))}`;
+}
+function isoFromJalali(jy,jm,jd){
+  const g = toGregorian(jy,jm,jd);
+  return `${g.gy}-${String(g.gm).padStart(2,'0')}-${String(g.gd).padStart(2,'0')}`;
+}
+
+let jalaliTargetHidden = null, jalaliTargetDisplay = null, jalaliViewY = 0, jalaliViewM = 0, jalaliSelectedISO = '';
+function openJalaliPicker(hiddenId, displayId){
+  jalaliTargetHidden = hiddenId; jalaliTargetDisplay = displayId;
+  const current = document.getElementById(hiddenId).value;
+  const today = new Date();
+  let base;
+  if(current){ const [gy,gm,gd] = current.split('-').map(Number); base = toJalaali(gy,gm,gd); }
+  else { base = toJalaali(today.getFullYear(), today.getMonth()+1, today.getDate()); }
+  jalaliViewY = base.jy; jalaliViewM = base.jm;
+  jalaliSelectedISO = current || '';
+  renderJalaliGrid();
+  openModal('jalaliPickerModalBg');
+}
+function jalaliPrevMonth(){
+  jalaliViewM--; if(jalaliViewM<1){ jalaliViewM=12; jalaliViewY--; }
+  renderJalaliGrid();
+}
+function jalaliNextMonth(){
+  jalaliViewM++; if(jalaliViewM>12){ jalaliViewM=1; jalaliViewY++; }
+  renderJalaliGrid();
+}
+function renderJalaliGrid(){
+  document.getElementById('jalaliPickerTitle').textContent = `${JALALI_MONTHS[jalaliViewM-1]} ${toFaDigits(jalaliViewY)}`;
+  const firstG = toGregorian(jalaliViewY, jalaliViewM, 1);
+  const firstDate = new Date(firstG.gy, firstG.gm-1, firstG.gd);
+  const startOffset = (firstDate.getDay()+1)%7; // 0=Sat
+  const daysInMonth = jalaaliMonthLength(jalaliViewY, jalaliViewM);
+  const today = new Date();
+  const todayJ = toJalaali(today.getFullYear(), today.getMonth()+1, today.getDate());
+  let html = '';
+  for(let i=0;i<startOffset;i++) html += `<div class="jalali-day empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const iso = isoFromJalali(jalaliViewY, jalaliViewM, d);
+    const isToday = todayJ.jy===jalaliViewY && todayJ.jm===jalaliViewM && todayJ.jd===d;
+    const isSel = iso===jalaliSelectedISO;
+    html += `<div class="jalali-day ${isToday?'today':''} ${isSel?'selected':''}" onclick="selectJalaliDay(${d})">${toFaDigits(d)}</div>`;
+  }
+  document.getElementById('jalaliGrid').innerHTML = html;
+}
+function selectJalaliDay(d){
+  const iso = isoFromJalali(jalaliViewY, jalaliViewM, d);
+  jalaliSelectedISO = iso;
+  document.getElementById(jalaliTargetHidden).value = iso;
+  document.getElementById(jalaliTargetDisplay).value = isoToJalaliText(iso);
+  closeModal('jalaliPickerModalBg');
+}
+function clearJalaliDate(){
+  document.getElementById(jalaliTargetHidden).value = '';
+  document.getElementById(jalaliTargetDisplay).value = '';
+  closeModal('jalaliPickerModalBg');
+}
+
 /* ============ TASKS ============ */
 let editingTaskId = null;
 function openTaskModal(id){
@@ -3040,11 +3292,12 @@ function openTaskModal(id){
     document.getElementById('tTitle').value = t.title;
     document.getElementById('tCat').value = t.cat||'';
     document.getElementById('tDate').value = t.date||'';
+    document.getElementById('tDateDisplay').value = isoToJalaliText(t.date||'');
     document.getElementById('tEst').value = t.est||'';
     document.getElementById('tNote').value = t.note||'';
     document.querySelector('#tPriority [data-v="'+t.priority+'"]').classList.add('sel');
   } else {
-    ['tTitle','tCat','tDate','tEst','tNote'].forEach(i=>document.getElementById(i).value='');
+    ['tTitle','tCat','tDate','tDateDisplay','tEst','tNote'].forEach(i=>document.getElementById(i).value='');
     document.querySelector('#tPriority [data-v="medium"]').classList.add('sel');
   }
   openModal('taskModalBg');
@@ -3084,7 +3337,13 @@ function toggleTask(id){
   save();
   checkCriticalCrisis();
 }
-function deleteTask(id){ DB.tasks = DB.tasks.filter(x=>x.id!==id); save(); checkCriticalCrisis(); }
+function deleteTask(id){
+  removeBossTaskRef(id);
+  DB.tasks = DB.tasks.filter(x=>x.id!==id);
+  save();
+  checkCriticalCrisis();
+  renderBossContent();
+}
 function logHistory(key,inc){
   const d = todayISO();
   DB.history[d] = DB.history[d] || {tasks:0, habits:0};
@@ -3107,7 +3366,7 @@ function taskRow(t){
       <div class="task-meta">
         <span class="pill ${t.priority}">${prLabel(t.priority)}</span>
         ${t.cat?`<span class="pill" style="background:${c}22; color:${c};">${esc(t.cat)}</span>`:''}
-        ${t.date?`<span style="font-size:11px;color:var(--txt-dim2)">📅 ${t.date}</span>`:''}
+        ${t.date?`<span style="font-size:11px;color:var(--txt-dim2)">📅 ${isoToJalaliText(t.date)}</span>`:''}
         ${t.est?`<span style="font-size:11px;color:var(--txt-dim2)">⏱ ${t.est} دقیقه</span>`:''}
       </div>
     </div>
@@ -3553,6 +3812,24 @@ function exportBackup(){
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'life-planner-backup.json'; a.click();
   toast('⬇️ فایل پشتیبان دانلود شد');
 }
+async function shareBackup(){
+  const fileName = 'life-planner-backup.json';
+  const blob = new Blob([JSON.stringify(DB,null,2)], {type:'application/json'});
+  try{
+    const file = new File([blob], fileName, {type:'application/json'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title:'پشتیبان برنامه‌ریز هوشمند زندگی', text:'فایل پشتیبان — این رو یه‌جای امن (گوگل‌درایو، ایمیل و...) نگه‌دار.' });
+      toast('✅ ارسال شد');
+      return;
+    }
+  }catch(e){
+    if(e && e.name==='AbortError') return; // user cancelled the share sheet, not an error
+  }
+  // fallback: browser doesn't support file sharing — just download instead
+  exportBackup();
+  toast('این مرورگر اشتراک‌گذاری مستقیم رو پشتیبانی نمی‌کنه — فایل دانلود شد، خودت بفرستش به فضای ابری 📤');
+}
+document.getElementById('shareBtn').onclick = shareBackup;
 document.getElementById('exportBtn').onclick = exportBackup;
 document.getElementById('importBtn').onclick = ()=> document.getElementById('importFile').click();
 document.getElementById('importFile').onchange = (e)=>{
@@ -3609,15 +3886,24 @@ function renderAll(){
 }
 checkStreakShields();
 renderAll();
+const DAY_MS = 24*60*60*1000;
+function autoLocalBackup(){
+  if(Date.now() - (DB.lastAutoBackupAt||0) < DAY_MS) return;
+  try{
+    exportBackup();
+    DB.lastAutoBackupAt = Date.now();
+    localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+  }catch(e){ /* auto backup failed silently, the daily reminder modal is the fallback */ }
+}
 function checkBackupReminder(){
-  const WEEK = 7*24*60*60*1000;
-  if(Date.now() - (DB.lastBackupReminder||0) >= WEEK){
+  if(Date.now() - (DB.lastBackupReminder||0) >= DAY_MS){
     openModal('backupReminderModalBg');
     DB.lastBackupReminder = Date.now();
     localStorage.setItem(STORE_KEY, JSON.stringify(DB));
   }
 }
-setTimeout(checkBackupReminder, 1800);
+setTimeout(autoLocalBackup, 1200);
+setTimeout(checkBackupReminder, 2200);
 setTimeout(checkBossTrigger, 2600);
 applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
