@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Life Planner — Recovery Tool</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#0f1117;color:#eee;max-width:760px;margin:0 auto;padding:24px;line-height:1.5}
+.card{background:#181c25;border:1px solid #2b3240;border-radius:16px;padding:20px;margin:14px 0}
+button{border:0;border-radius:10px;padding:12px 16px;margin:6px 6px 6px 0;font-weight:700;cursor:pointer}
+pre{white-space:pre-wrap;word-break:break-word;background:#0b0d12;padding:14px;border-radius:10px;max-height:360px;overflow:auto}
+.good{color:#7ee787}.warn{color:#ffd166}.bad{color:#ff7b72}.muted{color:#9da7b5}
+</style>
+</head>
+<body>
+<h1>🛡️ Life Planner Recovery</h1>
+<div class="card">
+<p><b>Read-only tool.</b> This page does not clear, overwrite, restore, or delete any browser data.</p>
+<p class="muted">IMPORTANT: Open this file from the same GitHub Pages origin as Life Planner (for example, <code>https://karoangus.github.io/Life-Planner/recovery.html</code>). Opening it directly as a downloaded file cannot see Life Planner's localStorage.</p>
+</div>
+<div class="card" id="status">Checking storage…</div>
+<div class="card">
+<button onclick="exportKey()">Download Life Planner data</button>
+<button onclick="exportAll()">Download all localStorage</button>
+<button onclick="refresh()">Refresh check</button>
+</div>
+<div class="card"><h2>Detected keys</h2><pre id="keys"></pre></div>
+<div class="card"><h2>Raw Life Planner data preview</h2><pre id="preview"></pre></div>
+<script>
+const STORE_KEY='lifePlannerAI_v1';
+function getRaw(){return localStorage.getItem(STORE_KEY)}
+function safeParse(raw){try{return JSON.parse(raw)}catch(e){return null}}
+function summarize(db){
+ if(!db||typeof db!=='object') return 'JSON exists, but its structure could not be summarized.';
+ const out={};
+ for(const k of ['tasks','habits','goals','notes','quests','history','stats','settings']){
+   if(k in db) out[k]=Array.isArray(db[k])?`array (${db[k].length})`:typeof db[k];
+ }
+ if('xp' in db) out.xp=db.xp;
+ if('level' in db) out.level=db.level;
+ return JSON.stringify(out,null,2);
+}
+function refresh(){
+ const raw=getRaw();
+ const keys=[]; for(let i=0;i<localStorage.length;i++) keys.push(localStorage.key(i));
+ document.getElementById('keys').textContent=keys.length?keys.join('\n'):'(no localStorage keys found)';
+ const s=document.getElementById('status');
+ if(raw===null){s.innerHTML='<span class="bad"><b>lifePlannerAI_v1 NOT FOUND.</b></span><br>No Life Planner database is visible to this origin right now.';document.getElementById('preview').textContent='(nothing to preview)';return}
+ const db=safeParse(raw);
+ s.innerHTML='<span class="good"><b>lifePlannerAI_v1 FOUND.</b></span><br>Raw size: '+raw.length.toLocaleString()+' characters<br><br><b>Summary:</b><pre>'+escapeHtml(summarize(db))+'</pre>';
+ document.getElementById('preview').textContent=raw.slice(0,12000)+(raw.length>12000?'\n… [preview truncated]':'');
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function download(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportKey(){const raw=getRaw();if(raw===null){alert('No lifePlannerAI_v1 data is visible. Nothing was exported.');return}download('lifePlannerAI-recovery-'+new Date().toISOString().slice(0,10)+'.json',raw)}
+function exportAll(){const all={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);all[k]=localStorage.getItem(k)}download('life-planner-localStorage-recovery-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(all,null,2))}
+refresh();
+</script>
+</body>
+</html>
