@@ -1355,7 +1355,7 @@ textarea{resize:vertical; min-height:70px;}
           <h3>Mystery Box</h3>
           <div class="muted" style="font-size:12.5px; margin:8px 0; line-height:1.8;">یه جایزه‌ی رندوم — از XP کوچیک تا جکپات ۲۰۰ تایی و آیتم Life City!</div>
           <div class="shop-item-cost num" id="costMystery">200 XP</div>
-          <button class="btn" style="width:100%; justify-content:center; margin-top:12px;" onclick="buyMysteryBox()">باز کردن جعبه</button>
+          <div style="display:flex; gap:8px; margin-top:12px;"><button class="btn" style="flex:1; justify-content:center;" onclick="buyMysteryBox()">باز کردن جعبه</button><button class="btn ghost" style="width:48px; justify-content:center;" title="محتویات و شانس‌ها" aria-label="محتویات و شانس‌های Mystery Box" onclick="openMysteryInfo()">ⓘ</button></div>
         </div>
         <div class="shop-item-card">
           <div class="shop-item-ic">🛡️</div>
@@ -1544,6 +1544,15 @@ textarea{resize:vertical; min-height:70px;}
   <h2 style="text-align:center; font-size:19px;">جایزه‌ت اینه!</h2>
   <p id="mysteryResultText" style="text-align:center; font-size:14.5px; font-weight:800; margin-top:12px; color:var(--neon); line-height:1.9;"></p>
   <button class="btn" style="width:100%; justify-content:center; margin-top:18px;" onclick="closeMysteryModal()">باشه! 🎉</button>
+</div></div>
+
+<div class="modal-bg" id="mysteryInfoModalBg"><div class="modal" style="max-width:520px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <h2 style="margin:0;">🎁 محتویات Mystery Box</h2>
+    <button class="btn ghost sm" onclick="closeModal('mysteryInfoModalBg')">✕</button>
+  </div>
+  <p class="muted" style="margin:10px 0 14px; line-height:1.8;">شانس‌ها بر اساس وزن پایه‌ی هر جایزه محاسبه شده‌اند. مهارت «شانس بلند» فقط شانس جعبه‌ی رایگان را بیشتر می‌کند.</p>
+  <div id="mysteryInfoList" style="display:flex; flex-direction:column; gap:7px;"></div>
 </div></div>
 
 <div class="modal-bg" id="backupReminderModalBg"><div class="modal">
@@ -2445,6 +2454,11 @@ const QUEST_POOL = {
     {id:'e15', icon:'🌱', text:'به یک گیاه رسیدگی کن یا اگر نداری، چند دقیقه کنار پنجره باش.'},
     {id:'e16', icon:'🌙', text:'قبل از اینکه Quest بعدی بیاد، یک دقیقه هیچ کاری نکن و فقط به محیط اطرافت توجه کن.'},
     {id:'e17', icon:'🧠', text:'یک چیز جدید که امروز یاد گرفتی رو در یک جمله ثبت کن.'},
+    {id:'e18', icon:'🚶', text:'یه دور کوتاه توی خونه راه برو.'},
+    {id:'e19', icon:'🧹', text:'۵ دقیقه اتاقت رو مرتب کن.'},
+    {id:'e20', icon:'📺', text:'یک قسمت کوتاه یا چند دقیقه تلویزیون ببین.'},
+    {id:'e21', icon:'😌', text:'۵ دقیقه استراحت واقعی داشته باش؛ بدون گوشی.'},
+
   ],
   normal:[
     {id:'n1', icon:'🤸', text:'۱۰ حرکت کششی انجام بده.'},
@@ -2453,11 +2467,17 @@ const QUEST_POOL = {
     {id:'n4', icon:'📵', text:'۵ دقیقه گوشی را کنار بگذار.'},
     {id:'n5', icon:'😄', text:'به یک اتفاق خوب امروز فکر کن و ثبتش کن.'},
     {id:'n6', icon:'📚', text:'۵ دقیقه روی مهم‌ترین کارت تمرکز کن.'},
-    {id:'n7', icon:'🧘', text:'۲ دقیقه مدیتیشن یا آرام‌سازی انجام بده.'},
-    {id:'n8', icon:'📱', text:'۱۰ دقیقه نوتیفیکیشن‌های غیرضروری گوشیت رو خاموش کن.'},
-    {id:'n9', icon:'🖥️', text:'یک فایل، عکس یا برنامه‌ای که دیگه لازم نداری رو مرتب یا حذف کن.'},
-    {id:'n10', icon:'🧩', text:'۵ دقیقه یک معما، پازل، سودوکو یا بازی فکری انجام بده.'},
-    {id:'n11', icon:'🎯', text:'کوچک‌ترین کاری که امروز عقب انداختی رو همین الان انجام بده.'},
+    {id:'n7', icon:'🎮', text:'اگر در دسترسه، ۱۰ دقیقه با کنسول یا کامپیوتر سرگرم شو.'},
+    {id:'n8', icon:'🏃', text:'۵ دقیقه فعالیت ورزشی سبک انجام بده؛ مثل اسکات، کشش یا راه رفتن تند.'},
+    {id:'n9', icon:'📝', text:'برای یکی از ویدیوهای آینده‌ات یک سناریوی کوتاه بنویس.'},
+    {id:'n10', icon:'📚', text:'۱۰ دقیقه مطالعه کن.'},
+    {id:'n11', icon:'🎲', text:'۱۰ دقیقه یک سرگرمی غیرموبایلی انجام بده؛ مثل کتاب، نقاشی یا بازی رومیزی.'},
+
+    {id:'n12', icon:'🧘', text:'۲ دقیقه مدیتیشن یا آرام‌سازی انجام بده.'},
+    {id:'n13', icon:'📱', text:'۱۰ دقیقه نوتیفیکیشن‌های غیرضروری گوشیت رو خاموش کن.'},
+    {id:'n14', icon:'🖥️', text:'یک فایل، عکس یا برنامه‌ای که دیگه لازم نداری رو مرتب یا حذف کن.'},
+    {id:'n15', icon:'🧩', text:'۵ دقیقه یک معما، پازل، سودوکو یا بازی فکری انجام بده.'},
+    {id:'n16', icon:'🎯', text:'کوچک‌ترین کاری که امروز عقب انداختی رو همین الان انجام بده.'},
   ],
   rare:[
     {id:'r1', icon:'💪', text:'۱۰ تا شنا یا ۱۵ تا اسکوات (هرکدام که راحت‌تری).'},
@@ -2496,7 +2516,7 @@ function completeQuest(){
   const q = DB.quest.current;
   DB.quest.current = null;
   DB.quest.waitStart = Date.now();
-  DB.quest.nextAt = Date.now() + 30*60*1000;
+  DB.quest.nextAt = Date.now() + 10*60*1000;
   DB.stats.questsCompleted = (DB.stats.questsCompleted||0) + 1;
   const d = todayISO();
   DB.stats.questsCompletedByDate[d] = (DB.stats.questsCompletedByDate[d]||0) + 1;
@@ -2514,7 +2534,7 @@ function skipQuest(){
   const penalty = Math.ceil(q.xp/2);
   DB.quest.current = null;
   DB.quest.waitStart = Date.now();
-  DB.quest.nextAt = Date.now() + 60*60*1000;
+  DB.quest.nextAt = Date.now() + 10*60*1000;
   addXP(-penalty);
   toast(`⏭️ رد شد — ${penalty} XP کم شد`);
   save();
@@ -3294,6 +3314,21 @@ function pickWeightedReward(){
   for(let i=0;i<MYSTERY_REWARDS.length;i++){ if(r<weights[i]) return MYSTERY_REWARDS[i]; r -= weights[i]; }
   return MYSTERY_REWARDS[0];
 }
+function openMysteryInfo(){
+  const list = document.getElementById('mysteryInfoList');
+  if(!list) return;
+  const luckyBonus = (DB.skillTiers?.luckyBox||0) * 3;
+  const weights = MYSTERY_REWARDS.map(r=>r.key==='freebox' ? r.weight+luckyBonus : r.weight);
+  const total = weights.reduce((a,b)=>a+b,0);
+  list.innerHTML = MYSTERY_REWARDS.map((r,i)=>{
+    const pct = weights[i]/total*100;
+    return `<div style="display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; padding:9px 10px; background:var(--bg2); border:1px solid var(--line); border-radius:10px;">
+      <div style="font-size:12.5px; line-height:1.6;">${esc(r.label)}</div>
+      <b class="num" style="white-space:nowrap;">${pct.toFixed(2)}%</b>
+    </div>`;
+  }).join('');
+  openModal('mysteryInfoModalBg');
+}
 function buyMysteryBox(){
   const cost = applyShopDiscount(200);
   if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
@@ -3876,20 +3911,53 @@ function openEventModal(){
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.remove('sel'));
   openModal('eventModalBg');
 }
+function timeToMinutes(value){
+  const m = String(value||'').match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return NaN;
+  return Math.max(0, Math.min(1439, parseInt(m[1],10)*60 + parseInt(m[2],10)));
+}
+function eventStartMinutes(e){
+  if(Number.isFinite(e.startMin)) return e.startMin;
+  if(Number.isFinite(e.startHour)) return Math.max(0, Math.min(1440, e.startHour*60));
+  return 0;
+}
+function eventEndMinutes(e){
+  if(Number.isFinite(e.endMin)) return e.endMin;
+  if(Number.isFinite(e.endHour)) return Math.max(0, Math.min(1440, e.endHour*60));
+  return 60;
+}
+function formatTimeMinutes(min){
+  min = Math.max(0, Math.min(1439, Number(min)||0));
+  return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');
+}
 function saveEvent(){
   const title = document.getElementById('eTitle').value.trim();
   if(!title){ toast('⚠️ عنوان رویداد رو بنویس'); return; }
   const days = [...document.querySelectorAll('#eDays .chip-opt.sel')].map(o=>+o.dataset.v);
   if(!days.length){ toast('⚠️ حداقل یک روز رو انتخاب کن'); return; }
-  const startHour = parseInt(document.getElementById('eHourStart').value);
-  const endHour = parseInt(document.getElementById('eHourEnd').value);
-  if(isNaN(startHour) || isNaN(endHour) || endHour<=startHour){ toast('⚠️ ساعت پایان باید بعد از ساعت شروع باشه'); return; }
+  const startMin = timeToMinutes(document.getElementById('eHourStart').value);
+  let endMin = timeToMinutes(document.getElementById('eHourEnd').value);
+  if(!Number.isFinite(startMin) || !Number.isFinite(endMin)){ toast('⚠️ ساعت را درست وارد کن'); return; }
+
+  // 00:00 after an evening start means midnight at the end of the same calendar block.
+  // Other end-before-start values are treated as crossing midnight into the next day.
+  const crossesMidnight = endMin <= startMin;
+  if(crossesMidnight) endMin += 1440;
+  if(endMin <= startMin || endMin > 2880){ toast('⚠️ بازه زمانی نامعتبره'); return; }
+
   if(editingEventId){
     const ev = DB.events.find(x=>x.id===editingEventId);
-    if(ev){ ev.title=title; ev.days=days; ev.startHour=startHour; ev.endHour=endHour; delete ev.day; }
+    if(ev){
+      ev.title=title; ev.days=days;
+      ev.startMin=startMin; ev.endMin=endMin;
+      // Keep legacy fields for backward compatibility.
+      ev.startHour=Math.floor(startMin/60); ev.endHour=Math.min(24,Math.floor(endMin/60));
+      delete ev.day;
+    }
     toast('✏️ رویداد ویرایش شد');
   } else {
-    DB.events.push({id:uid(), title, days, startHour, endHour});
+    DB.events.push({id:uid(), title, days, startMin, endMin,
+      startHour:Math.floor(startMin/60), endHour:Math.min(24,Math.floor(endMin/60))});
     toast('📅 رویداد اضافه شد');
   }
   editingEventId = null;
@@ -3913,8 +3981,10 @@ function startEditEvent(){
   editingEventId = ev.id;
   document.getElementById('eventModalTitle').textContent = '✏️ ویرایش رویداد';
   document.getElementById('eTitle').value = ev.title;
-  document.getElementById('eHourStart').value = String(ev.startHour).padStart(2,'0')+':00';
-  document.getElementById('eHourEnd').value = String(ev.endHour).padStart(2,'0')+':00';
+  document.getElementById('eHourStart').value = formatTimeMinutes(eventStartMinutes(ev)%1440);
+  let end = eventEndMinutes(ev);
+  // For a cross-midnight event, show the next-day clock time (00:00 etc.).
+  document.getElementById('eHourEnd').value = formatTimeMinutes(end%1440);
   const days = eventDays(ev);
   document.querySelectorAll('#eDays .chip-opt').forEach(o=> o.classList.toggle('sel', days.includes(+o.dataset.v)));
   openModal('eventModalBg');
@@ -3928,7 +3998,6 @@ function deleteEventDay(){
   eventActionCtx = null;
   closeModal('eventActionModalBg');
   save();
-  toast('🗑️ اون روز حذف شد');
 }
 function deleteWholeEvent(){
   const ctx = eventActionCtx; if(!ctx) return;
@@ -3939,50 +4008,61 @@ function deleteWholeEvent(){
   toast('🗑️ کل رویداد حذف شد');
 }
 function renderCalendar(){
-  const HOURS_START = 7, HOURS_END = 23;
-  const hours = []; for(let h=HOURS_START; h<=HOURS_END; h++) hours.push(h);
-  const totalRows = hours.length; // 17 rows
-  const todayIdx = (new Date().getDay()+1)%7; // 0=Sat...6=Fri
+  const HOURS_START = 7, HOURS_END = 24;
+  const MINUTES_PER_ROW = 15;
+  const ROW_HEIGHT = 12;
+  const totalMinutes = (HOURS_END-HOURS_START)*60;
+  const rows = totalMinutes/MINUTES_PER_ROW;
+  const todayIdx = (new Date().getDay()+1)%7;
 
-  // Build a single CSS grid: row1=header, rows2..N=hour rows
-  // Columns: col1=time label, col2-col8=7 days (Sat..Fri)
-  // Each hour row = 46px via grid-auto-rows CSS
-
-  // Override grid-auto-rows for hour rows dynamically
   let gridStyle = `display:grid; grid-template-columns:48px repeat(7,minmax(44px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:14px; overflow:hidden; min-width:360px;`;
-
   let cells = '';
-  // Header row (row 1)
+
   cells += `<div style="background:var(--bg2); grid-column:1; grid-row:1; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--txt-dim2); padding:4px; box-sizing:border-box;"></div>`;
   dayNames.forEach((d,i)=>{
     cells += `<div style="background:var(--bg2); grid-column:${i+2}; grid-row:1; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; padding:2px; box-sizing:border-box; overflow:hidden; ${i===todayIdx?'color:var(--neon)':''}">${d}</div>`;
   });
-  // Hour rows (rows 2 to totalRows+1)
-  hours.forEach((h, ri)=>{
-    const rowIdx = ri + 2;
-    cells += `<div style="background:var(--bg2); grid-column:1; grid-row:${rowIdx}; display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--txt-dim2); font-family:monospace; padding:2px; box-sizing:border-box;">${h}:00</div>`;
+
+  for(let ri=0; ri<rows; ri++){
+    const minute = HOURS_START*60 + ri*MINUTES_PER_ROW;
+    const rowIdx = ri+2;
+    const label = minute%60===0 ? `${String(Math.floor(minute/60)).padStart(2,'0')}:00` : '';
+    cells += `<div style="background:var(--bg2); grid-column:1; grid-row:${rowIdx}; height:${ROW_HEIGHT}px; display:flex; align-items:center; justify-content:center; font-size:8px; color:var(--txt-dim2); font-family:monospace; box-sizing:border-box;">${label}</div>`;
     for(let d=0; d<7; d++){
-      cells += `<div style="background:var(--panel); grid-column:${d+2}; grid-row:${rowIdx}; box-sizing:border-box; border:0; position:relative;"></div>`;
+      cells += `<div style="background:var(--panel); grid-column:${d+2}; grid-row:${rowIdx}; height:${ROW_HEIGHT}px; box-sizing:border-box; border-top:${minute%60===0?'1px solid var(--line)':'0'}; position:relative;"></div>`;
     }
+  }
+
+  // Events are rendered in 15-minute rows. Cross-midnight events are split into
+  // the current day (until 24:00) and the next day (from 00:00 onward).
+  let evCells = '';
+  DB.events.forEach(e=>{
+    const start = eventStartMinutes(e);
+    const end = eventEndMinutes(e);
+    if(!Number.isFinite(start) || !Number.isFinite(end) || end<=start) return;
+    eventDays(e).forEach(d=>{
+      const segments = [];
+      if(start < HOURS_END*60){
+        segments.push({day:d, from:Math.max(start,HOURS_START*60), to:Math.min(end,HOURS_END*60)});
+      }
+      if(end > 1440){
+        const nextDay=(d+1)%7;
+        segments.push({day:nextDay, from:HOURS_START*60, to:Math.min(end-1440,HOURS_END*60)});
+      }
+      segments.forEach(seg=>{
+        if(seg.from>=seg.to || seg.day<0 || seg.day>6) return;
+        const rowStart = Math.floor((seg.from-HOURS_START*60)/MINUTES_PER_ROW)+2;
+        const rowEnd = Math.ceil((seg.to-HOURS_START*60)/MINUTES_PER_ROW)+2;
+        if(rowEnd<=2 || rowStart>rows+1) return;
+        const rs=Math.max(2,rowStart), re=Math.min(rows+2,rowEnd);
+        evCells += `<div class="ev-block" style="grid-column:${seg.day+2}; grid-row:${rs}/${re}; margin:1px; z-index:5; min-height:8px; overflow:hidden;" onclick="onEventBlockClick('${e.id}', ${seg.day})">
+          <span class="ev-title">${esc(e.title)}</span>
+        </div>`;
+      });
+    });
   });
 
-  // Events: placed directly in grid
-  const evCells = DB.events.map(e=>{
-    const startH = Math.max(HOURS_START, e.startHour);
-    const endH = Math.min(HOURS_END+1, e.endHour);
-    if(startH >= endH) return '';
-    const rowStart = (startH - HOURS_START) + 2;
-    const rowEnd = (endH - HOURS_START) + 2;
-    return eventDays(e).map(d=>{
-      const col = d + 2; // col 2-8
-      return `<div class="ev-block" style="grid-column:${col}; grid-row:${rowStart}/${rowEnd}; margin:2px; z-index:5;" onclick="onEventBlockClick('${e.id}', ${d})">
-        <span class="ev-title">${esc(e.title)}</span>
-      </div>`;
-    }).join('');
-  }).join('');
-
-  // Combined grid with auto rows
-  const gridHtml = `<div style="${gridStyle} grid-auto-rows:46px; grid-template-rows:40px repeat(${totalRows},46px);">${cells}${evCells}</div>`;
+  const gridHtml = `<div style="${gridStyle} grid-template-rows:40px repeat(${rows},${ROW_HEIGHT}px);">${cells}${evCells}</div>`;
   document.getElementById('weekGrid').innerHTML = `<div class="week-outer">${gridHtml}</div>`;
 }
 
