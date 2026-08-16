@@ -1657,11 +1657,23 @@ document.getElementById('themeToggleBtn').onclick = toggleTheme;
 /* ============ STORE ============ */
 const STORE_KEY = 'lifePlannerAI_v1';
 function loadStore(){
+  let db = { tasks:[], habits:[], goals:[], notes:[], events:[], xp:0, level:1, history:{}, quest:null, stats:null };
   try{
     const raw = localStorage.getItem(STORE_KEY);
-    if(raw) return JSON.parse(raw);
+    if(raw){ const parsed = JSON.parse(raw); db = Object.assign(db, parsed); }
   }catch(e){}
-  return { tasks:[], habits:[], goals:[], notes:[], events:[], xp:0, level:1, history:{}, quest:null, stats:null };
+  // guarantee every array/object field is never undefined
+  if(!Array.isArray(db.tasks))   db.tasks   = [];
+  if(!Array.isArray(db.habits))  db.habits  = [];
+  if(!Array.isArray(db.goals))   db.goals   = [];
+  if(!Array.isArray(db.notes))   db.notes   = [];
+  if(!Array.isArray(db.events))  db.events  = [];
+  if(typeof db.history !== 'object' || Array.isArray(db.history)) db.history = {};
+  if(typeof db.xp    !== 'number') db.xp    = 0;
+  if(typeof db.level !== 'number' || db.level < 1) db.level = 1;
+  // ensure each task has extraDeadlines
+  db.tasks.forEach(t=>{ if(!Array.isArray(t.extraDeadlines)) t.extraDeadlines=[]; });
+  return db;
 }
 let DB = loadStore();
 if(!DB.quest){ DB.quest = { current:null, nextAt: Date.now()+2*60*1000, waitStart: Date.now(), bags:{} }; }
@@ -3771,7 +3783,7 @@ function saveGoal(){
 }
 function levelLabel(l){ return {daily:'روزانه',weekly:'هفتگی',monthly:'ماهانه',yearly:'سالانه',life:'زندگی'}[l]; }
 function setGoalProgress(id, val){
-  const g = DB.goals.find(x=>x.id===id); const old=g.progress;
+  const g = DB.goals.find(x=>x.id===id); if(!g) return; const old=g.progress;
   const newVal = Math.max(0,Math.min(100,val));
   const delta = newVal - old;
   g.progress = newVal;
@@ -3781,8 +3793,8 @@ function setGoalProgress(id, val){
     DB.dailyGoalProgress[d][id] = (DB.dailyGoalProgress[d][id]||0) + delta;
   }
   if(g.progress===100 && old<100) addXP(40);
-  save();
   checkPerfectDay();
+  save();
 }
 function renderGoals(){
   const el = document.getElementById('goalList');
@@ -4178,7 +4190,7 @@ function renderDashboard(){
 
   const doneToday = DB.tasks.filter(t=>t.doneDate===todayISO()).length;
   document.getElementById('statDone').textContent = doneToday;
-  const maxStreak = DB.habits.length ? Math.max(...DB.habits.map(habitStreak),0) : 0;
+  const maxStreak = DB.habits.length ? Math.max(0, ...DB.habits.map(habitStreak)) : 0;
   document.getElementById('statStreak').textContent = maxStreak;
   const avgGoal = DB.goals.length ? Math.round(DB.goals.reduce((s,g)=>s+g.progress,0)/DB.goals.length) : 0;
   document.getElementById('statGoals').textContent = avgGoal+'٪';
