@@ -1676,6 +1676,23 @@ function loadStore(){
   return db;
 }
 let DB = loadStore();
+// Defensive migration for data created by older/broken builds.
+if(!DB.motivation || typeof DB.motivation!=='object') DB.motivation = { mood:'energize' };
+if(!DB.stats || typeof DB.stats!=='object') DB.stats = { tasksCompleted:0, questsCompleted:0, bestStreak:0 };
+if(!DB.quest || typeof DB.quest!=='object') DB.quest = { current:null, nextAt:Date.now()+2*60*1000, waitStart:Date.now(), bags:{} };
+if(!DB.pomodoro || typeof DB.pomodoro!=='object') DB.pomodoro = { settings:{focusMin:25,breakMin:5,goalMinutes:0}, session:null, history:{}, pendingNext:null };
+if(!DB.xpBoost || typeof DB.xpBoost!=='object') DB.xpBoost = { activeUntil:0 };
+if(!DB.themes || typeof DB.themes!=='object') DB.themes = { owned:['dark','light'] };
+if(!Array.isArray(DB.cityBonusItems)) DB.cityBonusItems = [];
+if(!DB.skillTiers || typeof DB.skillTiers!=='object') DB.skillTiers = {pomoXp:0,questXp:0,shopDiscount:0,luckyBox:0,criticalBonus:0,streakGuard:0};
+if(!DB.boss || typeof DB.boss!=='object') DB.boss = {active:null,nextAvailableAt:Date.now()};
+if(!DB.crisis || typeof DB.crisis!=='object') DB.crisis = {active:false,deadlineAt:0,cooldownUntil:0};
+if(!DB.newRecordFlags || typeof DB.newRecordFlags!=='object') DB.newRecordFlags = {};
+if(!DB.perfectDayHistory || typeof DB.perfectDayHistory!=='object') DB.perfectDayHistory = {};
+if(!DB.dailyGoalProgress || typeof DB.dailyGoalProgress!=='object') DB.dailyGoalProgress = {};
+if(!DB.streakShields || typeof DB.streakShields!=='number') DB.streakShields = 0;
+if(typeof DB.skillPoints!=='number') DB.skillPoints = 0;
+if(typeof DB.xpWallet!=='number') DB.xpWallet = DB.stats.totalXPEarned || 0;
 if(!DB.quest){ DB.quest = { current:null, nextAt: Date.now()+2*60*1000, waitStart: Date.now(), bags:{} }; }
 if(DB.quest.waitStart===undefined) DB.quest.waitStart = Date.now();
 if(!DB.stats){ DB.stats = { tasksCompleted:0, questsCompleted:0, bestStreak:0 }; }
@@ -1703,7 +1720,12 @@ if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
 if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
 if(!DB.newRecordFlags) DB.newRecordFlags = {};
 function persist(){ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
-function save(){ persist(); renderAll(); }
+function save(){
+  persist();
+  // A renderer must never be able to break saving or every other part of the app.
+  // Render each subsystem independently so one bad widget cannot freeze the whole UI.
+  renderAll();
+}
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function todayISO(){
   const d = new Date();
@@ -2370,6 +2392,7 @@ function pickDailyQuote(mood){
   return arr[Math.abs(hash) % arr.length];
 }
 function renderMotivation(){
+  if(!DB.motivation || typeof DB.motivation!=='object') DB.motivation = {mood:'energize'};
   const mood = DB.motivation.mood || 'energize';
   const meta = MOOD_META[mood];
   const q = document.getElementById('motivationText');
@@ -4207,20 +4230,30 @@ function renderDashboard(){
 
 /* ============ RENDER ALL ============ */
 function renderAll(){
-  renderXP();
-  renderTasks(document.querySelector('#taskFilters .sel')?.dataset.f || 'all');
-  renderHabits();
-  renderGoals();
-  renderNotes();
-  renderCalendar();
-  renderDashboard();
-  renderQuestBox();
-  renderProfile();
-  renderPomoUI();
-  renderPomoStats();
-  renderSkillTree();
-  renderBossContent();
-  renderYVY();
+  // Keep the app alive if one independent renderer encounters a bad/old state.
+  // This is deliberately defensive: it does not change the UI or data model.
+  const jobs = [
+    ['XP', ()=>renderXP()],
+    ['Tasks', ()=>renderTasks(document.querySelector('#taskFilters .sel')?.dataset.f || 'all')],
+    ['Habits', ()=>renderHabits()],
+    ['Goals', ()=>renderGoals()],
+    ['Notes', ()=>renderNotes()],
+    ['Calendar', ()=>renderCalendar()],
+    ['Dashboard', ()=>renderDashboard()],
+    ['Quest', ()=>renderQuestBox()],
+    ['Profile', ()=>renderProfile()],
+    ['Pomodoro UI', ()=>renderPomoUI()],
+    ['Pomodoro stats', ()=>renderPomoStats()],
+    ['Skills', ()=>renderSkillTree()],
+    ['Boss', ()=>renderBossContent()],
+    ['YVY', ()=>renderYVY()]
+  ];
+  for(const [name, job] of jobs){
+    try { job(); }
+    catch(err){
+      console.error('[Life Planner render error]', name, err);
+    }
+  }
 }
 checkStreakShields();
 renderAll();
