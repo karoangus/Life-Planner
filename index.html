@@ -1690,9 +1690,13 @@ if(!DB.skillTiers) DB.skillTiers = { pomoXp:0, questXp:0, shopDiscount:0, luckyB
 if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
 if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
 if(!DB.newRecordFlags) DB.newRecordFlags = {};
-function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); renderAll(); }
+function persist(){ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
+function save(){ persist(); renderAll(); }
 function uid(){ return Math.random().toString(36).slice(2,10); }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function sendNotification(title, body){
   try{
     if(!('Notification' in window)) return;
@@ -1837,6 +1841,7 @@ function getLevelTitle(level){
   return cur;
 }
 function addXP(n){
+  // Pure mutation — does NOT persist or render. Caller must call save().
   if(n >= 0){
     const boosted = (DB.xpBoost && Date.now() < DB.xpBoost.activeUntil);
     const amount = boosted ? n*2 : n;
@@ -1846,9 +1851,10 @@ function addXP(n){
     const d = todayISO();
     DB.history[d] = DB.history[d] || {};
     DB.history[d].xp = (DB.history[d].xp||0) + amount;
-    const need = DB.level*100;
-    if(DB.xp >= need){
-      DB.xp -= need; DB.level++;
+    // BUG 6 FIX: process ALL levels if XP is enough for multiple
+    let safety = 0;
+    while(DB.xp >= DB.level*100 && safety++ < 50){
+      DB.xp -= DB.level*100; DB.level++;
       DB.skillPoints = (DB.skillPoints||0) + 1;
       const t = getLevelTitle(DB.level);
       toast(`🎉 تبریک! رسیدی به سطح ${DB.level} — ${t.icon} ${t.title} · +۱ امتیاز مهارت 🌳`);
@@ -1857,25 +1863,20 @@ function addXP(n){
   } else {
     DB.xp = Math.max(0, DB.xp + n);
   }
-  save();
+  // intentionally no save() here
 }
 function renderXP(){
   const need = DB.level*100;
   const t = getLevelTitle(DB.level);
   const pct = Math.min(100,(DB.xp/need)*100);
-  document.getElementById('xpLevel').textContent = DB.level;
-  document.getElementById('xpText').textContent = DB.xp+'/'+need;
-  document.getElementById('xpBar').style.width = pct+'%';
-  document.getElementById('xpTitleIcon').textContent = t.icon;
-  document.getElementById('xpTitleName').textContent = t.title;
-  // sync sheet XP
-  const sb=document.getElementById('xpBarSheet'), st=document.getElementById('xpTextSheet');
-  const sl=document.getElementById('xpLevelSheet'), si=document.getElementById('xpTitleIconSheet'), sn=document.getElementById('xpTitleNameSheet');
-  if(sb) sb.style.width=pct+'%';
-  if(st) st.textContent=DB.xp+'/'+need;
-  if(sl) sl.textContent=DB.level;
-  if(si) si.textContent=t.icon;
-  if(sn) sn.textContent=t.title;
+  const txt = DB.xp+'/'+need;
+  // safe setters — these IDs only exist in the sheet, never throw
+  const setEl = (id, prop, val) => { const el=document.getElementById(id); if(el){ if(prop==='text') el.textContent=val; else el.style[prop]=val; } };
+  setEl('xpLevelSheet','text', DB.level);
+  setEl('xpTextSheet','text', txt);
+  setEl('xpBarSheet','width', pct+'%');
+  setEl('xpTitleIconSheet','text', t.icon);
+  setEl('xpTitleNameSheet','text', t.title);
 }
 function renderProfile(){
   const need = DB.level*100;
@@ -1925,15 +1926,16 @@ function getTodayCriteria(){
   return { criticalDone, questsDone, habitDone, goalsOk, pomoFocus, questsToday, pomoMin };
 }
 function checkPerfectDay(){
+  // Pure mutation — caller must call save() afterwards
   const d = todayISO();
   if(DB.perfectDayHistory[d]) return;
-  const c = getTodayCriteria();
-  if(c.criticalDone && c.questsDone && c.habitDone && c.goalsOk && c.pomoFocus){
+  const cr = getTodayCriteria();
+  if(cr.criticalDone && cr.questsDone && cr.habitDone && cr.goalsOk && cr.pomoFocus){
     DB.perfectDayHistory[d] = true;
     DB.stats.perfectDays = (DB.stats.perfectDays||0) + 1;
     addXP(50);
     openModal('perfectDayModalBg');
-    save();
+    // no save() here — caller owns it
   }
 }
 function togglePerfectDayGuide(){
@@ -1980,7 +1982,7 @@ function isWeeklyPerfect(){
   const todayIdx = (now.getDay()+1)%7;
   const sat = new Date(now); sat.setDate(now.getDate()-todayIdx);
   const fri = new Date(sat); fri.setDate(sat.getDate()+6);
-  const satISO = sat.toISOString().slice(0,10), friISO = fri.toISOString().slice(0,10);
+  const satISO = dateToLocalISO(sat), friISO = dateToLocalISO(fri);
   const weekTasks = DB.tasks.filter(t=> t.date && t.date>=satISO && t.date<=friISO);
   return weekTasks.length>0 && weekTasks.every(t=>t.done);
 }
@@ -2469,6 +2471,7 @@ function completeQuest(){
   toast(`✅ آفرین! +${xpGain} XP گرفتی`);
   checkPerfectDay();
   checkNewRecords();
+  save();
 }
 function skipQuest(){
   if(!DB.quest.current) return;
@@ -2479,6 +2482,7 @@ function skipQuest(){
   DB.quest.nextAt = Date.now() + 60*60*1000;
   addXP(-penalty);
   toast(`⏭️ رد شد — ${penalty} XP کم شد`);
+  save();
 }
 function fmtCountdown(ms){
   if(ms<0) ms=0;
@@ -2782,7 +2786,7 @@ function renderPomoChart(){
     const daysInMonth = new Date(year, month+1, 0).getDate();
     const weeks = [0,0,0,0,0];
     for(let day=1; day<=daysInMonth; day++){
-      const iso = new Date(year, month, day).toISOString().slice(0,10);
+      const d_=new Date(year, month, day); const iso = dateToLocalISO(d_);
       weeks[Math.floor((day-1)/7)] += (DB.pomodoro.history[iso]?.focus)||0;
     }
     const activeWeeks = Math.ceil(daysInMonth/7);
@@ -2915,7 +2919,7 @@ function yvyWeekRange(offsetWeeks){
   const todayIdx = (now.getDay()+1)%7;
   const sat = new Date(now); sat.setDate(now.getDate()-todayIdx-offsetWeeks*7);
   const fri = new Date(sat); fri.setDate(sat.getDate()+6);
-  return [sat.toISOString().slice(0,10), fri.toISOString().slice(0,10)];
+  return [dateToLocalISO(sat), dateToLocalISO(fri)];
 }
 function yvySumRange(startISO, endISO, getter){
   let sum=0;
@@ -3171,7 +3175,7 @@ function buySkillTier(key){
   DB.skillPoints -= skillTierCost();
   DB.skillTiers[key] = current+1;
   if(key==='streakGuard'){ DB.streakShields = (DB.streakShields||0)+1; toast('🛡️ +۱ Streak Shield گرفتی!'); }
-  save();
+  persist();
   renderSkillTree();
   toast(`🌳 ${skill.name} به تیر ${DB.skillTiers[key]} رسید!`);
 }
@@ -3215,7 +3219,8 @@ function buyXPBoost(){
   const cost = applyShopDiscount(100);
   if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
   DB.xpBoost = { activeUntil: Date.now() + 30*60*1000 };
-  save();
+  persist();
+  renderXP();
   renderXPShop();
   toast('⚡ XP Boost ×۲ فعال شد! تا ۳۰ دقیقه همه‌ی XP هات دوبرابر می‌شه');
 }
@@ -3223,7 +3228,8 @@ function buyStreakShield(){
   const cost = applyShopDiscount(200);
   if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
   DB.streakShields = (DB.streakShields||0)+1;
-  save();
+  persist();
+  renderXP();
   renderXPShop();
   toast('🛡️ یه Streak Shield خریدی! یه روز از‌دست‌رفته‌ی عادت‌ها رو جبران می‌کنه');
 }
@@ -3285,7 +3291,7 @@ function checkStreakShields(){
   if(!DB.streakShields || DB.streakShields<=0) return;
   const y1 = new Date(); y1.setDate(y1.getDate()-1);
   const y2 = new Date(); y2.setDate(y2.getDate()-2);
-  const y1ISO = y1.toISOString().slice(0,10), y2ISO = y2.toISOString().slice(0,10);
+  const y1ISO = dateToLocalISO(y1), y2ISO = dateToLocalISO(y2);
   let used = false;
   DB.habits.forEach(h=>{
     if(DB.streakShields<=0) return;
@@ -3304,7 +3310,8 @@ function buyTheme(theme){
   const cost = applyShopDiscount(meta.cost);
   if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
   DB.themes.owned.push(theme);
-  save();
+  persist();
+  renderXP();
   renderXPShop();
   toast(`🎉 تم ${meta.label} باز شد!`);
 }
@@ -3498,10 +3505,13 @@ function openTaskModal(id){
     // load extra deadlines
     const wrap = document.getElementById('extraDeadlinesWrap');
     wrap.innerHTML = '';
-    (t.extraDeadlines||[]).filter(Boolean).forEach((d,i)=>{
+    (t.extraDeadlines||[]).filter(Boolean).forEach(dl=>{
+      const rid = 'edl_'+Math.random().toString(36).slice(2,8);
       const row = document.createElement('div');
+      row.className = 'extra-deadline-row';
       row.style.cssText = 'display:flex; gap:8px; align-items:center;';
-      row.innerHTML = `<input type="text" id="tExtraDisplay${i}" readonly value="${isoToJalaliText(d)}" onclick="openJalaliPicker('tExtra${i}','tExtraDisplay${i}')" style="flex:1;"><input type="hidden" id="tExtra${i}" value="${d}"><button class="btn ghost sm" type="button" onclick="this.parentElement.remove()" style="padding:8px 10px; flex-shrink:0;">✕</button>`;
+      row.setAttribute('data-rid', rid);
+      row.innerHTML = `<input type="text" id="${rid}_d" readonly value="${isoToJalaliText(dl)}" onclick="openJalaliPicker('${rid}_v','${rid}_d')" style="flex:1;"><input type="hidden" id="${rid}_v" value="${dl}"><button class="btn ghost sm" type="button" onclick="this.closest('.extra-deadline-row').remove()" style="padding:8px 10px; flex-shrink:0;">✕</button>`;
       wrap.appendChild(row);
     });
   } else {
@@ -3513,21 +3523,24 @@ function openTaskModal(id){
 }
 function addExtraDeadline(){
   const wrap = document.getElementById('extraDeadlinesWrap');
-  const idx = wrap.children.length;
+  // use uid-based IDs so deleting middle rows never breaks index mapping
+  const rid = 'edl_'+Math.random().toString(36).slice(2,8);
   const row = document.createElement('div');
+  row.className = 'extra-deadline-row';
   row.style.cssText = 'display:flex; gap:8px; align-items:center;';
-  row.innerHTML = `<input type="text" id="tExtraDisplay${idx}" readonly placeholder="انتخاب تاریخ" onclick="openJalaliPicker('tExtra${idx}','tExtraDisplay${idx}')" style="flex:1;">
-    <input type="hidden" id="tExtra${idx}" value="">
-    <button class="btn ghost sm" type="button" onclick="this.parentElement.remove()" style="padding:8px 10px; flex-shrink:0;">✕</button>`;
+  row.setAttribute('data-rid', rid);
+  row.innerHTML = `<input type="text" data-display="${rid}" readonly placeholder="انتخاب تاریخ" onclick="openJalaliPicker('${rid}_v','${rid}_d')" style="flex:1;" id="${rid}_d">
+    <input type="hidden" id="${rid}_v" value="">
+    <button class="btn ghost sm" type="button" onclick="this.closest('.extra-deadline-row').remove()" style="padding:8px 10px; flex-shrink:0;">✕</button>`;
   wrap.appendChild(row);
 }
 function getExtraDeadlines(){
-  const wrap = document.getElementById('extraDeadlinesWrap');
   const dates = [];
-  for(let i=0; i<wrap.children.length; i++){
-    const v = document.getElementById('tExtra'+i)?.value;
+  document.querySelectorAll('#extraDeadlinesWrap .extra-deadline-row').forEach(row=>{
+    const rid = row.getAttribute('data-rid');
+    const v = document.getElementById(rid+'_v')?.value;
     if(v) dates.push(v);
-  }
+  });
   return dates;
 }
 function saveTask(){
@@ -3542,7 +3555,9 @@ function saveTask(){
     extraDeadlines
   };
   if(editingTaskId){
-    Object.assign(DB.tasks.find(x=>x.id===editingTaskId), data);
+    const existing = DB.tasks.find(x=>x.id===editingTaskId);
+    if(!existing){ toast('⚠️ تسک یافت نشد'); closeModal('taskModalBg'); return; }
+    Object.assign(existing, data);
   } else {
     DB.tasks.push({id:uid(), done:false, created:todayISO(), ...data});
   }
@@ -3551,6 +3566,7 @@ function saveTask(){
 }
 function toggleTask(id){
   const t = DB.tasks.find(x=>x.id===id);
+  if(!t){ console.warn('toggleTask: id not found', id); return; }
   t.done = !t.done;
   if(t.done){
     t.doneDate = todayISO();
@@ -3670,22 +3686,26 @@ function saveHabit(){
   DB.habits.push({id:uid(), name, icon, log:{}});
   closeModal('habitModalBg'); save(); toast('🔥 عادت اضافه شد');
 }
+function dateToLocalISO(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function weekDates(){
-  // Returns 7 dates for the current week (Sat to Fri, Iranian calendar week)
+  // Returns 7 dates for the current week (Sat to Fri, Iranian calendar week) using LOCAL date
   const arr=[];
   const now = new Date();
   const dayOfWeek = (now.getDay()+1)%7; // 0=Sat,1=Sun,...,6=Fri
   const sat = new Date(now);
-  sat.setDate(now.getDate() - dayOfWeek); // go back to Saturday
+  sat.setDate(now.getDate() - dayOfWeek);
   for(let i=0;i<7;i++){
     const d=new Date(sat);
     d.setDate(sat.getDate()+i);
-    arr.push(d.toISOString().slice(0,10));
+    arr.push(dateToLocalISO(d));
   }
   return arr;
 }
 function toggleHabitDay(hid, date){
   const h = DB.habits.find(x=>x.id===hid);
+  if(!h){ console.warn('toggleHabitDay: habit not found', hid); return; }
   h.log[date] = !h.log[date];
   if(h.log[date]){
     addXP(6); logHistory('habits',1);
@@ -3698,7 +3718,7 @@ function toggleHabitDay(hid, date){
 function habitStreak(h){
   let streak=0; let d = new Date();
   while(true){
-    const iso = d.toISOString().slice(0,10);
+    const iso = dateToLocalISO(d);
     if(h.log[iso]){ streak++; d.setDate(d.getDate()-1); } else break;
   }
   return streak;
@@ -3732,7 +3752,7 @@ function renderHabits(){
   else mini.innerHTML = DB.habits.slice(0,4).map(h=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 2px;font-size:13px;">
     <span>${h.icon} ${esc(h.name)}</span><b class="num" style="color:var(--neon)">${habitStreak(h)} روز</b></div>`).join('');
 }
-function deleteHabit(id){ DB.habits = DB.habits.filter(x=>x.id!==id); save(); }
+function deleteHabit(id){ if(!DB.habits.find(x=>x.id===id)) return; DB.habits = DB.habits.filter(x=>x.id!==id); save(); }
 
 /* ============ GOALS ============ */
 function openGoalModal(){
@@ -3788,7 +3808,7 @@ function renderGoals(){
     <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>${esc(g.title)}</span><b class="num">${g.progress}٪</b></div>
     <div class="bar-track"><div class="bar-fill" style="width:${g.progress}%"></div></div></div>`).join('');
 }
-function deleteGoal(id){ DB.goals = DB.goals.filter(x=>x.id!==id); save(); }
+function deleteGoal(id){ if(!DB.goals.find(x=>x.id===id)) return; DB.goals = DB.goals.filter(x=>x.id!==id); save(); }
 
 /* ============ NOTES ============ */
 function openNoteModal(){ document.getElementById('nTitle').value=''; document.getElementById('nBody').value=''; document.getElementById('nTag').value=''; openModal('noteModalBg'); }
@@ -3932,7 +3952,7 @@ function renderCalendar(){
 }
 
 /* ============ CHARTS (self-contained, no external library) ============ */
-function last7(){ const arr=[]; for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(d.toISOString().slice(0,10)); } return arr; }
+function last7(){ const arr=[]; for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(dateToLocalISO(d)); } return arr; }
 function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function setupCanvas(canvas, cssHeight){
   const dpr = window.devicePixelRatio||1;
@@ -4102,10 +4122,50 @@ document.getElementById('importFile').onchange = (e)=>{
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
   reader.onload = ()=>{
-    try{ DB = JSON.parse(reader.result); save(); toast('✅ بازیابی شد'); }
-    catch(err){ toast('⚠️ فایل نامعتبر است'); }
+    try{
+      const parsed = JSON.parse(reader.result);
+      // validate it's actually a life planner backup
+      if(typeof parsed !== 'object' || parsed === null || !('tasks' in parsed)){
+        toast('⚠️ فایل نامعتبر است — بک‌آپ لایف پلنر نیست'); return;
+      }
+      DB = parsed;
+      // run migration guards (same as after loadStore)
+      if(!DB.quest){ DB.quest = { current:null, nextAt: Date.now()+2*60*1000, waitStart: Date.now(), bags:{} }; }
+      if(DB.quest.waitStart===undefined) DB.quest.waitStart = Date.now();
+      if(!DB.stats){ DB.stats = { tasksCompleted:0, questsCompleted:0, bestStreak:0 }; }
+      if(DB.stats.perfectDays===undefined) DB.stats.perfectDays = 0;
+      if(DB.stats.questsCompletedByDate===undefined) DB.stats.questsCompletedByDate = {};
+      if(DB.stats.totalXPEarned===undefined) DB.stats.totalXPEarned = 0;
+      if(DB.stats.weeklyPerfectUnlocked===undefined) DB.stats.weeklyPerfectUnlocked = false;
+      if(!DB.dailyGoalProgress) DB.dailyGoalProgress = {};
+      if(!DB.perfectDayHistory) DB.perfectDayHistory = {};
+      if(!DB.pomodoro){ DB.pomodoro = { settings:{focusMin:25, breakMin:5, goalMinutes:0}, session:null, history:{}, pendingNext:null }; }
+      if(DB.pomodoro.pendingNext===undefined) DB.pomodoro.pendingNext = null;
+      if(!DB.motivation) DB.motivation = { mood:'energize' };
+      if(DB.xpWallet===undefined) DB.xpWallet = DB.stats.totalXPEarned||0;
+      if(!DB.xpBoost) DB.xpBoost = { activeUntil:0 };
+      if(DB.streakShields===undefined) DB.streakShields = 0;
+      if(!DB.cityBonusItems) DB.cityBonusItems = [];
+      if(!DB.themes) DB.themes = { owned:['dark','light'] };
+      if(DB.lastBackupReminder===undefined) DB.lastBackupReminder = Date.now();
+      if(DB.lastAutoBackupAt===undefined) DB.lastAutoBackupAt = Date.now();
+      if(DB.skillPoints===undefined) DB.skillPoints = 0;
+      if(!DB.skillTiers) DB.skillTiers = { pomoXp:0, questXp:0, shopDiscount:0, luckyBox:0, criticalBonus:0, streakGuard:0 };
+      if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
+      if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
+      if(!DB.newRecordFlags) DB.newRecordFlags = {};
+      // ensure tasks have extraDeadlines array
+      (DB.tasks||[]).forEach(t=>{ if(!t.extraDeadlines) t.extraDeadlines=[]; });
+      localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+      renderAll();
+      toast('✅ بازیابی کامل شد — ' + (DB.tasks||[]).length + ' تسک بازگردانده شد');
+    }
+    catch(err){
+      console.error('Import error:', err);
+      toast('⚠️ فایل نامعتبر است — ' + (err.message||''));
+    }
   };
-  reader.readAsText(file);
+  reader.readAsText(file, 'utf-8');
 };
 
 /* ============ DASHBOARD RENDER ============ */
