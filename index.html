@@ -704,38 +704,45 @@ textarea{resize:vertical; min-height:70px;}
 /* kanban-ish calendar */
 /* calendar grid — pure CSS Grid, no pixel math */
 .week-outer{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+.cal-day-col{flex:1; min-width:54px; position:relative; border-right:1px solid var(--line); box-sizing:border-box;}
+.cal-day-col:last-child{border-right:none;}
+.cal-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);}
 .week-grid{
   display:grid;
-  grid-template-columns:38px repeat(7,minmax(0,1fr));
-  grid-auto-rows:40px; /* header row */
-  gap:1px; background:var(--line);
-  border:1px solid var(--line); border-radius:14px; overflow:hidden;
-  min-width:0;
+  grid-template-columns:46px repeat(7,minmax(52px,1fr));
+  gap:0; background:var(--line);
+  min-width:430px; width:100%;
 }
-.week-grid .cell{background:var(--panel); box-sizing:border-box; padding:2px 4px; font-size:11px; min-width:0; overflow:hidden;}
-.week-grid .hour-row{grid-auto-rows:46px;}
-.week-grid .dayhead{
+.week-grid .wg-cell{background:var(--panel); box-sizing:border-box; min-width:0;}
+.week-grid .wg-head{
   background:var(--bg2); text-align:center; box-sizing:border-box;
   display:flex; align-items:center; justify-content:center;
-  font-size:11px; font-weight:800; padding:0 1px; overflow:hidden; min-width:0;
+  font-size:11px; font-weight:800; border-bottom:1px solid var(--line);
+  height:40px; padding:0 2px; overflow:hidden; position:sticky; top:0; z-index:10;
 }
-.week-grid .dayhead.today{color:var(--neon);}
-.week-grid .hourlbl{
+.week-grid .wg-head.wg-today{color:var(--neon);}
+.week-grid .wg-time{
   background:var(--bg2); text-align:center; box-sizing:border-box;
-  display:flex; align-items:center; justify-content:center;
-  padding:2px; font-size:9.5px; color:var(--txt-dim2);
-  font-family:'Consolas','JetBrains Mono'; white-space:nowrap;
+  display:flex; align-items:flex-start; justify-content:center;
+  padding-top:2px; font-size:8.5px; color:var(--txt-dim2);
+  font-family:monospace; border-left:1px solid var(--line);
+  border-top:1px solid var(--line);
 }
-/* event blocks placed via grid-column/grid-row */
+.week-grid .wg-slot{
+  background:var(--panel); box-sizing:border-box;
+  border-top:1px solid var(--line); position:relative;
+}
+.week-grid .wg-slot.wg-hour-start{border-top-color:var(--line2);}
+/* رویدادها */
 .ev-block{
-  box-sizing:border-box; overflow:hidden; min-width:0; margin:1px;
+  box-sizing:border-box; overflow:hidden; min-width:0;
   background:linear-gradient(160deg,rgba(0,229,255,.28),rgba(139,107,255,.28));
-  border:1px solid rgba(0,229,255,.5); border-radius:8px; padding:3px 5px; cursor:pointer;
-  color:var(--txt); box-shadow:0 2px 10px rgba(0,229,255,.15); text-align:center; transition:.15s;
-  display:flex; align-items:center; justify-content:center;
+  border:1px solid rgba(0,229,255,.5); border-radius:6px; padding:2px 4px; cursor:pointer;
+  color:var(--txt); box-shadow:0 2px 8px rgba(0,229,255,.12); text-align:center; transition:.15s;
+  display:flex; align-items:center; justify-content:center; margin:1px;
 }
-.ev-block:hover{border-color:var(--neon); box-shadow:0 4px 16px rgba(0,229,255,.28);}
-.ev-block .ev-title{font-size:10.5px; font-weight:800; line-height:1.25; word-break:break-word;}
+.ev-block:hover{border-color:var(--neon);}
+.ev-block .ev-title{font-size:9.5px; font-weight:800; line-height:1.2; word-break:break-word;}
 
 /* notes */
 .note-card{background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:14px; cursor:pointer; transition:.15s; height:150px; display:flex; flex-direction:column;}
@@ -916,7 +923,7 @@ textarea{resize:vertical; min-height:70px;}
         <div class="top-actions"><button class="btn" onclick="openEventModal()">➕ رویداد جدید</button></div>
       </div>
       <div class="card" style="padding:0; overflow:hidden;">
-        <div id="weekGrid" style="overflow-x:auto; -webkit-overflow-scrolling:touch;"></div>
+        <div id="weekGrid"></div>
       </div>
     </div>
 
@@ -1520,7 +1527,7 @@ textarea{resize:vertical; min-height:70px;}
 
 <div class="modal-bg" id="eventActionModalBg"><div class="modal">
   <h2 id="eventActionTitle">📅 رویداد</h2>
-  <div id="eventActionDetails" class="event-detail-meta"></div>
+  <div id="eventActionDetails" style="font-size:12px;color:var(--txt-dim);line-height:1.8;margin:4px 0 2px;text-align:center;"></div>
   <div class="modal-actions" style="flex-direction:column;">
     <button class="btn" style="width:100%; justify-content:center;" onclick="startEditEvent()">✏️ ویرایش</button>
     <button class="btn danger" id="deleteThisDayBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteEventDay()">🗑️ حذف فقط این روز</button>
@@ -3969,102 +3976,124 @@ function eventDays(e){ return e.days || (e.day!==undefined ? [e.day] : []); }
 
 function onEventBlockClick(eventId, dayIdx){
   const ev = DB.events.find(x=>x.id===eventId); if(!ev) return;
-  eventActionCtx={eventId,dayIdx};
-  const start=eventStartMinutes(ev), end=eventEndMinutes(ev), duration=Math.max(0,end-start);
-  const durationText=duration>=60
-    ? `${Math.floor(duration/60)} ساعت${duration%60?` و ${duration%60} دقیقه`:''}`
-    : `${duration} دقیقه`;
-  document.getElementById('eventActionTitle').textContent=`📅 ${ev.title}`;
+  eventActionCtx = { eventId, dayIdx };
+  document.getElementById('eventActionTitle').textContent = `📅 ${ev.title}`;
+  const multiDay = eventDays(ev).length > 1;
+  document.getElementById('deleteThisDayBtn').style.display = multiDay ? 'flex' : 'none';
   const meta=document.getElementById('eventActionDetails');
   if(meta){
-    const days=eventDays(ev).map(d=>dayNames[d]).join('، ');
-    meta.innerHTML=`<div class="event-detail-time">${formatTimeMinutes(start%1440)} → ${formatTimeMinutes(end%1440)}${end>1440?' (+1 روز)':''}</div><div>⏱️ مدت: <b>${durationText}</b></div><div>📅 ${esc(days)}</div>`;
+    const s=eventStartMinutes(ev), e=eventEndMinutes(ev), d=Math.max(0,e-s);
+    const dur=d>=60?`${Math.floor(d/60)} ساعت${d%60?` و ${d%60} دقیقه`:''}`:`${d} دقیقه`;
+    meta.innerHTML=`🕒 <b style="color:var(--neon);direction:ltr;display:inline-block">${formatTimeMinutes(s%1440)} → ${formatTimeMinutes(e%1440)}</b> · ⏱️ ${dur}`;
   }
-  document.getElementById('deleteThisDayBtn').style.display=eventDays(ev).length>1?'flex':'none';
   openModal('eventActionModalBg');
 }
-
 function startEditEvent(){
-  const ctx=eventActionCtx;if(!ctx)return;
-  const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
-  closeModal('eventActionModalBg');editingEventId=ev.id;
-  document.getElementById('eventModalTitle').textContent='✏️ ویرایش رویداد';
-  document.getElementById('eTitle').value=ev.title;
-  document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
-  document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
-  const days=eventDays(ev);
-  document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',days.includes(+o.dataset.v)));
+  const ctx = eventActionCtx; if(!ctx) return;
+  const ev = DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
+  closeModal('eventActionModalBg');
+  editingEventId = ev.id;
+  document.getElementById('eventModalTitle').textContent = '✏️ ویرایش رویداد';
+  document.getElementById('eTitle').value = ev.title;
+  document.getElementById('eHourStart').value = formatTimeMinutes(eventStartMinutes(ev)%1440);
+  let end = eventEndMinutes(ev);
+  // For a cross-midnight event, show the next-day clock time (00:00 etc.).
+  document.getElementById('eHourEnd').value = formatTimeMinutes(end%1440);
+  const days = eventDays(ev);
+  document.querySelectorAll('#eDays .chip-opt').forEach(o=> o.classList.toggle('sel', days.includes(+o.dataset.v)));
   openModal('eventModalBg');
 }
 function deleteEventDay(){
-  const ctx=eventActionCtx;if(!ctx)return;
-  const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
-  const days=eventDays(ev).filter(d=>d!==ctx.dayIdx);
-  if(days.length){ev.days=days;delete ev.day}else DB.events=DB.events.filter(x=>x.id!==ev.id);
-  eventActionCtx=null;closeModal('eventActionModalBg');save();
+  const ctx = eventActionCtx; if(!ctx) return;
+  const ev = DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
+  const days = eventDays(ev).filter(d=>d!==ctx.dayIdx);
+  if(days.length){ ev.days = days; delete ev.day; }
+  else { DB.events = DB.events.filter(x=>x.id!==ev.id); }
+  eventActionCtx = null;
+  closeModal('eventActionModalBg');
+  save();
 }
 function deleteWholeEvent(){
-  const ctx=eventActionCtx;if(!ctx)return;
-  DB.events=DB.events.filter(x=>x.id!==ctx.eventId);eventActionCtx=null;
-  closeModal('eventActionModalBg');save();toast('🗑️ کل رویداد حذف شد');
+  const ctx = eventActionCtx; if(!ctx) return;
+  DB.events = DB.events.filter(x=>x.id!==ctx.eventId);
+  eventActionCtx = null;
+  closeModal('eventActionModalBg');
+  save();
+  toast('🗑️ کل رویداد حذف شد');
 }
-
 function renderCalendar(){
-  // Same clean v4.1 calendar. Only the event geometry is now exact to the minute.
-  const HOURS_START=7,HOURS_END=24,MINUTES_PER_ROW=15,ROW_HEIGHT=12;
-  const totalMinutes=(HOURS_END-HOURS_START)*60,rows=totalMinutes/MINUTES_PER_ROW;
-  const pxPerMinute=ROW_HEIGHT/MINUTES_PER_ROW;
-  const dayHeight=rows*ROW_HEIGHT;
-  const todayIdx=(new Date().getDay()+1)%7;
+  const HOUR_START=7, HOUR_END=23;
+  const ROW_H=52;    // px per hour
+  const HEAD_H=40;   // px header
+  const TIME_W=44;   // px time-label column
+  const COL_MIN=52;  // px min width per day column
+  const HOURS=[];
+  for(let h=HOUR_START;h<=HOUR_END;h++) HOURS.push(h);
+  const N=HOURS.length;
+  const todayDow=(new Date().getDay()+1)%7; // 0=شنبه…6=جمعه
 
-  const header=`<div class="clean-week-head"></div>`+
-    dayNames.map((d,i)=>`<div class="clean-week-head${i===todayIdx?' today':''}">${d}</div>`).join('');
-
-  const axis=[];
-  for(let ri=0;ri<=rows;ri++){
-    const minute=HOURS_START*60+ri*MINUTES_PER_ROW,top=ri*ROW_HEIGHT;
-    axis.push(`<div class="${minute%60===0?'clean-grid-line':'clean-grid-half'}" style="top:${top}px"></div>`);
-    if(minute<24*60&&minute%60===0)
-      axis.push(`<div class="clean-time-label" style="top:${top}px">${String(Math.floor(minute/60)).padStart(2,'0')}:00</div>`);
+  /* ---- time labels ---- */
+  let timeLbls='';
+  for(let hi=0;hi<N;hi++){
+    const h=HOURS[hi];
+    timeLbls+=`<div style="height:${ROW_H}px;display:flex;align-items:flex-start;justify-content:flex-end;padding:3px 4px 0 0;font-size:9px;color:var(--txt-dim2);font-family:monospace;border-top:1px solid var(--line);box-sizing:border-box;">${String(h).padStart(2,'0')}:00</div>`;
   }
 
-  const now=new Date(),nowMin=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
-  const nowHtml=(nowMin>=HOURS_START*60&&nowMin<=HOURS_END*60)
-    ? `<div class="clean-now-line" style="top:${(nowMin-HOURS_START*60)*pxPerMinute}px"><span class="clean-now-dot"></span></div>`:'';
-
-  const dayTracks=dayNames.map((d,dayIdx)=>{
-    const lines=[];
-    for(let ri=0;ri<=rows;ri++){
-      const minute=HOURS_START*60+ri*MINUTES_PER_ROW,top=ri*ROW_HEIGHT;
-      lines.push(`<div class="${minute%60===0?'clean-grid-line':'clean-grid-half'}" style="top:${top}px"></div>`);
+  /* ---- day columns ---- */
+  let dayCols='';
+  for(let d=0;d<7;d++){
+    const isToday=(d===todayDow);
+    let slots='';
+    for(let hi=0;hi<N;hi++){
+      slots+=`<div style="height:${ROW_H}px;border-top:1px solid var(--line);box-sizing:border-box;"></div>`;
     }
+    dayCols+=`<div class="cal-day-col" data-d="${d}" style="flex:1;min-width:${COL_MIN}px;position:relative;border-right:1px solid var(--line);">${slots}</div>`;
+  }
 
-    const items=[];
-    DB.events.forEach(e=>{
-      const start=eventStartMinutes(e),end=eventEndMinutes(e);
-      if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return;
-      eventDays(e).forEach(d0=>{
-        const from=Math.max(start,HOURS_START*60),to=Math.min(end,HOURS_END*60);
-        if(d0===dayIdx&&from<to)items.push({e,from,to});
-        if(end>1440){
-          const nextDay=(d0+1)%7,from2=HOURS_START*60,to2=Math.min(end-1440,HOURS_END*60);
-          if(nextDay===dayIdx&&from2<to2)items.push({e,from:from2,to:to2});
-        }
-      });
+  /* ---- header ---- */
+  let headerCells=`<div style="width:${TIME_W}px;flex-shrink:0;height:${HEAD_H}px;"></div>`;
+  dayNames.forEach((name,i)=>{
+    const isToday=(i===todayDow);
+    headerCells+=`<div style="flex:1;min-width:${COL_MIN}px;height:${HEAD_H}px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${isToday?'var(--neon)':'var(--txt)'};border-right:1px solid var(--line);box-sizing:border-box;">${name}</div>`;
+  });
+
+  /* ---- assemble — direction:ltr تا RTL layout رو خراب نکنه ---- */
+  const html=`
+<div class="cal-scroll" style="direction:ltr;">
+  <div style="min-width:${TIME_W+7*COL_MIN}px;">
+    <div style="display:flex;flex-direction:row;flex-wrap:nowrap;border-bottom:2px solid var(--line2);background:var(--bg2);position:sticky;top:0;z-index:20;">${headerCells}</div>
+    <div style="display:flex;flex-direction:row;flex-wrap:nowrap;">
+      <div style="width:${TIME_W}px;flex-shrink:0;background:var(--bg2);">${timeLbls}</div>
+      <div style="flex:1;display:flex;flex-direction:row;flex-wrap:nowrap;">${dayCols}</div>
+    </div>
+  </div>
+</div>`;
+
+  document.getElementById('weekGrid').innerHTML=html;
+
+  /* ---- رویدادها ---- */
+  const colEls=document.querySelectorAll('#weekGrid .cal-day-col');
+  if(!colEls.length) return;
+
+  DB.events.forEach(e=>{
+    const startM=eventStartMinutes(e);
+    const endM=eventEndMinutes(e);
+    if(!Number.isFinite(startM)||!Number.isFinite(endM)||endM<=startM) return;
+    eventDays(e).forEach(d=>{
+      const col=colEls[d]; if(!col) return;
+      const fromM=Math.max(startM,HOUR_START*60);
+      const toM=Math.min(endM,(HOUR_END+1)*60);
+      if(fromM>=toM) return;
+      const topPx=((fromM-HOUR_START*60)/60)*ROW_H;
+      const hPx=Math.max(((toM-fromM)/60)*ROW_H-2,14);
+      const ev=document.createElement('div');
+      ev.className='ev-block';
+      ev.style.cssText=`position:absolute;top:${topPx}px;left:1px;right:1px;height:${hPx}px;direction:rtl;`;
+      ev.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
+      ev.onclick=()=>onEventBlockClick(e.id,d);
+      col.appendChild(ev);
     });
-
-    const eventHtml=items.map(({e,from,to})=>{
-      const top=(from-HOURS_START*60)*pxPerMinute;
-      const height=Math.max(6,(to-from)*pxPerMinute);
-      const showTime=height>=28,tiny=height<20;
-      const timeText=`${formatTimeMinutes(from)} → ${formatTimeMinutes(to)}`;
-      return `<button type="button" class="ev-block${showTime?'':' compact'}${tiny?' tiny':''}" style="top:${top}px;height:${height}px;left:2px;right:2px;" title="${esc(e.title)} · ${timeText}" aria-label="${esc(e.title)}، ${timeText}" onclick="onEventBlockClick('${e.id}',${dayIdx})"><span class="ev-title">${esc(e.title)}</span>${showTime?`<span class="ev-time">${timeText}</span>`:''}</button>`;
-    }).join('');
-
-    return `<div class="clean-day-track" data-day="${dayIdx}" style="height:${dayHeight}px">${lines.join('')}${eventHtml}${dayIdx===todayIdx?nowHtml:''}</div>`;
-  }).join('');
-
-  document.getElementById('weekGrid').innerHTML=`<div class="week-outer"><div class="clean-week-grid">${header}<div class="clean-time-axis" style="height:${dayHeight}px">${axis.join('')}</div>${dayTracks}</div></div>`;
+  });
 }
 
 /* ============ CHARTS (self-contained, no external library) ============ */
