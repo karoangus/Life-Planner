@@ -714,7 +714,7 @@ textarea{resize:vertical; min-height:70px;}
 .lp-cal-hour{height:52px;box-sizing:border-box;border-top:1px solid var(--line);}
 .ev-block{position:absolute;left:2px;right:2px;box-sizing:border-box;overflow:hidden;background:linear-gradient(160deg,rgba(0,229,255,.28),rgba(139,107,255,.28));border:1px solid rgba(0,229,255,.5);border-radius:8px;padding:3px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:5;}
 .ev-block .ev-title{font-size:12px;font-weight:900;line-height:1.25;word-break:break-word;text-shadow:0 1px 2px rgba(0,0,0,.45);}
-.ev-block .ev-time{display:none!important;}
+.ev-block .ev-time{display:none!important;}.ev-block .ev-reminder{font-size:9px;line-height:1;margin-top:2px;opacity:.95;}
 @media(max-width:700px){.lp-cal-header{grid-template-columns:36px repeat(7,minmax(0,1fr));}.lp-cal-body{grid-template-columns:36px minmax(0,1fr);}.lp-cal-head{font-size:9px;}.ev-block .ev-title{font-size:10px;}}
 /* notes */
 .note-card{background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:14px; cursor:pointer; transition:.15s; height:150px; display:flex; flex-direction:column;}
@@ -738,6 +738,17 @@ textarea{resize:vertical; min-height:70px;}
 .pinned-nav-select{width:100%;min-width:0;background:var(--panel2);color:var(--txt);border:1px solid var(--line2);border-radius:9px;padding:9px 10px;font-family:inherit;font-size:12px;font-weight:700;outline:none;}
 .pinned-nav-select:focus{border-color:var(--neon);box-shadow:0 0 0 2px rgba(0,229,255,.1);}
 .pinned-nav-hint{font-size:10px;color:var(--txt-dim2);margin-top:2px;}
+
+/* v5.1 notes + current calendar hour */
+.notes-tools{margin-bottom:12px;}
+.note-card{position:relative;}
+.note-card .note-actions{display:flex;gap:6px;margin-top:10px;}
+.note-card .note-action{border:1px solid var(--line);background:var(--bg2);color:var(--txt);border-radius:8px;padding:5px 8px;font:700 10px inherit;cursor:pointer;}
+.note-card .note-action:hover{border-color:var(--neon);}
+.lp-cal-time-row.current-hour{background:rgba(0,229,255,.16);color:var(--neon);font-weight:900;border-top-color:rgba(0,229,255,.65);border-bottom:1px solid rgba(0,229,255,.45);box-shadow:inset 3px 0 0 var(--neon);}
+.lp-cal-hour.current-hour{background:rgba(0,229,255,.055);}
+.lp-cal-head.current-day{font-weight:900;}
+.version-badge{font:800 9px monospace;direction:ltr;color:var(--txt-dim2);opacity:.85;margin-top:7px;}
 </style>
 </head>
 <body>
@@ -779,18 +790,7 @@ textarea{resize:vertical; min-height:70px;}
     </div>
     <div class="sheet-body">
       <div class="sheet-section-label">📱 بخش‌ها</div>
-      <div class="sheet-nav-item" data-view="calendar" onclick="showView('calendar'); closeSheet();"><span class="ic">📅</span> تقویم هفتگی</div>
-      <div class="sheet-nav-item" data-view="notes" onclick="showView('notes'); closeSheet();"><span class="ic">📝</span> یادداشت‌ها</div>
-      <div class="sheet-nav-item" data-view="analytics" onclick="showView('analytics'); closeSheet();"><span class="ic">📊</span> آنالیتیکس</div>
-      <div class="sheet-nav-item" data-view="pomodoro" onclick="showView('pomodoro'); closeSheet();"><span class="ic">🍅</span> پومودورو</div>
-      <div class="sheet-nav-item" data-view="shop" onclick="showView('shop'); closeSheet();"><span class="ic">🛍️</span> XP Shop</div>
-      <div class="sheet-nav-item" data-view="skills" onclick="showView('skills'); closeSheet();"><span class="ic">🌳</span> درخت مهارت</div>
-      <div class="sheet-nav-item" data-view="boss" onclick="showView('boss'); closeSheet();"><span class="ic">⚔️</span> باس هفتگی</div>
-      <div class="sheet-nav-item" data-view="yvy" onclick="showView('yvy'); closeSheet();"><span class="ic">🪞</span> You VS You</div>
-      <div class="sheet-nav-item" data-view="city" onclick="showView('city'); closeSheet();"><span class="ic">🏙️</span> Life City</div>
-      <div class="sheet-nav-item" data-view="profile" onclick="showView('profile'); closeSheet();"><span class="ic">👤</span> پروفایل</div>
-      <div class="sheet-sep"></div>
-      <div class="sheet-section-label">⚙️ تنظیمات</div>
+      <div id="moreViewList"></div>
       <div class="sheet-nav-item" onclick="openPinnedNavSettings(); closeSheet();"><span class="ic">📌</span> شخصی‌سازی نوار پایین</div>
       <div class="sheet-nav-item" id="themeToggleBtn" onclick="toggleTheme()"><span class="ic" id="themeIcon">🌙</span> <span id="themeLabel">تم تاریک</span></div>
       <div class="sheet-nav-item" onclick="showThemePanel()"><span class="ic">🎨</span> انتخاب تم</div>
@@ -924,20 +924,12 @@ textarea{resize:vertical; min-height:70px;}
         <div><h1>یادداشت‌ها</h1><div class="sub">پایگاه دانش شخصی تو</div></div>
         <div class="top-actions"><button class="btn" onclick="openNoteModal()">➕ یادداشت جدید</button></div>
       </div>
+      <div class="card notes-tools">
+        <div class="field" style="margin:0;">
+          <input type="search" id="noteSearch" placeholder="🔎 جستجو در عنوان، متن یا برچسب..." oninput="renderNotes()">
+        </div>
+      </div>
       <div class="grid g3" id="noteGrid"></div>
-    </div>
-
-    <!-- ANALYTICS -->
-    <div class="view" id="view-analytics">
-      <div class="topbar"><div><h1>آنالیتیکس بهره‌وری</h1><div class="sub">روند ۷ روز اخیر</div></div></div>
-      <div class="grid g2">
-        <div class="card"><div class="card-head"><h3>✅ تسک‌های تکمیل‌شده</h3></div><canvas id="chartTasks" height="180"></canvas></div>
-        <div class="card"><div class="card-head"><h3>🔥 پایبندی به عادت‌ها</h3></div><canvas id="chartHabits" height="180"></canvas></div>
-      </div>
-      <div class="grid g3" style="margin-top:16px;">
-        <div class="card"><div class="card-head"><h3>🏷️ تسک بر اساس اولویت</h3></div><canvas id="chartPriority" height="180"></canvas></div>
-        <div class="card" style="grid-column:span 2;"><div class="card-head"><h3>🎯 پیشرفت اهداف</h3></div><canvas id="chartGoals" height="180"></canvas></div>
-      </div>
     </div>
 
     <!-- POMODORO -->
@@ -1470,10 +1462,11 @@ textarea{resize:vertical; min-height:70px;}
 </div></div>
 
 <div class="modal-bg" id="noteModalBg"><div class="modal">
-  <h2>📝 یادداشت جدید</h2>
+  <h2 id="noteModalTitle">📝 یادداشت جدید</h2>
   <div class="field"><label>عنوان</label><input type="text" id="nTitle" placeholder="عنوان یادداشت"></div>
   <div class="field"><label>محتوا</label><textarea id="nBody" style="min-height:140px;" placeholder="هر چی دوست داری بنویس..."></textarea></div>
   <div class="field"><label>برچسب</label><input type="text" id="nTag" placeholder="مثلاً: کار، ایده، درس"></div>
+  <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="nPinned"><span>📌 سنجاق کردن یادداشت</span></label>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('noteModalBg')">انصراف</button><button class="btn" onclick="saveNote()">ذخیره</button></div>
 </div></div>
 
@@ -1495,6 +1488,7 @@ textarea{resize:vertical; min-height:70px;}
     <div class="field"><label>ساعت شروع</label><input type="time" id="eHourStart" value="09:00"></div>
     <div class="field"><label>ساعت پایان</label><input type="time" id="eHourEnd" value="12:00"></div>
   </div>
+  <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="eReminder"><span>🔔 یادآوری این رویداد</span></label>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('eventModalBg')">انصراف</button><button class="btn" onclick="saveEvent()">ذخیره</button></div>
 </div></div>
 
@@ -1650,13 +1644,13 @@ function toggleTheme(){
   const next = owned[(idx+1) % owned.length] || 'dark';
   localStorage.setItem(THEME_KEY, next);
   applyTheme(next);
-  if(document.getElementById('view-analytics').classList.contains('active')) renderCharts();
+  
 }
 function useTheme(theme){
   localStorage.setItem(THEME_KEY, theme);
   applyTheme(theme);
   renderXPShop();
-  if(document.getElementById('view-analytics')?.classList.contains('active')) renderCharts();
+  
 }
 applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
 document.getElementById('themeToggleBtn').onclick = toggleTheme;
@@ -1683,6 +1677,8 @@ function loadStore(){
   return db;
 }
 let DB = loadStore();
+DB.notes.forEach(n=>{ if(typeof n.pinned!=='boolean') n.pinned=false; if(!n.updatedAt) n.updatedAt=n.date||todayISO(); });
+DB.events.forEach(e=>{ if(typeof e.reminder!=='boolean') e.reminder=false; });
 // Defensive migration for data created by older/broken builds.
 if(!DB.motivation || typeof DB.motivation!=='object') DB.motivation = { mood:'energize' };
 if(!DB.stats || typeof DB.stats!=='object') DB.stats = { tasksCompleted:0, questsCompleted:0, bestStreak:0 };
@@ -1788,7 +1784,6 @@ const PINNED_NAV_OPTIONS = [
   {id:'goals', label:'اهداف', icon:'🎯'},
   {id:'calendar', label:'تقویم هفتگی', icon:'📅'},
   {id:'notes', label:'یادداشت‌ها', icon:'📝'},
-  {id:'analytics', label:'آنالیتیکس', icon:'📊'},
   {id:'pomodoro', label:'پومودورو', icon:'🍅'},
   {id:'shop', label:'XP Shop', icon:'🛍️'},
   {id:'skills', label:'درخت مهارت', icon:'🌳'},
@@ -1802,79 +1797,84 @@ function getPinnedNav(){
   try{
     const saved=JSON.parse(localStorage.getItem(PINNED_NAV_KEY)||'null');
     if(Array.isArray(saved)&&saved.length===4){
-      const valid=saved.every((id,i)=>PINNED_NAV_OPTIONS.some(x=>x.id===id));
+      const valid=saved.every(id=>PINNED_NAV_OPTIONS.some(x=>x.id===id));
       const unique=new Set(saved).size===4;
-      if(valid&&unique) return saved;
+      if(valid&&unique)return saved;
     }
   }catch(_){}
   return [...DEFAULT_PINNED_VIEWS];
 }
 
-let PINNED_VIEWS = getPinnedNav();
+let PINNED_VIEWS=getPinnedNav();
 
 function getPinnedOption(id){
   return PINNED_NAV_OPTIONS.find(x=>x.id===id)||PINNED_NAV_OPTIONS[0];
 }
 
+function renderMoreViews(){
+  const box=document.getElementById('moreViewList');
+  if(!box)return;
+  box.innerHTML=PINNED_NAV_OPTIONS
+    .filter(item=>!PINNED_VIEWS.includes(item.id))
+    .map(item=>`<div class="sheet-nav-item" data-view="${item.id}" onclick="showView('${item.id}'); closeSheet();"><span class="ic">${item.icon}</span> ${item.label}</div>`)
+    .join('');
+}
+
 function renderPinnedNav(){
   PINNED_VIEWS.forEach((viewId,i)=>{
     const el=document.getElementById('bnav-slot'+i);
-    if(!el) return;
+    if(!el)return;
     const item=getPinnedOption(viewId);
     el.dataset.view=viewId;
     el.innerHTML=`<span class="bic">${item.icon}</span><span>${item.label}</span>`;
     el.onclick=()=>showView(viewId);
     el.setAttribute('aria-label',item.label);
   });
+  renderMoreViews();
 }
 
 function showView(v){
   const target=document.getElementById('view-'+v);
-  if(!target) return;
+  if(!target)return;
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   target.classList.add('active');
 
-  // Update only the four configurable quick-access buttons.
   document.querySelectorAll('.bnav-item[data-view]').forEach(el=>{
-    el.classList.toggle('active', el.dataset.view===v);
+    el.classList.toggle('active',el.dataset.view===v);
   });
-
-  // Update More drawer items.
   document.querySelectorAll('.sheet-nav-item[data-view]').forEach(el=>{
-    el.classList.toggle('active', el.dataset.view===v);
+    el.classList.toggle('active',el.dataset.view===v);
   });
 
-  if(v==='analytics') setTimeout(renderCharts, 50);
-  if(v==='pomodoro') setTimeout(()=>{ renderPomoStats(); if(pomoTab==='stats') renderPomoChart(); }, 50);
+  if(v==='pomodoro')setTimeout(()=>{renderPomoStats();if(pomoTab==='stats')renderPomoChart();},50);
   if(v==='city'){
     citySunMoonInited=false;
-    setTimeout(renderCityScene, 30);
+    setTimeout(renderCityScene,30);
     setTimeout(()=>{
       if(!citySoundOn){
         citySoundOn=true;
         const b=document.getElementById('citySoundBtn');
-        if(b) b.textContent='🔊';
+        if(b)b.textContent='🔊';
         startCityAmbience();
         renderCityScene();
       }
-    }, 400);
+    },400);
   }
-  if(v==='shop') setTimeout(renderXPShop, 30);
-  if(v==='skills') setTimeout(renderSkillTree, 30);
-  if(v==='boss') setTimeout(renderBossContent, 30);
-  if(v==='yvy') setTimeout(renderYVY, 30);
-  if(v!=='city' && citySoundOn){
+  if(v==='shop')setTimeout(renderXPShop,30);
+  if(v==='skills')setTimeout(renderSkillTree,30);
+  if(v==='boss')setTimeout(renderBossContent,30);
+  if(v==='yvy')setTimeout(renderYVY,30);
+  if(v!=='city'&&citySoundOn){
     citySoundOn=false;
     stopCityAmbience();
     const b=document.getElementById('citySoundBtn');
-    if(b) b.textContent='🔇';
+    if(b)b.textContent='🔇';
   }
 }
 
 function openPinnedNavSettings(){
   const box=document.getElementById('pinnedNavEditor');
-  if(!box) return;
-
+  if(!box)return;
   const options=PINNED_NAV_OPTIONS;
   box.innerHTML=PINNED_VIEWS.map((selected,i)=>{
     const current=getPinnedOption(selected);
@@ -1892,22 +1892,19 @@ function openPinnedNavSettings(){
     sel.addEventListener('change',()=>{
       const item=getPinnedOption(sel.value);
       const slot=sel.closest('.pinned-nav-row')?.querySelector('.pinned-nav-slot');
-      if(slot) slot.textContent=item.icon;
+      if(slot)slot.textContent=item.icon;
     });
   });
-
   openModal('pinnedNavModalBg');
 }
 
 function savePinnedNav(){
   const selects=[...document.querySelectorAll('#pinnedNavEditor .pinned-nav-select')];
   const chosen=selects.map(x=>x.value);
-
-  if(chosen.length!==4 || new Set(chosen).size!==4){
+  if(chosen.length!==4||new Set(chosen).size!==4){
     toast('⚠️ هر چهار دکمه باید بخش متفاوتی داشته باشن');
     return;
   }
-
   PINNED_VIEWS=chosen;
   localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(PINNED_VIEWS));
   renderPinnedNav();
@@ -2475,29 +2472,52 @@ const MOTIVATION_QUOTES = {
     'قرار نیست همیشه انگیزه داشته باشی؛ قرارِ تو اینه که حتی بدون انگیزه هم ادامه بدی. 🔥',
     'به خودت ثابت کن وقتی گفتی «انجامش میدم»، واقعاً منظورت انجام دادنش بوده.',
     'اگر امروز فقط یک کار مهم انجام بدی، بذار همون کاری باشه که بیشتر از همه ازش فرار کردی. 😈',
+    'شروع ناقص، از برنامه‌ریزی بی‌پایان بهتره. همین الان یک قدم بردار.',
+    'نذار چند دقیقه سخت، کل روزت رو تعریف کنه. برگرد به مسیر. ⚡',
+    'انضباط یعنی وقتی حوصله نداری هم به چیزی که برای خودت مهمه احترام بذاری.',
+    'کاری که امروز عقب می‌اندازی، فردا سبک‌تر نمی‌شه؛ فقط تبدیل به بار بیشتری می‌شه.',
+    'به جای اینکه منتظر نسخه بهتر خودت باشی، امروز مثل همون نسخه رفتار کن.'
   ],
   energize:[
     'حوصله داشتن شرط شروع نیست؛ شروع کن، حوصله خودش میاد.',
     'هر بار که بهانه‌ات رو شکست میدی، داری نسخه قوی‌تری از خودت می‌سازی. 💪',
     'اون حس خوبی که بعد از تمام کردن کار میاد، ارزش چند دقیقه شروع سخت رو داره. برو.',
-    'وقتشه از حالت «باید انجامش بدم» بری به حالت «انجامش دادم».',
+    'وقته از حالت «باید انجامش بدم» بری به حالت «انجامش دادم».',
     'بلند شو. برنامه‌ات منتظرته. هدفت منتظرته. نسخه بهتر خودت هم منتظرته. شروع کن. 🚀',
+    'فقط قدم اول رو بردار؛ لازم نیست کل مسیر رو همین الان ببینی.',
+    'امروز یک برد کوچک بساز. بردهای کوچک، روزهای بزرگ می‌سازن. 🏆',
+    'اگه شروعش سخته، فقط پنج دقیقه انجامش بده. پنج دقیقه هم حساب می‌شه.',
+    'تو لازم نیست سریع‌ترین باشی؛ فقط لازم نیست متوقف بشی.',
+    'یک ساعت خوب امروز، می‌تونه حس کل روزت رو عوض کنه. شروع کن.'
   ],
   calm:[
     'امروز قرار نیست فوق‌العاده باشی؛ فقط قرار نیست تسلیم تنبلی بشی.',
     'آینده‌ات با تصمیم‌های بزرگ ساخته نمی‌شه؛ با کارهای کوچیکی ساخته می‌شه که هر روز انجام میدی.',
     'پنج دقیقه اول رو شروع کن. لازم نیست کل کوه رو امروز جابه‌جا کنی.',
+    'آروم جلو رفتن با عقب موندن فرق داره؛ تا وقتی جلو می‌ری، هنوز توی مسیری.',
+    'یک کار رو انتخاب کن، نفس بکش و فقط همون یکی رو انجام بده. 🌱',
+    'لازم نیست امروز همه‌چیز رو درست کنی؛ فقط یک چیز رو بهتر کن.',
+    'استراحت واقعی بخشی از مسیر پیشرفته، نه دشمنشه.'
   ],
   focus:[
     'اون کاری که داری عقب می‌اندازی؟ دقیقاً همون کاریه که باید همین الان انجامش بدی.',
     'گوشی رو بذار کنار. هدفت هنوز همونجاست که گذاشتیش. برو سراغش. 📱❌',
     'یک ساعت تمرکز امروز می‌تونه از ده ساعت «فردا انجامش میدم» باارزش‌تر باشه.',
     'اگر هدفت برات مهمه، امروز حداقل یک قدم براش بردار. حتی یک قدم. 🎯',
+    'حواست رو از نتیجه بردار و بذار روی همین ده دقیقه‌ای که جلوت قرار داره.',
+    'هر بار که حواست رو برمی‌گردونی، داری عضله تمرکزت رو قوی‌تر می‌کنی.',
+    'یک کار، یک بازه زمانی، بدون حواس‌پرتی. همین فرمول ساده رو اجرا کن. 🎯',
+    'شروع کن و اجازه بده تمرکزت بعد از چند دقیقه خودش شکل بگیره.'
   ],
   supportive:[
     'اگر فقط وقتی حال داشتی کار کنی، نصف رؤیاهات هیچ‌وقت ساخته نمی‌شن.',
     'تو برای کامل بودن شروع نکردی؛ برای بهتر شدن شروع کردی. پس ادامه بده.',
     'تو دنبال یک روز بی‌نقص نیستی؛ دنبال روزیه که شبش بگی «امروز واقعاً تلاش کردم.» 🌙',
+    'اگر امروز سخت بود، معنیش این نیست که شکست خوردی؛ معنیش اینه که امروز سخت بود.',
+    'یک قدم کوچک هم هنوز یک قدم به جلوئه. خودت رو با سرعت بقیه نسنج.',
+    'روزهای ضعیف هم جزئی از مسیرن؛ مهم اینه که دوباره برگردی.',
+    'با خودت مثل کسی رفتار کن که واقعاً می‌خواد رشدت رو ببینه: صادق، صبور و پیگیر. 💎',
+    'لازم نیست امروز همه‌چیز عالی پیش بره تا ارزش تلاش کردنت حفظ بشه.'
   ],
 };
 function pickDailyQuote(mood){
@@ -3988,20 +4008,81 @@ function renderGoals(){
 function deleteGoal(id){ if(!DB.goals.find(x=>x.id===id)) return; DB.goals = DB.goals.filter(x=>x.id!==id); save(); }
 
 /* ============ NOTES ============ */
-function openNoteModal(){ document.getElementById('nTitle').value=''; document.getElementById('nBody').value=''; document.getElementById('nTag').value=''; openModal('noteModalBg'); }
-function saveNote(){
-  const title = document.getElementById('nTitle').value.trim();
-  if(!title){ toast('⚠️ عنوان یادداشت رو بنویس'); return; }
-  DB.notes.unshift({id:uid(), title, body:document.getElementById('nBody').value.trim(), tag:document.getElementById('nTag').value.trim(), date:todayISO()});
-  closeModal('noteModalBg'); save(); toast('📝 یادداشت ذخیره شد');
+let editingNoteId=null;
+function openNoteModal(id=null){
+  editingNoteId=id;
+  const titleEl=document.getElementById('noteModalTitle');
+  const ev=id?DB.notes.find(x=>x.id===id):null;
+  if(ev){
+    titleEl.textContent='✏️ ویرایش یادداشت';
+    document.getElementById('nTitle').value=ev.title||'';
+    document.getElementById('nBody').value=ev.body||'';
+    document.getElementById('nTag').value=ev.tag||'';
+    document.getElementById('nPinned').checked=!!ev.pinned;
+  }else{
+    titleEl.textContent='📝 یادداشت جدید';
+    document.getElementById('nTitle').value='';
+    document.getElementById('nBody').value='';
+    document.getElementById('nTag').value='';
+    document.getElementById('nPinned').checked=false;
+  }
+  openModal('noteModalBg');
 }
-function deleteNote(id){ DB.notes = DB.notes.filter(x=>x.id!==id); save(); }
+function saveNote(){
+  const title=document.getElementById('nTitle').value.trim();
+  if(!title){toast('⚠️ عنوان یادداشت رو بنویس');return;}
+  const body=document.getElementById('nBody').value.trim();
+  const tag=document.getElementById('nTag').value.trim();
+  const pinned=document.getElementById('nPinned').checked;
+
+  if(editingNoteId){
+    const n=DB.notes.find(x=>x.id===editingNoteId);
+    if(n){
+      n.title=title;n.body=body;n.tag=tag;n.pinned=pinned;
+      n.updatedAt=todayISO();
+    }
+    toast('✏️ یادداشت ویرایش شد');
+  }else{
+    DB.notes.unshift({id:uid(),title,body,tag,pinned,date:todayISO(),updatedAt:todayISO()});
+    toast('📝 یادداشت ذخیره شد');
+  }
+  editingNoteId=null;
+  closeModal('noteModalBg');
+  save();
+}
+function deleteNote(id){
+  if(!DB.notes.find(x=>x.id===id))return;
+  if(!confirm('این یادداشت حذف بشه؟'))return;
+  DB.notes=DB.notes.filter(x=>x.id!==id);
+  save();renderNotes();toast('🗑️ یادداشت حذف شد');
+}
+function toggleNotePin(id){
+  const n=DB.notes.find(x=>x.id===id);if(!n)return;
+  n.pinned=!n.pinned;
+  save();renderNotes();
+  toast(n.pinned?'📌 یادداشت سنجاق شد':'📍 یادداشت از حالت سنجاق خارج شد');
+}
 function renderNotes(){
-  const el = document.getElementById('noteGrid');
-  if(!DB.notes.length){ el.innerHTML = `<div class="empty"><div class="ic">📝</div>یادداشتی نداری</div>`; return; }
-  el.innerHTML = DB.notes.map(n=>`<div class="note-card" onclick="if(confirm('این یادداشت حذف بشه؟')) deleteNote('${n.id}')">
-    <h4>${esc(n.title)}</h4><p>${esc(n.body)}</p>
+  const el=document.getElementById('noteGrid');if(!el)return;
+  const q=(document.getElementById('noteSearch')?.value||'').trim().toLowerCase();
+  const list=[...DB.notes]
+    .filter(n=>!q||[n.title,n.body,n.tag].some(v=>String(v||'').toLowerCase().includes(q)))
+    .sort((a,b)=>(Number(!!b.pinned)-Number(!!a.pinned))||String(b.updatedAt||b.date||'').localeCompare(String(a.updatedAt||a.date||'')));
+
+  if(!list.length){
+    el.innerHTML=`<div class="empty"><div class="ic">📝</div>${q?'چیزی با این جستجو پیدا نشد':'یادداشتی نداری'}</div>`;
+    return;
+  }
+  el.innerHTML=list.map(n=>`<div class="note-card">
+    ${n.pinned?'<span class="pill cat tag">📌 سنجاق‌شده</span>':''}
+    <h4>${esc(n.title)}</h4>
+    <p>${esc(n.body||'بدون محتوا')}</p>
     ${n.tag?`<span class="pill cat tag">${esc(n.tag)}</span>`:''}
+    <div class="note-actions">
+      <button class="note-action" onclick="openNoteModal('${n.id}')">✏️ ویرایش</button>
+      <button class="note-action" onclick="toggleNotePin('${n.id}')">${n.pinned?'📍 برداشتن سنجاق':'📌 سنجاق'}</button>
+      <button class="note-action" onclick="deleteNote('${n.id}')">🗑️ حذف</button>
+    </div>
   </div>`).join('');
 }
 
@@ -4010,11 +4091,12 @@ const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چ
 let editingEventId = null;
 let eventActionCtx = null; // {eventId, dayIdx}
 function openEventModal(){
-  editingEventId = null;
-  document.getElementById('eventModalTitle').textContent = '📅 رویداد جدید';
+  editingEventId=null;
+  document.getElementById('eventModalTitle').textContent='📅 رویداد جدید';
   document.getElementById('eTitle').value='';
   document.getElementById('eHourStart').value='09:00';
   document.getElementById('eHourEnd').value='12:00';
+  document.getElementById('eReminder').checked=false;
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.remove('sel'));
   openModal('eventModalBg');
 }
@@ -4037,38 +4119,120 @@ function formatTimeMinutes(min){
   min = Math.max(0, Math.min(1439, Number(min)||0));
   return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');
 }
-function saveEvent(){
-  const title = document.getElementById('eTitle').value.trim();
-  if(!title){ toast('⚠️ عنوان رویداد رو بنویس'); return; }
-  const days = [...document.querySelectorAll('#eDays .chip-opt.sel')].map(o=>+o.dataset.v);
-  if(!days.length){ toast('⚠️ حداقل یک روز رو انتخاب کن'); return; }
-  const startMin = timeToMinutes(document.getElementById('eHourStart').value);
-  let endMin = timeToMinutes(document.getElementById('eHourEnd').value);
-  if(!Number.isFinite(startMin) || !Number.isFinite(endMin)){ toast('⚠️ ساعت را درست وارد کن'); return; }
+async function saveEvent(){
+  const title=document.getElementById('eTitle').value.trim();
+  if(!title){toast('⚠️ عنوان رویداد رو بنویس');return;}
+  const days=[...document.querySelectorAll('#eDays .chip-opt.sel')].map(o=>+o.dataset.v);
+  if(!days.length){toast('⚠️ حداقل یک روز رو انتخاب کن');return;}
 
-  // 00:00 after an evening start means midnight at the end of the same calendar block.
-  // Other end-before-start values are treated as crossing midnight into the next day.
-  const crossesMidnight = endMin <= startMin;
-  if(crossesMidnight) endMin += 1440;
-  if(endMin <= startMin || endMin > 2880){ toast('⚠️ بازه زمانی نامعتبره'); return; }
+  const startMin=timeToMinutes(document.getElementById('eHourStart').value);
+  let endMin=timeToMinutes(document.getElementById('eHourEnd').value);
+  if(!Number.isFinite(startMin)||!Number.isFinite(endMin)){toast('⚠️ ساعت را درست وارد کن');return;}
+
+  const crossesMidnight=endMin<=startMin;
+  if(crossesMidnight)endMin+=1440;
+  if(endMin<=startMin||endMin>2880){toast('⚠️ بازه زمانی نامعتبره');return;}
+
+  let reminder=!!document.getElementById('eReminder').checked;
+  if(reminder){
+    if(!('Notification' in window)){
+      reminder=false;
+      toast('⚠️ این مرورگر اعلان رو پشتیبانی نمی‌کنه');
+    }else if(Notification.permission!=='granted'){
+      try{
+        const permission=await Notification.requestPermission();
+        if(permission!=='granted'){
+          reminder=false;
+          toast('🔕 اجازه اعلان داده نشد؛ رویداد بدون یادآور ذخیره شد');
+        }
+      }catch(_){
+        reminder=false;
+        toast('🔕 دسترسی اعلان ممکن نشد؛ رویداد بدون یادآور ذخیره شد');
+      }
+    }
+  }
+
+  const candidate={title,days,startMin,endMin};
+  const conflict=findEventConflict(candidate,editingEventId);
+  if(conflict){
+    toast(`⚠️ «${conflict.title}» مانع ثبت این رویداد است؛ ساعت‌ها تداخل دارند`);
+    return;
+  }
 
   if(editingEventId){
-    const ev = DB.events.find(x=>x.id===editingEventId);
+    const ev=DB.events.find(x=>x.id===editingEventId);
     if(ev){
-      ev.title=title; ev.days=days;
-      ev.startMin=startMin; ev.endMin=endMin;
-      // Keep legacy fields for backward compatibility.
-      ev.startHour=Math.floor(startMin/60); ev.endHour=Math.min(24,Math.floor(endMin/60));
+      ev.title=title;ev.days=days;ev.startMin=startMin;ev.endMin=endMin;ev.reminder=reminder;
+      ev.startHour=Math.floor(startMin/60);ev.endHour=Math.min(24,Math.floor(endMin/60));
       delete ev.day;
     }
     toast('✏️ رویداد ویرایش شد');
-  } else {
-    DB.events.push({id:uid(), title, days, startMin, endMin,
-      startHour:Math.floor(startMin/60), endHour:Math.min(24,Math.floor(endMin/60))});
-    toast('📅 رویداد اضافه شد');
+  }else{
+    DB.events.push({
+      id:uid(),title,days,startMin,endMin,reminder,
+      startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
+    });
+    toast(reminder?'📅 رویداد اضافه شد؛ یادآورش فعاله':'📅 رویداد اضافه شد');
   }
-  editingEventId = null;
-  closeModal('eventModalBg'); save();
+  editingEventId=null;
+  closeModal('eventModalBg');
+  save();
+  renderCalendar();
+}
+
+function eventSegments(e){
+  const out=[];
+  const s=eventStartMinutes(e), en=eventEndMinutes(e);
+  eventDays(e).forEach(d=>{
+    const end=Math.min(en,1440);
+    if(end>s)out.push({day:d,start:s,end});
+    if(en>1440)out.push({day:(d+1)%7,start:0,end:en-1440});
+  });
+  return out;
+}
+function findEventConflict(candidate,ignoreId=null){
+  const cSeg=eventSegments(candidate);
+  for(const other of DB.events){
+    if(other.id===ignoreId)continue;
+    for(const a of cSeg){
+      for(const b of eventSegments(other)){
+        if(a.day===b.day&&a.start<b.end&&b.start<a.end)return other;
+      }
+    }
+  }
+  return null;
+}
+function reminderStorageKey(date,evId,day){
+  return `lifePlanner_eventReminder_${date}_${evId}_${day}`;
+}
+async function checkEventReminders(){
+  const now=new Date();
+  const day=(now.getDay()+1)%7;
+  const minute=now.getHours()*60+now.getMinutes();
+  const date=todayISO();
+  for(const ev of DB.events){
+    if(!ev.reminder||!eventDays(ev).includes(day))continue;
+    if(eventStartMinutes(ev)!==minute)continue;
+    const key=reminderStorageKey(date,ev.id,day);
+    if(localStorage.getItem(key)==='1')continue;
+    localStorage.setItem(key,'1');
+    const text=`${ev.title} — شروع شد`;
+    try{
+      if('serviceWorker' in navigator){
+        const reg=await navigator.serviceWorker.getRegistration();
+        if(reg) await reg.showNotification('🔔 یادآوری Life Planner',{body:text,tag:`lp-${ev.id}-${date}-${day}`,icon:'icon-192.png',renotify:false});
+        else if('Notification' in window&&Notification.permission==='granted') new Notification('🔔 یادآوری Life Planner',{body:text});
+      }else if('Notification' in window&&Notification.permission==='granted'){
+        new Notification('🔔 یادآوری Life Planner',{body:text});
+      }
+    }catch(_){
+      toast(`🔔 ${text}`);
+    }
+  }
+}
+function startEventReminderScheduler(){
+  checkEventReminders();
+  setInterval(checkEventReminders,20000);
 }
 function deleteEvent(id){ DB.events = DB.events.filter(x=>x.id!==id); save(); }
 function eventDays(e){ return e.days || (e.day!==undefined ? [e.day] : []); }
@@ -4088,18 +4252,17 @@ function onEventBlockClick(eventId, dayIdx){
   openModal('eventActionModalBg');
 }
 function startEditEvent(){
-  const ctx = eventActionCtx; if(!ctx) return;
-  const ev = DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
+  const ctx=eventActionCtx;if(!ctx)return;
+  const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
   closeModal('eventActionModalBg');
-  editingEventId = ev.id;
-  document.getElementById('eventModalTitle').textContent = '✏️ ویرایش رویداد';
-  document.getElementById('eTitle').value = ev.title;
-  document.getElementById('eHourStart').value = formatTimeMinutes(eventStartMinutes(ev)%1440);
-  let end = eventEndMinutes(ev);
-  // For a cross-midnight event, show the next-day clock time (00:00 etc.).
-  document.getElementById('eHourEnd').value = formatTimeMinutes(end%1440);
-  const days = eventDays(ev);
-  document.querySelectorAll('#eDays .chip-opt').forEach(o=> o.classList.toggle('sel', days.includes(+o.dataset.v)));
+  editingEventId=ev.id;
+  document.getElementById('eventModalTitle').textContent='✏️ ویرایش رویداد';
+  document.getElementById('eTitle').value=ev.title;
+  document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
+  document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
+  document.getElementById('eReminder').checked=!!ev.reminder;
+  const days=eventDays(ev);
+  document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',days.includes(+o.dataset.v)));
   openModal('eventModalBg');
 }
 function deleteEventDay(){
@@ -4121,35 +4284,43 @@ function deleteWholeEvent(){
   toast('🗑️ کل رویداد حذف شد');
 }
 function renderCalendar(){
-  const START=7, END=24, PX_HOUR=52;
-  const today=(new Date().getDay()+1)%7;
+  const START=7,END=24,PX_HOUR=52;
+  const now=new Date();
+  const today=(now.getDay()+1)%7;
+  const currentHour=now.getHours();
+
   let head='<div class="lp-cal-head lp-cal-time"></div>';
-  dayNames.forEach((d,i)=>head+=`<div class="lp-cal-head${i===today?' today':''}">${d}</div>`);
+  dayNames.forEach((d,i)=>head+=`<div class="lp-cal-head${i===today?' today current-day':''}">${d}</div>`);
+
   let axis='';
-  for(let h=START;h<END;h++) axis+=`<div class="lp-cal-time-row">${String(h).padStart(2,'0')}:00</div>`;
+  for(let h=START;h<END;h++){
+    axis+=`<div class="lp-cal-time-row${h===currentHour?' current-hour':''}">${String(h).padStart(2,'0')}:00</div>`;
+  }
+
   let days='';
   for(let d=0;d<7;d++){
     days+=`<div class="lp-cal-day" data-day="${d}">`;
-    for(let h=START;h<END;h++) days+='<div class="lp-cal-hour"></div>';
+    for(let h=START;h<END;h++)days+=`<div class="lp-cal-hour${d===today&&h===currentHour?' current-hour':''}"></div>`;
     days+='</div>';
   }
+
   document.getElementById('weekGrid').innerHTML=
     `<div class="lp-cal-wrap"><div class="lp-cal-header">${head}</div><div class="lp-cal-body"><div class="lp-cal-time-col">${axis}</div><div class="lp-cal-days">${days}</div></div></div>`;
 
   const cols=document.querySelectorAll('.lp-cal-day');
   DB.events.forEach(e=>{
-    const s=eventStartMinutes(e), en=eventEndMinutes(e);
+    const s=eventStartMinutes(e),en=eventEndMinutes(e);
     if(!Number.isFinite(s)||!Number.isFinite(en)||en<=s)return;
     eventDays(e).forEach(d=>{
-      const col=cols[d]; if(!col)return;
-      const from=Math.max(s,START*60), to=Math.min(en,END*60);
+      const col=cols[d];if(!col)return;
+      const from=Math.max(s,START*60),to=Math.min(en,END*60);
       if(from>=to)return;
       const el=document.createElement('button');
-      el.type='button'; el.className='ev-block';
+      el.type='button';el.className='ev-block';
       el.style.top=((from-START*60)/60*PX_HOUR)+'px';
       el.style.height=Math.max(10,(to-from)/60*PX_HOUR-2)+'px';
       el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
-
+      if(e.reminder)el.innerHTML+=`<span class="ev-reminder" title="یادآور فعال">🔔</span>`;
       el.onclick=()=>onEventBlockClick(e.id,d);
       col.appendChild(el);
     });
@@ -4333,6 +4504,10 @@ document.getElementById('importFile').onchange = (e)=>{
         toast('⚠️ فایل نامعتبر است — بک‌آپ لایف پلنر نیست'); return;
       }
       DB = parsed;
+      DB.notes = Array.isArray(DB.notes)?DB.notes:[];
+      DB.events = Array.isArray(DB.events)?DB.events:[];
+      DB.notes.forEach(n=>{ if(typeof n.pinned!=='boolean') n.pinned=false; if(!n.updatedAt) n.updatedAt=n.date||todayISO(); });
+      DB.events.forEach(e=>{ if(typeof e.reminder!=='boolean') e.reminder=false; });
       // run migration guards (same as after loadStore)
       if(!DB.quest){ DB.quest = { current:null, nextAt: Date.now()+2*60*1000, waitStart: Date.now(), bags:{} }; }
       if(DB.quest.waitStart===undefined) DB.quest.waitStart = Date.now();
@@ -4427,6 +4602,8 @@ function renderAll(){
 checkStreakShields();
 renderPinnedNav();
 renderAll();
+startEventReminderScheduler();
+setInterval(()=>{ const cv=document.getElementById('view-calendar'); if(cv&&cv.classList.contains('active')) renderCalendar(); },30000);
 const DAY_MS = 24*60*60*1000;
 function autoLocalBackup(){
   if(Date.now() - (DB.lastAutoBackupAt||0) < DAY_MS) return;
@@ -4450,7 +4627,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='5.0';
+const LP_APP_VERSION='5.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
