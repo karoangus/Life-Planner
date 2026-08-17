@@ -702,48 +702,20 @@ textarea{resize:vertical; min-height:70px;}
 .bar-fill{height:100%; background:var(--grad); border-radius:20px; transition:width .4s;}
 
 /* kanban-ish calendar */
-/* calendar grid — pure CSS Grid, no pixel math */
-.week-outer{overflow-x:auto; -webkit-overflow-scrolling:touch;}
-.cal-day-col{flex:1; min-width:54px; position:relative; border-right:1px solid var(--line); box-sizing:border-box;}
-.cal-day-col:last-child{border-right:none;}
-.cal-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);}
-.week-grid{
-  display:grid;
-  grid-template-columns:46px repeat(7,minmax(52px,1fr));
-  gap:0; background:var(--line);
-  min-width:430px; width:100%;
-}
-.week-grid .wg-cell{background:var(--panel); box-sizing:border-box; min-width:0;}
-.week-grid .wg-head{
-  background:var(--bg2); text-align:center; box-sizing:border-box;
-  display:flex; align-items:center; justify-content:center;
-  font-size:11px; font-weight:800; border-bottom:1px solid var(--line);
-  height:40px; padding:0 2px; overflow:hidden; position:sticky; top:0; z-index:10;
-}
-.week-grid .wg-head.wg-today{color:var(--neon);}
-.week-grid .wg-time{
-  background:var(--bg2); text-align:center; box-sizing:border-box;
-  display:flex; align-items:flex-start; justify-content:center;
-  padding-top:2px; font-size:8.5px; color:var(--txt-dim2);
-  font-family:monospace; border-left:1px solid var(--line);
-  border-top:1px solid var(--line);
-}
-.week-grid .wg-slot{
-  background:var(--panel); box-sizing:border-box;
-  border-top:1px solid var(--line); position:relative;
-}
-.week-grid .wg-slot.wg-hour-start{border-top-color:var(--line2);}
-/* رویدادها */
-.ev-block{
-  box-sizing:border-box; overflow:hidden; min-width:0;
-  background:linear-gradient(160deg,rgba(0,229,255,.28),rgba(139,107,255,.28));
-  border:1px solid rgba(0,229,255,.5); border-radius:6px; padding:2px 4px; cursor:pointer;
-  color:var(--txt); box-shadow:0 2px 8px rgba(0,229,255,.12); text-align:center; transition:.15s;
-  display:flex; align-items:center; justify-content:center; margin:1px;
-}
-.ev-block:hover{border-color:var(--neon);}
-.ev-block .ev-title{font-size:9.5px; font-weight:800; line-height:1.2; word-break:break-word;}
-
+.lp-cal-wrap{width:100%;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--line);}
+.lp-cal-header{display:grid;grid-template-columns:42px repeat(7,minmax(0,1fr));height:38px;background:var(--bg2);}
+.lp-cal-head{display:flex;align-items:center;justify-content:center;min-width:0;padding:0 2px;border-left:1px solid var(--line);font-size:10px;font-weight:800;overflow:hidden;white-space:nowrap;}
+.lp-cal-head.today{color:var(--neon);}
+.lp-cal-body{display:grid;grid-template-columns:42px minmax(0,1fr);height:884px;overflow:hidden;}
+.lp-cal-time-col{background:var(--bg2);}
+.lp-cal-time-row{height:52px;box-sizing:border-box;border-top:1px solid var(--line);display:flex;align-items:flex-start;justify-content:center;padding-top:3px;font:9px monospace;color:var(--txt-dim2);direction:ltr;}
+.lp-cal-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:0;}
+.lp-cal-day{height:884px;position:relative;min-width:0;background:var(--panel);border-left:1px solid var(--line);overflow:hidden;}
+.lp-cal-hour{height:52px;box-sizing:border-box;border-top:1px solid var(--line);}
+.ev-block{position:absolute;left:2px;right:2px;box-sizing:border-box;overflow:hidden;background:linear-gradient(160deg,rgba(0,229,255,.28),rgba(139,107,255,.28));border:1px solid rgba(0,229,255,.5);border-radius:8px;padding:3px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:5;}
+.ev-block .ev-title{font-size:10px;font-weight:800;line-height:1.2;word-break:break-word;}
+.ev-block .ev-time{font:8px monospace;color:var(--txt-dim);direction:ltr;white-space:nowrap;margin-top:2px;}
+@media(max-width:700px){.lp-cal-header{grid-template-columns:36px repeat(7,minmax(0,1fr));}.lp-cal-body{grid-template-columns:36px minmax(0,1fr);}.lp-cal-head{font-size:9px;}.ev-block .ev-title{font-size:8px;}}
 /* notes */
 .note-card{background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:14px; cursor:pointer; transition:.15s; height:150px; display:flex; flex-direction:column;}
 .note-card:hover{border-color:rgba(0,229,255,.3);}
@@ -4022,80 +3994,40 @@ function deleteWholeEvent(){
   toast('🗑️ کل رویداد حذف شد');
 }
 function renderCalendar(){
-  const HOUR_START=7, HOUR_END=23;
-  const ROW_H=52;    // px per hour
-  const HEAD_H=40;   // px header
-  const TIME_W=44;   // px time-label column
-  const COL_MIN=52;  // px min width per day column
-  const HOURS=[];
-  for(let h=HOUR_START;h<=HOUR_END;h++) HOURS.push(h);
-  const N=HOURS.length;
-  const todayDow=(new Date().getDay()+1)%7; // 0=شنبه…6=جمعه
-
-  /* ---- time labels ---- */
-  let timeLbls='';
-  for(let hi=0;hi<N;hi++){
-    const h=HOURS[hi];
-    timeLbls+=`<div style="height:${ROW_H}px;display:flex;align-items:flex-start;justify-content:flex-end;padding:3px 4px 0 0;font-size:9px;color:var(--txt-dim2);font-family:monospace;border-top:1px solid var(--line);box-sizing:border-box;">${String(h).padStart(2,'0')}:00</div>`;
-  }
-
-  /* ---- day columns ---- */
-  let dayCols='';
+  const START=7, END=24, PX_HOUR=52;
+  const today=(new Date().getDay()+1)%7;
+  let head='<div class="lp-cal-head lp-cal-time"></div>';
+  dayNames.forEach((d,i)=>head+=`<div class="lp-cal-head${i===today?' today':''}">${d}</div>`);
+  let axis='';
+  for(let h=START;h<END;h++) axis+=`<div class="lp-cal-time-row">${String(h).padStart(2,'0')}:00</div>`;
+  let days='';
   for(let d=0;d<7;d++){
-    const isToday=(d===todayDow);
-    let slots='';
-    for(let hi=0;hi<N;hi++){
-      slots+=`<div style="height:${ROW_H}px;border-top:1px solid var(--line);box-sizing:border-box;"></div>`;
-    }
-    dayCols+=`<div class="cal-day-col" data-d="${d}" style="flex:1;min-width:${COL_MIN}px;position:relative;border-right:1px solid var(--line);">${slots}</div>`;
+    days+=`<div class="lp-cal-day" data-day="${d}">`;
+    for(let h=START;h<END;h++) days+='<div class="lp-cal-hour"></div>';
+    days+='</div>';
   }
+  document.getElementById('weekGrid').innerHTML=
+    `<div class="lp-cal-wrap"><div class="lp-cal-header">${head}</div><div class="lp-cal-body"><div class="lp-cal-time-col">${axis}</div><div class="lp-cal-days">${days}</div></div></div>`;
 
-  /* ---- header ---- */
-  let headerCells=`<div style="width:${TIME_W}px;flex-shrink:0;height:${HEAD_H}px;"></div>`;
-  dayNames.forEach((name,i)=>{
-    const isToday=(i===todayDow);
-    headerCells+=`<div style="flex:1;min-width:${COL_MIN}px;height:${HEAD_H}px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${isToday?'var(--neon)':'var(--txt)'};border-right:1px solid var(--line);box-sizing:border-box;">${name}</div>`;
-  });
-
-  /* ---- assemble — direction:ltr تا RTL layout رو خراب نکنه ---- */
-  const html=`
-<div class="cal-scroll" style="direction:ltr;">
-  <div style="min-width:${TIME_W+7*COL_MIN}px;">
-    <div style="display:flex;flex-direction:row;flex-wrap:nowrap;border-bottom:2px solid var(--line2);background:var(--bg2);position:sticky;top:0;z-index:20;">${headerCells}</div>
-    <div style="display:flex;flex-direction:row;flex-wrap:nowrap;">
-      <div style="width:${TIME_W}px;flex-shrink:0;background:var(--bg2);">${timeLbls}</div>
-      <div style="flex:1;display:flex;flex-direction:row;flex-wrap:nowrap;">${dayCols}</div>
-    </div>
-  </div>
-</div>`;
-
-  document.getElementById('weekGrid').innerHTML=html;
-
-  /* ---- رویدادها ---- */
-  const colEls=document.querySelectorAll('#weekGrid .cal-day-col');
-  if(!colEls.length) return;
-
+  const cols=document.querySelectorAll('.lp-cal-day');
   DB.events.forEach(e=>{
-    const startM=eventStartMinutes(e);
-    const endM=eventEndMinutes(e);
-    if(!Number.isFinite(startM)||!Number.isFinite(endM)||endM<=startM) return;
+    const s=eventStartMinutes(e), en=eventEndMinutes(e);
+    if(!Number.isFinite(s)||!Number.isFinite(en)||en<=s)return;
     eventDays(e).forEach(d=>{
-      const col=colEls[d]; if(!col) return;
-      const fromM=Math.max(startM,HOUR_START*60);
-      const toM=Math.min(endM,(HOUR_END+1)*60);
-      if(fromM>=toM) return;
-      const topPx=((fromM-HOUR_START*60)/60)*ROW_H;
-      const hPx=Math.max(((toM-fromM)/60)*ROW_H-2,14);
-      const ev=document.createElement('div');
-      ev.className='ev-block';
-      ev.style.cssText=`position:absolute;top:${topPx}px;left:1px;right:1px;height:${hPx}px;direction:rtl;`;
-      ev.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
-      ev.onclick=()=>onEventBlockClick(e.id,d);
-      col.appendChild(ev);
+      const col=cols[d]; if(!col)return;
+      const from=Math.max(s,START*60), to=Math.min(en,END*60);
+      if(from>=to)return;
+      const el=document.createElement('button');
+      el.type='button'; el.className='ev-block';
+      el.style.top=((from-START*60)/60*PX_HOUR)+'px';
+      el.style.height=Math.max(10,(to-from)/60*PX_HOUR-2)+'px';
+      el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
+      if(to-from>=30)el.innerHTML+=`<span class="ev-time">${formatTimeMinutes(from%1440)} → ${formatTimeMinutes(to%1440)}</span>`;
+      el.onclick=()=>onEventBlockClick(e.id,d);
+      col.appendChild(el);
     });
   });
 }
-
 /* ============ CHARTS (self-contained, no external library) ============ */
 function last7(){ const arr=[]; for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(dateToLocalISO(d)); } return arr; }
 function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
@@ -4389,6 +4321,34 @@ setTimeout(checkBossTrigger, 2600);
 applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
+/* ============ APP UPDATE CHECK ============ */
+const LP_APP_VERSION='4.2.2';
+let lpUpdateShown=false;
+function showLifePlannerUpdate(v){
+  if(lpUpdateShown)return;
+  lpUpdateShown=true;
+  const x=document.createElement('div');
+  x.id='lpUpdateNotice'; x.dir='rtl';
+  x.style.cssText='position:fixed;left:12px;right:12px;bottom:74px;z-index:99999;background:var(--bg2);border:1px solid var(--neon);border-radius:14px;padding:12px;box-shadow:0 10px 35px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;';
+  x.innerHTML=`<div><b>🆕 نسخه جدید Life Planner</b><div style="color:var(--txt-dim)">نسخه ${esc(v)} آماده است.</div></div><button class="btn" id="lpUpdateNow">به‌روزرسانی</button>`;
+  document.body.appendChild(x);
+  document.getElementById('lpUpdateNow').onclick=async()=>{
+    try{
+      const reg=await navigator.serviceWorker?.getRegistration();
+      if(reg) await reg.update();
+    }catch(_){}
+    location.reload();
+  };
+}
+async function checkLifePlannerUpdate(){
+  try{
+    const r=await fetch('app-version.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)return;
+    const v=String((await r.json()).version||'');
+    if(v&&v!==LP_APP_VERSION)showLifePlannerUpdate(v);
+  }catch(_){}
+}
+window.addEventListener('load',()=>{checkLifePlannerUpdate();setInterval(checkLifePlannerUpdate,180000);});
 /* ============ PWA / OFFLINE ============ */
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
