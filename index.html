@@ -730,6 +730,14 @@ textarea{resize:vertical; min-height:70px;}
 .view{display:none;}
 .view.active{display:block; animation:fadeUp .35s ease;}
 @keyframes fadeUp{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+
+/* v5 — configurable quick-access bottom navigation */
+.pinned-nav-editor{display:flex;flex-direction:column;gap:9px;}
+.pinned-nav-row{display:grid;grid-template-columns:38px 1fr;align-items:center;gap:9px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:8px;}
+.pinned-nav-slot{width:34px;height:34px;border-radius:10px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:18px;}
+.pinned-nav-select{width:100%;min-width:0;background:var(--panel2);color:var(--txt);border:1px solid var(--line2);border-radius:9px;padding:9px 10px;font-family:inherit;font-size:12px;font-weight:700;outline:none;}
+.pinned-nav-select:focus{border-color:var(--neon);box-shadow:0 0 0 2px rgba(0,229,255,.1);}
+.pinned-nav-hint{font-size:10px;color:var(--txt-dim2);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -740,18 +748,10 @@ textarea{resize:vertical; min-height:70px;}
 <div class="app">
   <!-- BOTTOM NAV (always visible, 5 pinned items + More button) -->
   <nav class="bottom-nav" id="bottomNav">
-    <div class="bnav-item active" id="bnav-dashboard" onclick="showView('dashboard')">
-      <span class="bic">🏠</span><span>داشبورد</span>
-    </div>
-    <div class="bnav-item" id="bnav-tasks" onclick="showView('tasks')">
-      <span class="bic">✅</span><span>تسک‌ها</span>
-    </div>
-    <div class="bnav-item" id="bnav-habits" onclick="showView('habits')">
-      <span class="bic">🔥</span><span>عادت‌ها</span>
-    </div>
-    <div class="bnav-item" id="bnav-goals" onclick="showView('goals')">
-      <span class="bic">🎯</span><span>اهداف</span>
-    </div>
+    <div class="bnav-item active" id="bnav-slot0" data-slot="0"></div>
+    <div class="bnav-item" id="bnav-slot1" data-slot="1"></div>
+    <div class="bnav-item" id="bnav-slot2" data-slot="2"></div>
+    <div class="bnav-item" id="bnav-slot3" data-slot="3"></div>
     <div class="bnav-more" id="bnavMoreBtn" onclick="openSheet()">
       <span class="bic">☰</span><span>بیشتر</span>
     </div>
@@ -791,6 +791,7 @@ textarea{resize:vertical; min-height:70px;}
       <div class="sheet-nav-item" data-view="profile" onclick="showView('profile'); closeSheet();"><span class="ic">👤</span> پروفایل</div>
       <div class="sheet-sep"></div>
       <div class="sheet-section-label">⚙️ تنظیمات</div>
+      <div class="sheet-nav-item" onclick="openPinnedNavSettings(); closeSheet();"><span class="ic">📌</span> شخصی‌سازی نوار پایین</div>
       <div class="sheet-nav-item" id="themeToggleBtn" onclick="toggleTheme()"><span class="ic" id="themeIcon">🌙</span> <span id="themeLabel">تم تاریک</span></div>
       <div class="sheet-nav-item" onclick="showThemePanel()"><span class="ic">🎨</span> انتخاب تم</div>
       <div class="sheet-nav-item" id="shareBtn"><span class="ic">📤</span> ارسال پشتیبان به فضای ابری</div>
@@ -1605,6 +1606,23 @@ textarea{resize:vertical; min-height:70px;}
   </div>
 </div></div>
 
+
+<div class="modal-bg" id="pinnedNavModalBg">
+  <div class="modal" style="max-width:430px;">
+    <h2 style="text-align:center;">📌 نوار دسترسی سریع</h2>
+    <p style="text-align:center;color:var(--txt-dim);font-size:12px;line-height:1.8;margin:6px 0 14px;">
+      چهار دکمه پایین برنامه رو خودت انتخاب کن؛ چیزهایی که بیشتر استفاده می‌کنی همیشه دم دستت باشن.
+    </p>
+
+    <div id="pinnedNavEditor" class="pinned-nav-editor"></div>
+
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn ghost" style="flex:1;justify-content:center;" onclick="resetPinnedNav()">↩️ پیش‌فرض</button>
+      <button class="btn" style="flex:1;justify-content:center;" onclick="savePinnedNav()">💾 ذخیره</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1760,26 +1778,77 @@ function toast(msg){
 }
 
 /* ============ NAV ============ */
-const PINNED_VIEWS = ['dashboard','tasks','habits','goals'];
+const DEFAULT_PINNED_VIEWS = ['dashboard','tasks','habits','goals'];
+const PINNED_NAV_KEY = 'lifePlannerAI_pinnedNav_v1';
+
+const PINNED_NAV_OPTIONS = [
+  {id:'dashboard', label:'داشبورد', icon:'🏠'},
+  {id:'tasks', label:'تسک‌ها', icon:'✅'},
+  {id:'habits', label:'عادت‌ها', icon:'🔥'},
+  {id:'goals', label:'اهداف', icon:'🎯'},
+  {id:'calendar', label:'تقویم هفتگی', icon:'📅'},
+  {id:'notes', label:'یادداشت‌ها', icon:'📝'},
+  {id:'analytics', label:'آنالیتیکس', icon:'📊'},
+  {id:'pomodoro', label:'پومودورو', icon:'🍅'},
+  {id:'shop', label:'XP Shop', icon:'🛍️'},
+  {id:'skills', label:'درخت مهارت', icon:'🌳'},
+  {id:'boss', label:'باس هفتگی', icon:'⚔️'},
+  {id:'yvy', label:'You VS You', icon:'🪞'},
+  {id:'city', label:'Life City', icon:'🏙️'},
+  {id:'profile', label:'پروفایل', icon:'👤'}
+];
+
+function getPinnedNav(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(PINNED_NAV_KEY)||'null');
+    if(Array.isArray(saved)&&saved.length===4){
+      const valid=saved.every((id,i)=>PINNED_NAV_OPTIONS.some(x=>x.id===id));
+      const unique=new Set(saved).size===4;
+      if(valid&&unique) return saved;
+    }
+  }catch(_){}
+  return [...DEFAULT_PINNED_VIEWS];
+}
+
+let PINNED_VIEWS = getPinnedNav();
+
+function getPinnedOption(id){
+  return PINNED_NAV_OPTIONS.find(x=>x.id===id)||PINNED_NAV_OPTIONS[0];
+}
+
+function renderPinnedNav(){
+  PINNED_VIEWS.forEach((viewId,i)=>{
+    const el=document.getElementById('bnav-slot'+i);
+    if(!el) return;
+    const item=getPinnedOption(viewId);
+    el.dataset.view=viewId;
+    el.innerHTML=`<span class="bic">${item.icon}</span><span>${item.label}</span>`;
+    el.onclick=()=>showView(viewId);
+    el.setAttribute('aria-label',item.label);
+  });
+}
 
 function showView(v){
+  const target=document.getElementById('view-'+v);
+  if(!target) return;
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
-  document.getElementById('view-'+v).classList.add('active');
-  // update bottom nav pinned items
-  document.querySelectorAll('.bnav-item[id]').forEach(el=>{
-    const vid = el.id.replace('bnav-','');
-    el.classList.toggle('active', vid===v);
+  target.classList.add('active');
+
+  // Update only the four configurable quick-access buttons.
+  document.querySelectorAll('.bnav-item[data-view]').forEach(el=>{
+    el.classList.toggle('active', el.dataset.view===v);
   });
-  // update sheet drawer items
+
+  // Update More drawer items.
   document.querySelectorAll('.sheet-nav-item[data-view]').forEach(el=>{
     el.classList.toggle('active', el.dataset.view===v);
   });
+
   if(v==='analytics') setTimeout(renderCharts, 50);
   if(v==='pomodoro') setTimeout(()=>{ renderPomoStats(); if(pomoTab==='stats') renderPomoChart(); }, 50);
   if(v==='city'){
     citySunMoonInited=false;
     setTimeout(renderCityScene, 30);
-    // auto-start sound when entering city
     setTimeout(()=>{
       if(!citySoundOn){
         citySoundOn=true;
@@ -1794,8 +1863,66 @@ function showView(v){
   if(v==='skills') setTimeout(renderSkillTree, 30);
   if(v==='boss') setTimeout(renderBossContent, 30);
   if(v==='yvy') setTimeout(renderYVY, 30);
-  if(v!=='city' && citySoundOn){ citySoundOn=false; stopCityAmbience(); const b=document.getElementById('citySoundBtn'); if(b) b.textContent='🔇'; }
+  if(v!=='city' && citySoundOn){
+    citySoundOn=false;
+    stopCityAmbience();
+    const b=document.getElementById('citySoundBtn');
+    if(b) b.textContent='🔇';
+  }
 }
+
+function openPinnedNavSettings(){
+  const box=document.getElementById('pinnedNavEditor');
+  if(!box) return;
+
+  const options=PINNED_NAV_OPTIONS;
+  box.innerHTML=PINNED_VIEWS.map((selected,i)=>{
+    const current=getPinnedOption(selected);
+    return `<div class="pinned-nav-row">
+      <div class="pinned-nav-slot">${current.icon}</div>
+      <div>
+        <select class="pinned-nav-select" data-pinned-slot="${i}">
+          ${options.map(o=>`<option value="${o.id}" ${o.id===selected?'selected':''}>${o.icon}  ${o.label}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('.pinned-nav-select').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      const item=getPinnedOption(sel.value);
+      const slot=sel.closest('.pinned-nav-row')?.querySelector('.pinned-nav-slot');
+      if(slot) slot.textContent=item.icon;
+    });
+  });
+
+  openModal('pinnedNavModalBg');
+}
+
+function savePinnedNav(){
+  const selects=[...document.querySelectorAll('#pinnedNavEditor .pinned-nav-select')];
+  const chosen=selects.map(x=>x.value);
+
+  if(chosen.length!==4 || new Set(chosen).size!==4){
+    toast('⚠️ هر چهار دکمه باید بخش متفاوتی داشته باشن');
+    return;
+  }
+
+  PINNED_VIEWS=chosen;
+  localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(PINNED_VIEWS));
+  renderPinnedNav();
+  closeModal('pinnedNavModalBg');
+  toast('✅ نوار دسترسی سریع ذخیره شد');
+}
+
+function resetPinnedNav(){
+  PINNED_VIEWS=[...DEFAULT_PINNED_VIEWS];
+  localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(PINNED_VIEWS));
+  renderPinnedNav();
+  openPinnedNavSettings();
+  toast('↩️ نوار پایین به حالت پیش‌فرض برگشت');
+}
+
 function openSheet(){
   document.getElementById('sheetOverlay').classList.add('open');
   document.getElementById('sheetDrawer').classList.add('open');
@@ -4298,6 +4425,7 @@ function renderAll(){
   }
 }
 checkStreakShields();
+renderPinnedNav();
 renderAll();
 const DAY_MS = 24*60*60*1000;
 function autoLocalBackup(){
@@ -4322,7 +4450,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='4.2.4';
+const LP_APP_VERSION='5.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
