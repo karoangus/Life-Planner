@@ -712,14 +712,14 @@ textarea{resize:vertical; min-height:70px;}
 .lp-cal-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:0;}
 .lp-cal-day{height:884px;position:relative;min-width:0;background:var(--panel);border-left:1px solid var(--line);overflow:hidden;}
 .lp-cal-hour{height:52px;box-sizing:border-box;border-top:1px solid var(--line);}
-.ev-block{position:absolute;left:2px;right:2px;box-sizing:border-box;overflow:hidden;background:linear-gradient(160deg,rgba(0,229,255,.28),rgba(139,107,255,.28));border:1px solid rgba(0,229,255,.5);border-radius:8px;padding:3px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:5;}
-.ev-block .ev-title{font-size:12px;font-weight:900;line-height:1.25;word-break:break-word;text-shadow:0 1px 2px rgba(0,0,0,.45);}
+.ev-block{position:absolute;left:2px;right:2px;box-sizing:border-box;overflow:hidden;background:linear-gradient(160deg,rgba(0,229,255,.28),rgba(139,107,255,.28));border:1px solid rgba(0,229,255,.5);border-radius:8px;padding:3px 4px;color:var(--txt);cursor:pointer;display:flex;align-items:flex-start;justify-content:flex-start;flex-direction:column;z-index:5;}
+.ev-block .ev-title{width:100%;font-size:.8rem;font-weight:800;line-height:1.28;word-break:break-word;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.55);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--ev-lines,3);overflow:hidden;}
 .ev-block .ev-time{display:none!important;}
-.ev-block.ev-dur-small .ev-title{font-size:10.5px;line-height:1.15;}
+.ev-block.ev-dur-small .ev-title{font-size:.72rem;line-height:1.2;}
 .ev-block.ev-dur-tiny{padding:2px 4px;justify-content:center;}
-.ev-block.ev-dur-tiny .ev-title{font-size:9.5px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-break:normal;max-width:100%;}
+.ev-block.ev-dur-tiny .ev-title{display:block;-webkit-line-clamp:unset;font-size:.68rem;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-break:normal;max-width:100%;}
 .ev-block .ev-reminder-dot{position:absolute;top:3px;left:3px;width:6px;height:6px;border-radius:50%;background:#ff4d5e;box-shadow:0 0 4px rgba(255,77,94,.8);z-index:6;}
-@media(max-width:700px){.lp-cal-header{grid-template-columns:36px repeat(7,minmax(0,1fr));}.lp-cal-body{grid-template-columns:36px minmax(0,1fr);}.lp-cal-head{font-size:9px;}.ev-block .ev-title{font-size:10px;}.ev-block.ev-dur-small .ev-title{font-size:9px;}.ev-block.ev-dur-tiny .ev-title{font-size:8.5px;}}
+@media(max-width:700px){.lp-cal-header{grid-template-columns:36px repeat(7,minmax(0,1fr));}.lp-cal-body{grid-template-columns:36px minmax(0,1fr);}.lp-cal-head{font-size:9px;}.ev-block .ev-title{font-size:.72rem;}.ev-block.ev-dur-small .ev-title{font-size:.66rem;}.ev-block.ev-dur-tiny .ev-title{font-size:.62rem;}}
 /* notes */
 .note-card{background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:14px; cursor:pointer; transition:.15s; height:150px; display:flex; flex-direction:column;}
 .note-card:hover{border-color:rgba(0,229,255,.3);}
@@ -4312,6 +4312,7 @@ function renderCalendar(){
     `<div class="lp-cal-wrap"><div class="lp-cal-header">${head}</div><div class="lp-cal-body"><div class="lp-cal-time-col">${axis}</div><div class="lp-cal-days">${days}</div></div></div>`;
 
   const cols=document.querySelectorAll('.lp-cal-day');
+  const rootPx=parseFloat(getComputedStyle(document.documentElement).fontSize)||16;
   DB.events.forEach(e=>{
     const s=eventStartMinutes(e),en=eventEndMinutes(e);
     if(!Number.isFinite(s)||!Number.isFinite(en)||en<=s)return;
@@ -4323,8 +4324,16 @@ function renderCalendar(){
       const durMin=en-s;
       const durClass=durMin<15?'ev-dur-tiny':(durMin<30?'ev-dur-small':'');
       el.type='button';el.className='ev-block'+(durClass?' '+durClass:'');
+      const hPx=Math.max(10,(to-from)/60*PX_HOUR-2);
       el.style.top=((from-START*60)/60*PX_HOUR)+'px';
-      el.style.height=Math.max(10,(to-from)/60*PX_HOUR-2)+'px';
+      el.style.height=hPx+'px';
+      if(durClass!=='ev-dur-tiny'){
+        const fontRem=durClass==='ev-dur-small'?.72:.8;
+        const lineH=durClass==='ev-dur-small'?1.2:1.28;
+        const lineHeightPx=rootPx*fontRem*lineH;
+        const maxLines=Math.max(1,Math.floor((hPx-6)/lineHeightPx));
+        el.style.setProperty('--ev-lines',maxLines);
+      }
       el.title=e.title;
       el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
       if(e.reminder)el.innerHTML+=`<span class="ev-reminder-dot" title="یادآور فعال"></span>`;
@@ -4634,7 +4643,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='5.2';
+const LP_APP_VERSION='5.3';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
