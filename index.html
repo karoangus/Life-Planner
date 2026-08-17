@@ -706,11 +706,11 @@ textarea{resize:vertical; min-height:70px;}
 .week-outer{overflow-x:auto; -webkit-overflow-scrolling:touch;}
 .week-grid{
   display:grid;
-  grid-template-columns:48px repeat(7,minmax(44px,1fr));
+  grid-template-columns:38px repeat(7,minmax(0,1fr));
   grid-auto-rows:40px; /* header row */
   gap:1px; background:var(--line);
   border:1px solid var(--line); border-radius:14px; overflow:hidden;
-  min-width:360px;
+  min-width:0;
 }
 .week-grid .cell{background:var(--panel); box-sizing:border-box; padding:2px 4px; font-size:11px; min-width:0; overflow:hidden;}
 .week-grid .hour-row{grid-auto-rows:46px;}
@@ -1520,7 +1520,7 @@ textarea{resize:vertical; min-height:70px;}
 
 <div class="modal-bg" id="eventActionModalBg"><div class="modal">
   <h2 id="eventActionTitle">📅 رویداد</h2>
-  <div id="eventActionDetails" style="font-size:12px;color:var(--txt-dim);line-height:1.8;margin:4px 0 2px;text-align:center;"></div>
+  <div id="eventActionDetails" class="event-detail-meta"></div>
   <div class="modal-actions" style="flex-direction:column;">
     <button class="btn" style="width:100%; justify-content:center;" onclick="startEditEvent()">✏️ ویرایش</button>
     <button class="btn danger" id="deleteThisDayBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteEventDay()">🗑️ حذف فقط این روز</button>
@@ -3969,108 +3969,102 @@ function eventDays(e){ return e.days || (e.day!==undefined ? [e.day] : []); }
 
 function onEventBlockClick(eventId, dayIdx){
   const ev = DB.events.find(x=>x.id===eventId); if(!ev) return;
-  eventActionCtx = { eventId, dayIdx };
-  document.getElementById('eventActionTitle').textContent = `📅 ${ev.title}`;
-  const multiDay = eventDays(ev).length > 1;
-  document.getElementById('deleteThisDayBtn').style.display = multiDay ? 'flex' : 'none';
+  eventActionCtx={eventId,dayIdx};
+  const start=eventStartMinutes(ev), end=eventEndMinutes(ev), duration=Math.max(0,end-start);
+  const durationText=duration>=60
+    ? `${Math.floor(duration/60)} ساعت${duration%60?` و ${duration%60} دقیقه`:''}`
+    : `${duration} دقیقه`;
+  document.getElementById('eventActionTitle').textContent=`📅 ${ev.title}`;
   const meta=document.getElementById('eventActionDetails');
   if(meta){
-    const s=eventStartMinutes(ev), e=eventEndMinutes(ev), d=Math.max(0,e-s);
-    const dur=d>=60?`${Math.floor(d/60)} ساعت${d%60?` و ${d%60} دقیقه`:''}`:`${d} دقیقه`;
-    meta.innerHTML=`🕒 <b style="color:var(--neon);direction:ltr;display:inline-block">${formatTimeMinutes(s%1440)} → ${formatTimeMinutes(e%1440)}</b> · ⏱️ ${dur}`;
+    const days=eventDays(ev).map(d=>dayNames[d]).join('، ');
+    meta.innerHTML=`<div class="event-detail-time">${formatTimeMinutes(start%1440)} → ${formatTimeMinutes(end%1440)}${end>1440?' (+1 روز)':''}</div><div>⏱️ مدت: <b>${durationText}</b></div><div>📅 ${esc(days)}</div>`;
   }
+  document.getElementById('deleteThisDayBtn').style.display=eventDays(ev).length>1?'flex':'none';
   openModal('eventActionModalBg');
 }
+
 function startEditEvent(){
-  const ctx = eventActionCtx; if(!ctx) return;
-  const ev = DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
-  closeModal('eventActionModalBg');
-  editingEventId = ev.id;
-  document.getElementById('eventModalTitle').textContent = '✏️ ویرایش رویداد';
-  document.getElementById('eTitle').value = ev.title;
-  document.getElementById('eHourStart').value = formatTimeMinutes(eventStartMinutes(ev)%1440);
-  let end = eventEndMinutes(ev);
-  // For a cross-midnight event, show the next-day clock time (00:00 etc.).
-  document.getElementById('eHourEnd').value = formatTimeMinutes(end%1440);
-  const days = eventDays(ev);
-  document.querySelectorAll('#eDays .chip-opt').forEach(o=> o.classList.toggle('sel', days.includes(+o.dataset.v)));
+  const ctx=eventActionCtx;if(!ctx)return;
+  const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
+  closeModal('eventActionModalBg');editingEventId=ev.id;
+  document.getElementById('eventModalTitle').textContent='✏️ ویرایش رویداد';
+  document.getElementById('eTitle').value=ev.title;
+  document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
+  document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
+  const days=eventDays(ev);
+  document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',days.includes(+o.dataset.v)));
   openModal('eventModalBg');
 }
 function deleteEventDay(){
-  const ctx = eventActionCtx; if(!ctx) return;
-  const ev = DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
-  const days = eventDays(ev).filter(d=>d!==ctx.dayIdx);
-  if(days.length){ ev.days = days; delete ev.day; }
-  else { DB.events = DB.events.filter(x=>x.id!==ev.id); }
-  eventActionCtx = null;
-  closeModal('eventActionModalBg');
-  save();
+  const ctx=eventActionCtx;if(!ctx)return;
+  const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
+  const days=eventDays(ev).filter(d=>d!==ctx.dayIdx);
+  if(days.length){ev.days=days;delete ev.day}else DB.events=DB.events.filter(x=>x.id!==ev.id);
+  eventActionCtx=null;closeModal('eventActionModalBg');save();
 }
 function deleteWholeEvent(){
-  const ctx = eventActionCtx; if(!ctx) return;
-  DB.events = DB.events.filter(x=>x.id!==ctx.eventId);
-  eventActionCtx = null;
-  closeModal('eventActionModalBg');
-  save();
-  toast('🗑️ کل رویداد حذف شد');
+  const ctx=eventActionCtx;if(!ctx)return;
+  DB.events=DB.events.filter(x=>x.id!==ctx.eventId);eventActionCtx=null;
+  closeModal('eventActionModalBg');save();toast('🗑️ کل رویداد حذف شد');
 }
+
 function renderCalendar(){
-  const HOURS_START = 7, HOURS_END = 24;
-  const MINUTES_PER_ROW = 15;
-  const ROW_HEIGHT = 12;
-  const totalMinutes = (HOURS_END-HOURS_START)*60;
-  const rows = totalMinutes/MINUTES_PER_ROW;
-  const todayIdx = (new Date().getDay()+1)%7;
+  // Same clean v4.1 calendar. Only the event geometry is now exact to the minute.
+  const HOURS_START=7,HOURS_END=24,MINUTES_PER_ROW=15,ROW_HEIGHT=12;
+  const totalMinutes=(HOURS_END-HOURS_START)*60,rows=totalMinutes/MINUTES_PER_ROW;
+  const pxPerMinute=ROW_HEIGHT/MINUTES_PER_ROW;
+  const dayHeight=rows*ROW_HEIGHT;
+  const todayIdx=(new Date().getDay()+1)%7;
 
-  let gridStyle = `display:grid; grid-template-columns:48px repeat(7,minmax(44px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:14px; overflow:hidden; min-width:360px;`;
-  let cells = '';
+  const header=`<div class="clean-week-head"></div>`+
+    dayNames.map((d,i)=>`<div class="clean-week-head${i===todayIdx?' today':''}">${d}</div>`).join('');
 
-  cells += `<div style="background:var(--bg2); grid-column:1; grid-row:1; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--txt-dim2); padding:4px; box-sizing:border-box;"></div>`;
-  dayNames.forEach((d,i)=>{
-    cells += `<div style="background:var(--bg2); grid-column:${i+2}; grid-row:1; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; padding:2px; box-sizing:border-box; overflow:hidden; ${i===todayIdx?'color:var(--neon)':''}">${d}</div>`;
-  });
-
-  for(let ri=0; ri<rows; ri++){
-    const minute = HOURS_START*60 + ri*MINUTES_PER_ROW;
-    const rowIdx = ri+2;
-    const label = minute%60===0 ? `${String(Math.floor(minute/60)).padStart(2,'0')}:00` : '';
-    cells += `<div style="background:var(--bg2); grid-column:1; grid-row:${rowIdx}; height:${ROW_HEIGHT}px; display:flex; align-items:center; justify-content:center; font-size:8px; color:var(--txt-dim2); font-family:monospace; box-sizing:border-box;">${label}</div>`;
-    for(let d=0; d<7; d++){
-      cells += `<div style="background:var(--panel); grid-column:${d+2}; grid-row:${rowIdx}; height:${ROW_HEIGHT}px; box-sizing:border-box; border-top:${minute%60===0?'1px solid var(--line)':'0'}; position:relative;"></div>`;
-    }
+  const axis=[];
+  for(let ri=0;ri<=rows;ri++){
+    const minute=HOURS_START*60+ri*MINUTES_PER_ROW,top=ri*ROW_HEIGHT;
+    axis.push(`<div class="${minute%60===0?'clean-grid-line':'clean-grid-half'}" style="top:${top}px"></div>`);
+    if(minute<24*60&&minute%60===0)
+      axis.push(`<div class="clean-time-label" style="top:${top}px">${String(Math.floor(minute/60)).padStart(2,'0')}:00</div>`);
   }
 
-  // Events are rendered in 15-minute rows. Cross-midnight events are split into
-  // the current day (until 24:00) and the next day (from 00:00 onward).
-  let evCells = '';
-  DB.events.forEach(e=>{
-    const start = eventStartMinutes(e);
-    const end = eventEndMinutes(e);
-    if(!Number.isFinite(start) || !Number.isFinite(end) || end<=start) return;
-    eventDays(e).forEach(d=>{
-      const segments = [];
-      if(start < HOURS_END*60){
-        segments.push({day:d, from:Math.max(start,HOURS_START*60), to:Math.min(end,HOURS_END*60)});
-      }
-      if(end > 1440){
-        const nextDay=(d+1)%7;
-        segments.push({day:nextDay, from:HOURS_START*60, to:Math.min(end-1440,HOURS_END*60)});
-      }
-      segments.forEach(seg=>{
-        if(seg.from>=seg.to || seg.day<0 || seg.day>6) return;
-        const rowStart = Math.floor((seg.from-HOURS_START*60)/MINUTES_PER_ROW)+2;
-        const rowEnd = Math.ceil((seg.to-HOURS_START*60)/MINUTES_PER_ROW)+2;
-        if(rowEnd<=2 || rowStart>rows+1) return;
-        const rs=Math.max(2,rowStart), re=Math.min(rows+2,rowEnd);
-        evCells += `<div class="ev-block" style="grid-column:${seg.day+2}; grid-row:${rs}/${re}; margin:1px; z-index:5; min-height:8px; overflow:hidden;" onclick="onEventBlockClick('${e.id}', ${seg.day})">
-          <span class="ev-title">${esc(e.title)}</span>
-        </div>`;
+  const now=new Date(),nowMin=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
+  const nowHtml=(nowMin>=HOURS_START*60&&nowMin<=HOURS_END*60)
+    ? `<div class="clean-now-line" style="top:${(nowMin-HOURS_START*60)*pxPerMinute}px"><span class="clean-now-dot"></span></div>`:'';
+
+  const dayTracks=dayNames.map((d,dayIdx)=>{
+    const lines=[];
+    for(let ri=0;ri<=rows;ri++){
+      const minute=HOURS_START*60+ri*MINUTES_PER_ROW,top=ri*ROW_HEIGHT;
+      lines.push(`<div class="${minute%60===0?'clean-grid-line':'clean-grid-half'}" style="top:${top}px"></div>`);
+    }
+
+    const items=[];
+    DB.events.forEach(e=>{
+      const start=eventStartMinutes(e),end=eventEndMinutes(e);
+      if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return;
+      eventDays(e).forEach(d0=>{
+        const from=Math.max(start,HOURS_START*60),to=Math.min(end,HOURS_END*60);
+        if(d0===dayIdx&&from<to)items.push({e,from,to});
+        if(end>1440){
+          const nextDay=(d0+1)%7,from2=HOURS_START*60,to2=Math.min(end-1440,HOURS_END*60);
+          if(nextDay===dayIdx&&from2<to2)items.push({e,from:from2,to:to2});
+        }
       });
     });
-  });
 
-  const gridHtml = `<div style="${gridStyle} grid-template-rows:40px repeat(${rows},${ROW_HEIGHT}px);">${cells}${evCells}</div>`;
-  document.getElementById('weekGrid').innerHTML = `<div class="week-outer">${gridHtml}</div>`;
+    const eventHtml=items.map(({e,from,to})=>{
+      const top=(from-HOURS_START*60)*pxPerMinute;
+      const height=Math.max(6,(to-from)*pxPerMinute);
+      const showTime=height>=28,tiny=height<20;
+      const timeText=`${formatTimeMinutes(from)} → ${formatTimeMinutes(to)}`;
+      return `<button type="button" class="ev-block${showTime?'':' compact'}${tiny?' tiny':''}" style="top:${top}px;height:${height}px;left:2px;right:2px;" title="${esc(e.title)} · ${timeText}" aria-label="${esc(e.title)}، ${timeText}" onclick="onEventBlockClick('${e.id}',${dayIdx})"><span class="ev-title">${esc(e.title)}</span>${showTime?`<span class="ev-time">${timeText}</span>`:''}</button>`;
+    }).join('');
+
+    return `<div class="clean-day-track" data-day="${dayIdx}" style="height:${dayHeight}px">${lines.join('')}${eventHtml}${dayIdx===todayIdx?nowHtml:''}</div>`;
+  }).join('');
+
+  document.getElementById('weekGrid').innerHTML=`<div class="week-outer"><div class="clean-week-grid">${header}<div class="clean-time-axis" style="height:${dayHeight}px">${axis.join('')}</div>${dayTracks}</div></div>`;
 }
 
 /* ============ CHARTS (self-contained, no external library) ============ */
