@@ -968,6 +968,7 @@ textarea{resize:vertical; min-height:70px;}
       <div class="chip-group" id="pomoTabs" style="margin-bottom:18px;">
         <div class="chip-opt sel" data-pt="focus">⏱️ فوکوس</div>
         <div class="chip-opt" data-pt="stats">📊 آمار پومو</div>
+        <div class="chip-opt" data-pt="manual">📝 ثبت داده</div>
         <div class="chip-opt" data-pt="settings">⚙️ تنظیمات</div>
       </div>
 
@@ -1011,6 +1012,28 @@ textarea{resize:vertical; min-height:70px;}
           </div>
           <canvas id="chartPomo" height="180"></canvas>
         </div>
+      </div>
+
+      <!-- MANUAL DATA TAB -->
+      <div class="pomo-pane" id="pomoPane-manual">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-head"><h3>📝 ثبت داده خارج از پومودورو</h3></div>
+          <p class="muted" style="font-size:12.5px;line-height:1.9;margin-top:0;">اگر بیرون از تایمر پومودورو مطالعه یا استراحت کردی، اینجا ثبتش کن تا آمار روزت از قلم نیفته.</p>
+          <div class="row2">
+            <div class="field"><label>نوع فعالیت</label><select id="pomoManualKind"><option value="focus">📚 مطالعه</option><option value="break">☕ استراحت</option></select></div>
+            <div class="field"><label>مدت (دقیقه)</label><input type="number" id="pomoManualMinutes" min="1" max="1440" step="1" placeholder="مثلاً 45"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>تاریخ</label><input type="date" id="pomoManualDate"></div>
+            <div class="field"><label>توضیح (اختیاری)</label><input type="text" id="pomoManualNote" maxlength="120" placeholder="مثلاً ریاضی — فصل معادلات"></div>
+          </div>
+          <button class="btn" style="width:100%;justify-content:center;" onclick="addManualPomoData()">➕ ثبت داده</button>
+        </div>
+        <div class="grid g2" style="margin-bottom:16px;">
+          <div class="stat-card"><div class="ic">📚</div><div class="val num" id="pomoManualTodayFocus">0m</div><div class="lbl">مطالعه ثبت‌شده امروز</div></div>
+          <div class="stat-card"><div class="ic">☕</div><div class="val num" id="pomoManualTodayBreak">0m</div><div class="lbl">استراحت ثبت‌شده امروز</div></div>
+        </div>
+        <div class="card"><div class="card-head"><h3>🗂️ ثبت‌های دستی اخیر</h3></div><div id="pomoManualList"></div></div>
       </div>
 
       <!-- SETTINGS TAB -->
@@ -1754,6 +1777,7 @@ if(!DB.motivation || typeof DB.motivation!=='object') DB.motivation = { mood:'en
 if(!DB.stats || typeof DB.stats!=='object') DB.stats = { tasksCompleted:0, questsCompleted:0, bestStreak:0 };
 if(!DB.quest || typeof DB.quest!=='object') DB.quest = { current:null, nextAt:Date.now()+2*60*1000, waitStart:Date.now(), bags:{} };
 if(!DB.pomodoro || typeof DB.pomodoro!=='object') DB.pomodoro = { settings:{focusMin:25,breakMin:5,goalMinutes:0}, session:null, history:{}, pendingNext:null };
+if(!Array.isArray(DB.pomodoro.manualData)) DB.pomodoro.manualData = [];
 if(!DB.xpBoost || typeof DB.xpBoost!=='object') DB.xpBoost = { activeUntil:0 };
 if(!DB.themes || typeof DB.themes!=='object') DB.themes = { owned:['dark','light'] };
 if(!Array.isArray(DB.cityBonusItems)) DB.cityBonusItems = [];
@@ -1778,6 +1802,7 @@ if(!DB.perfectDayHistory) DB.perfectDayHistory = {};
 if(!DB.pomodoro){
   DB.pomodoro = { settings:{focusMin:25, breakMin:5, goalMinutes:0}, session:null, history:{}, pendingNext:null };
 }
+if(!Array.isArray(DB.pomodoro.manualData)) DB.pomodoro.manualData = [];
 if(DB.pomodoro.pendingNext===undefined) DB.pomodoro.pendingNext = null;
 if(!DB.motivation) DB.motivation = { mood:'energize' };
 if(DB.xpWallet===undefined) DB.xpWallet = DB.stats.totalXPEarned||0;
@@ -2807,6 +2832,7 @@ function showPomoTab(tab){
   document.getElementById('pomoPane-'+tab).classList.add('active');
   if(tab==='focus') renderPomoUI();
   if(tab==='stats'){ renderPomoStats(); renderPomoChart(); }
+  if(tab==='manual'){ renderManualPomoData(); }
   if(tab==='settings') fillPomoSettingsForm();
 }
 
@@ -3011,29 +3037,55 @@ function savePomoSettings(){
   toast('✅ تنظیمات پومودورو ذخیره شد');
 }
 
+function addManualPomoData(){
+  const kind=document.getElementById('pomoManualKind')?.value||'focus';
+  const minutes=Math.floor(Number(document.getElementById('pomoManualMinutes')?.value||0));
+  const date=document.getElementById('pomoManualDate')?.value||todayISO();
+  const note=(document.getElementById('pomoManualNote')?.value||'').trim();
+  if(!Number.isFinite(minutes)||minutes<1||minutes>1440){toast('⚠️ مدت را بین ۱ تا ۱۴۴۰ دقیقه وارد کن');return;}
+  if(!Array.isArray(DB.pomodoro.manualData))DB.pomodoro.manualData=[];
+  DB.pomodoro.manualData.push({id:uid(),kind,minutes,date,note,createdAt:Date.now()});
+  persist();
+  document.getElementById('pomoManualMinutes').value='';document.getElementById('pomoManualNote').value='';
+  renderManualPomoData(); if(pomoTab==='stats'){renderPomoStats();renderPomoChart();}
+  toast(`✅ ${minutes} دقیقه ${kind==='focus'?'مطالعه':'استراحت'} ثبت شد`);
+}
+function deleteManualPomoData(id){DB.pomodoro.manualData=(DB.pomodoro.manualData||[]).filter(x=>x.id!==id);persist();renderManualPomoData();if(pomoTab==='stats'){renderPomoStats();renderPomoChart();}}
+function getManualPomoTotal(date,kind){return (DB.pomodoro.manualData||[]).filter(x=>x.date===date&&x.kind===kind).reduce((a,x)=>a+(x.minutes||0),0);}
+function getPomoTotal(date,kind){return (DB.pomodoro.history[date]?.[kind]||0)+getManualPomoTotal(date,kind);}
+function renderManualPomoData(){
+  const d=document.getElementById('pomoManualDate');if(d&&!d.value)d.value=todayISO();const date=d?.value||todayISO();
+  const f=document.getElementById('pomoManualTodayFocus'),b=document.getElementById('pomoManualTodayBreak');
+  if(f)f.textContent=getManualPomoTotal(date,'focus')+'m';if(b)b.textContent=getManualPomoTotal(date,'break')+'m';
+  const list=document.getElementById('pomoManualList');if(!list)return;
+  const arr=(DB.pomodoro.manualData||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  list.innerHTML=arr.length?arr.slice(0,30).map(x=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);"><div><div style="font-weight:800;">${x.kind==='focus'?'📚':'☕'} ${x.minutes} دقیقه</div><div class="muted" style="font-size:11.5px;">${x.date}${x.note?' • '+esc(x.note):''}</div></div><button class="btn ghost" style="padding:7px 10px;" onclick="deleteManualPomoData('${x.id}')">🗑️</button></div>`).join(''):'<div class="muted" style="padding:10px 0;">هنوز ثبت دستی نداری.</div>';
+}
 function renderPomoStats(){
   const d = todayISO();
   const today = DB.pomodoro.history[d] || {focus:0, break:0};
-  document.getElementById('pomoTodayFocus').textContent = (today.focus||0)+'m';
-  document.getElementById('pomoTodayBreak').textContent = (today.break||0)+'m';
+  const totalFocus=getPomoTotal(d,'focus'), totalBreak=getPomoTotal(d,'break');
+  document.getElementById('pomoTodayFocus').textContent = totalFocus+'m';
+  document.getElementById('pomoTodayBreak').textContent = totalBreak+'m';
   const goal = DB.pomodoro.settings.goalMinutes||0;
-  const pct = goal ? Math.min(100, ((today.focus||0)/goal)*100) : 0;
+  const pct = goal ? Math.min(100, (totalFocus/goal)*100) : 0;
   document.getElementById('pomoGoalBar').style.width = pct+'%';
-  document.getElementById('pomoGoalTxt').textContent = `${today.focus||0} / ${goal} دقیقه`;
+  document.getElementById('pomoGoalTxt').textContent = `${totalFocus} / ${goal} دقیقه`;
   const statusEl = document.getElementById('pomoGoalStatus');
   if(!goal){ statusEl.textContent = 'هنوز هدف روزانه‌ای توی تنظیمات مشخص نکردی'; statusEl.style.color='var(--txt-dim2)'; }
-  else if((today.focus||0)>=goal){ statusEl.textContent='✅ هدف امروز رو کامل کردی، آفرین!'; statusEl.style.color='var(--ok)'; }
-  else { statusEl.textContent = `${goal-(today.focus||0)} دقیقه تا رسیدن به هدف امروز مونده`; statusEl.style.color='var(--warn)'; }
+  else if(totalFocus>=goal){ statusEl.textContent='✅ هدف امروز رو کامل کردی، آفرین!'; statusEl.style.color='var(--ok)'; }
+  else { statusEl.textContent = `${Math.max(0,goal-totalFocus)} دقیقه تا رسیدن به هدف امروز مونده`; statusEl.style.color='var(--warn)'; }
 
   const days = last7();
   const dayLbl = days.map(dd=>new Date(dd).toLocaleDateString('fa-IR',{weekday:'short'}));
   const wc = document.getElementById('pomoWeekChecklist');
   wc.innerHTML = days.map((dd,i)=>{
     const rec = DB.pomodoro.history[dd] || {focus:0};
-    const met = goal>0 && (rec.focus||0)>=goal;
+    const focusTotal=getPomoTotal(dd,'focus');
+    const met = goal>0 && focusTotal>=goal;
     const cls = goal>0 ? (met?'met':'missed') : '';
     const sym = goal>0 ? (met?'✅':'▫️') : '⏺️';
-    return `<div class="pomo-day-chip ${cls}"><div class="d">${dayLbl[i]}</div><div class="s">${sym}</div><div class="d num">${rec.focus||0}m</div></div>`;
+    return `<div class="pomo-day-chip ${cls}"><div class="d">${dayLbl[i]}</div><div class="s">${sym}</div><div class="d num">${focusTotal}m</div></div>`;
   }).join('');
 }
 function renderPomoChart(){
@@ -3043,14 +3095,14 @@ function renderPomoChart(){
   if(pomoPeriod==='week'){
     const days = last7();
     labels = days.map(d=>new Date(d).toLocaleDateString('fa-IR',{weekday:'short'}));
-    values = days.map(d=> (DB.pomodoro.history[d]?.focus)||0);
+    values = days.map(d=> getPomoTotal(d,'focus'));
   } else if(pomoPeriod==='month'){
     const now = new Date(); const year=now.getFullYear(), month=now.getMonth();
     const daysInMonth = new Date(year, month+1, 0).getDate();
     const weeks = [0,0,0,0,0];
     for(let day=1; day<=daysInMonth; day++){
       const d_=new Date(year, month, day); const iso = dateToLocalISO(d_);
-      weeks[Math.floor((day-1)/7)] += (DB.pomodoro.history[iso]?.focus)||0;
+      weeks[Math.floor((day-1)/7)] += getPomoTotal(iso,'focus');
     }
     const activeWeeks = Math.ceil(daysInMonth/7);
     values = weeks.slice(0, activeWeeks);
@@ -4717,7 +4769,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='6.0';
+const LP_APP_VERSION='6.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
