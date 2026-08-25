@@ -779,17 +779,7 @@ textarea{resize:vertical; min-height:70px;}
 .lp-cal-head.current-day{font-weight:900;}
 .version-badge{font:800 9px monospace;direction:ltr;color:var(--txt-dim2);opacity:.85;margin-top:7px;}
 </style>
-<style id="lp-v62-css">
-:root{--lp-font-scale:1;--lp-ui-scale:1}
-body{font-size:calc(1em * var(--lp-font-scale))}
-#lp-v62-settings{margin-top:14px;display:grid;gap:12px}
-#lp-v62-settings .lp62-card{padding:14px;border-radius:16px;background:var(--card-bg,rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.1)}
-#lp-v62-settings .lp62-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
-#lp-v62-settings button,#lp-v62-settings select{border:0;border-radius:10px;padding:9px 12px;font-weight:800;cursor:pointer;background:var(--button-bg,rgba(255,255,255,.1));color:inherit}
-#lp-v62-settings .lp62-help{font-size:12px;opacity:.65;margin-top:4px}
-#lp-v62-settings .lp62-menu{display:none;margin-top:8px;padding:8px;border-radius:12px;background:rgba(0,0,0,.08)}
-#lp-v62-settings .lp62-menu.open{display:grid;gap:6px}
-</style></head>
+</head>
 <body>
 
 <div class="crisis-banner" id="crisisBanner" style="display:none;">
@@ -4779,7 +4769,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='6.2';
+const LP_APP_VERSION='6.3';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
@@ -4813,46 +4803,7 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-<script id="lp-v62-settings">
-(()=> {
-const FK='lifePlannerFontSize_v1', UK='lifePlannerUIScale_v1';
-const fs={small:.90,medium:1,large:1.10,xlarge:1.20}, us={compact:.90,normal:1,large:1.08,xlarge:1.16};
-function apply(){let f=localStorage.getItem(FK)||'medium',u=localStorage.getItem(UK)||'normal';document.documentElement.style.setProperty('--lp-font-scale',fs[f]||1);document.documentElement.style.setProperty('--lp-ui-scale',us[u]||1)}
-function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function mount(){
- if(document.getElementById('lp-v62-settings'))return;
- const r=document.createElement('section');r.id='lp-v62-settings';
- r.innerHTML=`<div class="lp62-card">
- <div style="font-size:19px;font-weight:900">⚙️ تنظیمات</div>
- <div class="lp62-row"><div><b>🔤 اندازه فونت</b><div class="lp62-help">فقط روی Life Planner اثر می‌گذارد.</div></div><select id="lp62-font"><option value="small">کوچک</option><option value="medium">متوسط</option><option value="large">بزرگ</option><option value="xlarge">خیلی بزرگ</option></select></div>
- <div class="lp62-row"><div><b>📐 اندازه رابط کاربری</b><div class="lp62-help">اندازه کلی اجزای رابط را تنظیم می‌کند.</div></div><select id="lp62-ui"><option value="compact">کوچک</option><option value="normal">متوسط</option><option value="large">بزرگ</option><option value="xlarge">خیلی بزرگ</option></select></div>
- <div class="lp62-row"><b>📱 شخصی‌سازی نوار پایین</b><button id="lp62-nav">باز کردن</button></div>
- <div class="lp62-row"><b>🌓 دکمه تم</b><button id="lp62-theme">تغییر تم</button></div>
- <div class="lp62-row"><div><b>🎨 انتخاب تم</b><div class="lp62-help">همه تم‌های موجود برنامه را نمایش می‌دهد.</div></div><button id="lp62-themes">انتخاب</button></div>
- <div id="lp62-theme-menu" class="lp62-menu"></div>
- <div class="lp62-row"><b>☁️ ارسال پشتیبان به فضای ابری</b><button id="lp62-cloud">پشتیبان</button></div>
- <div class="lp62-row"><b>💾 خروجی / بازیابی پشتیبان</b><button id="lp62-backup">باز کردن</button></div>
- <div class="lp62-row"><b>🏷️ نسخه برنامه</b><span>6.2</span></div></div>`;
- document.body.appendChild(r);
- const f=localStorage.getItem(FK)||'medium',u=localStorage.getItem(UK)||'normal';r.querySelector('#lp62-font').value=f;r.querySelector('#lp62-ui').value=u;apply();
- r.querySelector('#lp62-font').onchange=e=>{localStorage.setItem(FK,e.target.value);apply()};
- r.querySelector('#lp62-ui').onchange=e=>{localStorage.setItem(UK,e.target.value);apply()};
- r.querySelector('#lp62-nav').onclick=()=>{for(const n of ['openBottomNavCustomizer','openNavCustomizer','openQuickBarSettings','showBottomNavSettings'])if(typeof window[n]=='function'){window[n]();return}alert('شخصی‌سازی نوار پایین از منوی فعلی برنامه قابل دسترسی است.')};
- r.querySelector('#lp62-theme').onclick=()=>{for(const n of ['toggleTheme','toggleDarkMode','changeTheme'])if(typeof window[n]=='function'){window[n]();return}};
- const menu=r.querySelector('#lp62-theme-menu');
- r.querySelector('#lp62-themes').onclick=()=>{
-  menu.classList.toggle('open');if(menu.dataset.loaded)return;
-  let names=[];try{if(Array.isArray(window.themes))names=window.themes.map(x=>typeof x==='string'?x:(x.name||x.id)).filter(Boolean);else if(window.THEMES)names=Object.keys(window.THEMES)}catch(_){}
-  if(!names.length)names=['پیش‌فرض','تاریک','روشن'];
-  menu.innerHTML=names.map((x,i)=>`<button type="button" data-i="${i}">${esc(x)}</button>`).join('');
-  menu.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{const n=names[+b.dataset.i];for(const fn of ['setTheme','applyTheme','selectTheme'])if(typeof window[fn]=='function'){window[fn](n);break}});
-  menu.dataset.loaded='1';
- };
- r.querySelector('#lp62-cloud').onclick=()=>{for(const n of ['cloudBackup','sendBackupToCloud','backupToCloud'])if(typeof window[n]=='function'){window[n]();return}alert('اتصال فضای ابری باید توسط سرویس فعلی برنامه پشتیبانی شود.')};
- r.querySelector('#lp62-backup').onclick=()=>{for(const n of ['openBackup','openBackupRestore','showBackupRestore','exportBackup'])if(typeof window[n]=='function'){window[n]();return}alert('از قابلیت پشتیبان فعلی برنامه استفاده کنید.')};
-}
-apply();document.readyState==='loading'?document.addEventListener('DOMContentLoaded',mount):mount();
-})();</script><script id="lp-v62-manual-study-bridge">
+<script id="lp-v63-manual-study-bridge">
 window.getManualStudyMinutesToday=function(){try{const d=new Date().toISOString().slice(0,10);const a=JSON.parse(localStorage.getItem('lifePlannerManualData_v1')||'[]');return a.filter(x=>x.date===d&&(x.kind==='study'||x.type==='study')).reduce((s,x)=>s+(Number(x.minutes)||0),0)}catch(e){return 0}};
 </script></body>
 </html>
