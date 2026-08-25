@@ -808,7 +808,19 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 .theme-option-swatch{width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.15);}
 .theme-option-name{font-size:12px;font-weight:800;min-width:0;}
 .theme-option-state{font-size:10px;opacity:.72;white-space:nowrap;}
-@media(max-width:520px){.settings-theme-grid{grid-template-columns:1fr}.settings-actions .btn{min-width:100%}.settings-version-card{align-items:flex-start;flex-direction:column;}}
+.settings-scale-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.settings-scale-card{display:grid;gap:9px;padding:14px;border:1px solid var(--line);background:var(--panel2);border-radius:12px;}
+.settings-scale-card label{font-size:11px;font-weight:800;color:var(--txt-dim);}
+.settings-scale-card small{font-size:10.5px;color:var(--txt-dim2);line-height:1.7;}
+.motivation-custom-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.motivation-custom-actions .btn{flex:1;min-width:120px;justify-content:center;}
+.motivation-custom-box{display:none;margin-top:10px;padding:11px;border:1px solid var(--line);background:rgba(255,255,255,.025);border-radius:12px;}
+.motivation-custom-box.open{display:block;}
+.motivation-custom-box textarea{width:100%;min-height:78px;resize:vertical;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:10px;padding:10px;font:inherit;outline:none;line-height:1.9;}
+/* v6.5 UI scale: scales the main app content independently from phone text size. */
+.main{zoom:var(--lp-ui-scale,1);}
+.bottom-nav,.sheet-drawer,.modal{zoom:var(--lp-ui-scale,1);}
+@media(max-width:520px){.settings-theme-grid{grid-template-columns:1fr}.settings-actions .btn{min-width:100%}.settings-version-card{align-items:flex-start;flex-direction:column}.settings-scale-grid{grid-template-columns:1fr}.motivation-custom-actions .btn{min-width:100%;}}
 </style></head>
 <body>
 
@@ -850,12 +862,6 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
     <div class="sheet-body">
       <div class="sheet-section-label">📱 بخش‌ها</div>
       <div id="moreViewList"></div>
-      <div class="sheet-nav-item" onclick="openPinnedNavSettings(); closeSheet();"><span class="ic">📌</span> شخصی‌سازی نوار پایین</div>
-      <div class="sheet-nav-item" id="themeToggleBtn" onclick="toggleTheme()"><span class="ic" id="themeIcon">🌙</span> <span id="themeLabel">تم تاریک</span></div>
-      <div class="sheet-nav-item" onclick="showThemePanel()"><span class="ic">🎨</span> انتخاب تم</div>
-      <div class="sheet-nav-item" id="shareBtn"><span class="ic">📤</span> ارسال پشتیبان به فضای ابری</div>
-      <div class="sheet-nav-item" id="exportBtn"><span class="ic">⬇️</span> خروجی پشتیبان</div>
-      <div class="sheet-nav-item" id="importBtn"><span class="ic">⬆️</span> بازیابی پشتیبان</div>
       <input type="file" id="importFile" accept=".json" style="display:none">
     </div>
   </div>
@@ -880,6 +886,9 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
             <div class="motivation-mood-toggle" onclick="toggleMoodPicker()">
               <span id="motivationMoodLabel">⚡ شارژکننده</span> · تغییر حال‌وهوا
             </div>
+            <div class="motivation-custom-actions">
+              <button class="btn ghost sm" type="button" onclick="openCustomMotivationComposer()">💬 پیام سفارشی</button>
+            </div>
           </div>
         </div>
         <div class="chip-group" id="moodPicker" style="display:none; margin-top:12px;">
@@ -888,6 +897,13 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
           <div class="chip-opt" data-mood="calm">🧘 آرام</div>
           <div class="chip-opt" data-mood="focus">🎯 تمرکزی</div>
           <div class="chip-opt" data-mood="supportive">💪 حمایتی</div>
+        </div>
+        <div class="motivation-custom-box" id="motivationCustomBox">
+          <textarea id="dashboardMotivationInput" maxlength=220 placeholder="مثلاً: امروز فقط یک قدم جلوتر."></textarea>
+          <div class="settings-actions">
+            <button class="btn sm" type="button" onclick="saveDashboardCustomMotivation()">✅ اعمال پیام</button>
+            <button class="btn ghost sm" type="button" onclick="resetCustomMotivationFromDashboard()">🎲 برگشت به رندوم</button>
+          </div>
         </div>
       </div>
 
@@ -1537,6 +1553,17 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
       </div>
 
       <div class="card settings-card">
+        <div class="card-head"><h3>🧩 اندازه رابط کاربری</h3></div>
+        <p class="muted settings-help">چیدمان و فاصله‌های رابط را جدا از اندازه فونت، جمع‌وجور یا بزرگ‌تر کن.</p>
+        <select id="settingsUIScale" class="settings-select" onchange="setSettingsUIScale(this.value)">
+          <option value="small">کوچک و جمع‌وجور</option>
+          <option value="medium">متوسط</option>
+          <option value="large">بزرگ</option>
+          <option value="xlarge">خیلی بزرگ</option>
+        </select>
+      </div>
+
+      <div class="card settings-card">
         <div class="card-head"><h3>📱 نوار پایین</h3></div>
         <p class="muted settings-help">چهار میانبر پایین برنامه را هر طور که می‌خواهی بچین.</p>
         <button class="btn" style="width:100%;justify-content:center;" onclick="openSettingsNav()">🛠️ شخصی‌سازی نوار پایین</button>
@@ -1550,16 +1577,6 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
       </div>
 
       <div class="card settings-card">
-        <div class="card-head"><h3>💬 پیام انگیزشی سفارشی</h3></div>
-        <p class="muted settings-help">پیامی که اینجا می‌نویسی روی داشبورد نشان داده می‌شود و بعد از Refresh هم باقی می‌ماند.</p>
-        <textarea id="settingsMotivationInput" maxlength="220" rows="4" placeholder="مثلاً: امروز فقط یک قدم جلوتر."></textarea>
-        <div class="settings-actions">
-          <button class="btn" onclick="saveCustomMotivation()">💾 ذخیره پیام</button>
-          <button class="btn ghost" onclick="resetCustomMotivation()">🎲 برگشت به پیام‌های رندوم</button>
-        </div>
-      </div>
-
-      <div class="card settings-card">
         <div class="card-head"><h3>☁️ پشتیبان و بازیابی</h3></div>
         <p class="muted settings-help">پشتیبان شامل داده‌های اصلی برنامه مثل تسک‌ها، عادت‌ها، اهداف، XP، پومودورو، تم‌ها و تنظیمات ذخیره‌شده است.</p>
         <div class="settings-actions settings-actions-stack">
@@ -1570,7 +1587,7 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">6.4</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">6.5</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1831,7 +1848,7 @@ function useTheme(theme){
   
 }
 applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
-document.getElementById('themeToggleBtn').onclick = toggleTheme;
+const _themeToggleBtn = document.getElementById('themeToggleBtn'); if(_themeToggleBtn) _themeToggleBtn.onclick = toggleTheme;
 
 /* ============ STORE ============ */
 const STORE_KEY = 'lifePlannerAI_v1';
@@ -2720,7 +2737,42 @@ function pickDailyQuote(mood){
   for(let i=0;i<seed.length;i++){ hash = seed.charCodeAt(i) + ((hash<<5)-hash); }
   return arr[Math.abs(hash) % arr.length];
 }
-function renderMotivation(){ if(!DB.motivation || typeof DB.motivation!=='object') DB.motivation={mood:'energize',custom:''}; if(typeof DB.motivation.custom!=='string') DB.motivation.custom=''; const mood=DB.motivation.mood||'energize'; const meta=MOOD_META[mood]||MOOD_META.energize; const q=document.getElementById('motivationText'); if(!q)return; q.textContent=DB.motivation.custom.trim()||pickDailyQuote(mood); document.getElementById('motivationMoodLabel').textContent=DB.motivation.custom.trim()?'💬 سفارشی':`${meta.icon} ${meta.label}`; }
+function renderMotivation(){
+  if(!DB.motivation || typeof DB.motivation!=='object') DB.motivation={mood:'energize',custom:''};
+  if(typeof DB.motivation.custom!=='string') DB.motivation.custom='';
+  const mood=DB.motivation.mood||'energize';
+  const meta=MOOD_META[mood]||MOOD_META.energize;
+  const q=document.getElementById('motivationText');
+  if(!q)return;
+  q.textContent=DB.motivation.custom.trim()||pickDailyQuote(mood);
+  const label=document.getElementById('motivationMoodLabel');
+  if(label) label.textContent=DB.motivation.custom.trim()?'💬 سفارشی':`${meta.icon} ${meta.label}`;
+  const input=document.getElementById('dashboardMotivationInput');
+  if(input && document.activeElement!==input) input.value=DB.motivation.custom||'';
+}
+function openCustomMotivationComposer(){
+  ensureV65Data();
+  const box=document.getElementById('motivationCustomBox');
+  const input=document.getElementById('dashboardMotivationInput');
+  if(!box)return;
+  box.classList.add('open');
+  if(input){ input.value=DB.motivation.custom||''; setTimeout(()=>input.focus(),0); }
+}
+function saveDashboardCustomMotivation(){
+  ensureV65Data();
+  const input=document.getElementById('dashboardMotivationInput');
+  DB.motivation.custom=(input?.value||'').trim().slice(0,220);
+  save();
+  const box=document.getElementById('motivationCustomBox'); if(box)box.classList.remove('open');
+  toast(DB.motivation.custom?'✅ پیام سفارشی اعمال شد':'🎲 پیام‌های رندوم فعال شدند');
+}
+function resetCustomMotivationFromDashboard(){
+  ensureV65Data();
+  DB.motivation.custom='';
+  save();
+  const box=document.getElementById('motivationCustomBox'); if(box)box.classList.remove('open');
+  toast('🎲 پیام‌های انگیزشی رندوم دوباره فعال شدند');
+}
 function toggleMoodPicker(){
   const el = document.getElementById('moodPicker');
   const isHidden = !el.style.display || el.style.display==='none';
@@ -3127,13 +3179,15 @@ function addManualPomoData(){
   let manualXP=0;
   if(kind==='focus') manualXP=awardManualStudyXP(minutes,date);
   checkPerfectDay();
-  persist();
+  save();
   document.getElementById('pomoManualMinutes').value='';document.getElementById('pomoManualNote').value='';
-  renderManualPomoData(); if(pomoTab==='stats'){renderPomoStats();renderPomoChart();}
-  renderXP(); renderProfile();
   toast(`✅ ${minutes} دقیقه ${kind==='focus'?'مطالعه':'استراحت'} ثبت شد${manualXP?` · +${manualXP} XP`:''}`);
 }
-function deleteManualPomoData(id){DB.pomodoro.manualData=(DB.pomodoro.manualData||[]).filter(x=>x.id!==id);persist();renderManualPomoData();if(pomoTab==='stats'){renderPomoStats();renderPomoChart();}}
+function deleteManualPomoData(id){
+  DB.pomodoro.manualData=(DB.pomodoro.manualData||[]).filter(x=>x.id!==id);
+  save();
+  toast('🗑️ ثبت دستی حذف شد');
+}
 function getManualPomoTotal(date,kind){return (DB.pomodoro.manualData||[]).filter(x=>x.date===date&&x.kind===kind).reduce((a,x)=>a+(x.minutes||0),0);}
 function getPomoTotal(date,kind){return (DB.pomodoro.history[date]?.[kind]||0)+getManualPomoTotal(date,kind);}
 function renderManualPomoData(){
@@ -3146,7 +3200,6 @@ function renderManualPomoData(){
 }
 function renderPomoStats(){
   const d = todayISO();
-  const today = DB.pomodoro.history[d] || {focus:0, break:0};
   const totalFocus=getPomoTotal(d,'focus'), totalBreak=getPomoTotal(d,'break');
   document.getElementById('pomoTodayFocus').textContent = totalFocus+'m';
   document.getElementById('pomoTodayBreak').textContent = totalBreak+'m';
@@ -3163,7 +3216,6 @@ function renderPomoStats(){
   const dayLbl = days.map(dd=>new Date(dd).toLocaleDateString('fa-IR',{weekday:'short'}));
   const wc = document.getElementById('pomoWeekChecklist');
   wc.innerHTML = days.map((dd,i)=>{
-    const rec = DB.pomodoro.history[dd] || {focus:0};
     const focusTotal=getPomoTotal(dd,'focus');
     const met = goal>0 && focusTotal>=goal;
     const cls = goal>0 ? (met?'met':'missed') : '';
@@ -3193,9 +3245,13 @@ function renderPomoChart(){
   } else {
     const year = new Date().getFullYear();
     const months = new Array(12).fill(0);
-    Object.keys(DB.pomodoro.history).forEach(dateStr=>{
+    const allDates = new Set([
+      ...Object.keys(DB.pomodoro.history||{}),
+      ...(DB.pomodoro.manualData||[]).map(x=>x.date)
+    ]);
+    allDates.forEach(dateStr=>{
       const dt = new Date(dateStr);
-      if(dt.getFullYear()===year) months[dt.getMonth()] += (DB.pomodoro.history[dateStr].focus||0);
+      if(dt.getFullYear()===year) months[dt.getMonth()] += getPomoTotal(dateStr,'focus');
     });
     labels = Array.from({length:12}, (_,i)=> new Date(year,i,1).toLocaleDateString('fa-IR',{month:'short'}));
     values = months;
@@ -3279,7 +3335,7 @@ setInterval(tickCrisis, 1000);
 const YVY_METRICS = [
   { key:'xp',           label:'XP روزانه',            icon:'⚡', unit:'XP',        get:(d)=> (DB.history[d]?.xp)||0 },
   { key:'tasks',        label:'تسک‌های انجام‌شده',    icon:'✅', unit:'تسک',       get:(d)=> (DB.history[d]?.tasks)||0 },
-  { key:'pomoMin',      label:'مدت مطالعه',           icon:'⏱️', unit:'دقیقه',     get:(d)=> (DB.pomodoro.history[d]?.focus)||0 },
+  { key:'pomoMin',      label:'مدت مطالعه',           icon:'⏱️', unit:'دقیقه',     get:(d)=> getPomoTotal(d,'focus') },
   { key:'pomoSessions', label:'تعداد پومودورو',       icon:'🍅', unit:'پومودورو',  get:(d)=> (DB.pomodoro.history[d]?.sessions)||0 },
   { key:'quests',       label:'کوئست‌های انجام‌شده',  icon:'🎯', unit:'کوئست',     get:(d)=> (DB.stats.questsCompletedByDate?.[d])||0 },
 ];
@@ -3287,6 +3343,7 @@ function yvyAllDates(){
   const dates = new Set();
   Object.keys(DB.history||{}).forEach(d=>dates.add(d));
   Object.keys(DB.pomodoro.history||{}).forEach(d=>dates.add(d));
+  (DB.pomodoro.manualData||[]).forEach(x=>dates.add(x.date));
   Object.keys(DB.stats.questsCompletedByDate||{}).forEach(d=>dates.add(d));
   return [...dates];
 }
@@ -3369,7 +3426,7 @@ function renderYVYWeekCompare(){
   const [thisStart, thisEnd] = yvyWeekRange(0);
   const [lastStart, lastEnd] = yvyWeekRange(1);
   const metrics = [
-    {label:'⏱️ مدت مطالعه', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.pomodoro.history[d]?.focus)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.pomodoro.history[d]?.focus)||0)},
+    {label:'⏱️ مدت مطالعه', thisWk: yvySumRange(thisStart,thisEnd,d=>getPomoTotal(d,'focus')), lastWk: yvySumRange(lastStart,lastEnd,d=>getPomoTotal(d,'focus'))},
     {label:'✅ تسک‌ها', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.history[d]?.tasks)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.history[d]?.tasks)||0)},
     {label:'🍅 پومودورو', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.pomodoro.history[d]?.sessions)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.pomodoro.history[d]?.sessions)||0)},
     {label:'⚡ XP', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.history[d]?.xp)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.history[d]?.xp)||0)},
@@ -4698,7 +4755,8 @@ function buildBackupPayload(){
   payload.uiSettings={
     fontSize:localStorage.getItem('lifePlannerFontSize_v2')||localStorage.getItem('lifePlannerFontSize_v1')||'medium',
     activeTheme:localStorage.getItem(THEME_KEY)||'dark',
-    pinnedNav:(()=>{try{return JSON.parse(localStorage.getItem(PINNED_NAV_KEY)||'null')}catch(_){return null}})()
+    pinnedNav:(()=>{try{return JSON.parse(localStorage.getItem(PINNED_NAV_KEY)||'null')}catch(_){return null}})(),
+    uiScale:localStorage.getItem(LP_UI_SCALE_KEY)||'medium'
   };
   return payload;
 }
@@ -4725,9 +4783,9 @@ async function shareBackup(){
   exportBackup();
   toast('این مرورگر اشتراک‌گذاری مستقیم رو پشتیبانی نمی‌کنه — فایل دانلود شد، خودت بفرستش به فضای ابری 📤');
 }
-document.getElementById('shareBtn').onclick = shareBackup;
-document.getElementById('exportBtn').onclick = exportBackup;
-document.getElementById('importBtn').onclick = ()=> document.getElementById('importFile').click();
+const _shareBtn=document.getElementById('shareBtn'); if(_shareBtn) _shareBtn.onclick=shareBackup;
+const _exportBtn=document.getElementById('exportBtn'); if(_exportBtn) _exportBtn.onclick=exportBackup;
+const _importBtn=document.getElementById('importBtn'); if(_importBtn) _importBtn.onclick=()=> document.getElementById('importFile').click();
 document.getElementById('importFile').onchange = (e)=>{
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
@@ -4743,6 +4801,7 @@ document.getElementById('importFile').onchange = (e)=>{
       if(restoredUI){
         if(restoredUI.fontSize) localStorage.setItem('lifePlannerFontSize_v2',restoredUI.fontSize);
         if(restoredUI.activeTheme && THEME_META[restoredUI.activeTheme]) useTheme(restoredUI.activeTheme);
+        if(restoredUI.uiScale) localStorage.setItem(LP_UI_SCALE_KEY,restoredUI.uiScale);
         if(Array.isArray(restoredUI.pinnedNav) && restoredUI.pinnedNav.length===4) localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(restoredUI.pinnedNav));
       }
       DB.notes = Array.isArray(DB.notes)?DB.notes:[];
@@ -4868,45 +4927,19 @@ setTimeout(checkBossTrigger, 2600);
 applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
-/* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='6.4';
-let lpUpdateShown=false;
-function showLifePlannerUpdate(v){
-  if(lpUpdateShown)return;
-  lpUpdateShown=true;
-  const x=document.createElement('div');
-  x.id='lpUpdateNotice'; x.dir='rtl';
-  x.style.cssText='position:fixed;left:12px;right:12px;bottom:74px;z-index:99999;background:var(--bg2);border:1px solid var(--neon);border-radius:14px;padding:12px;box-shadow:0 10px 35px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;';
-  x.innerHTML=`<div><b>🆕 نسخه جدید Life Planner</b><div style="color:var(--txt-dim)">نسخه ${esc(v)} آماده است.</div></div><button class="btn" id="lpUpdateNow">به‌روزرسانی</button>`;
-  document.body.appendChild(x);
-  document.getElementById('lpUpdateNow').onclick=async()=>{
-    try{
-      const reg=await navigator.serviceWorker?.getRegistration();
-      if(reg) await reg.update();
-    }catch(_){}
-    location.reload();
-  };
-}
-async function checkLifePlannerUpdate(){
-  try{
-    const r=await fetch('app-version.json?t='+Date.now(),{cache:'no-store'});
-    if(!r.ok)return;
-    const v=String((await r.json()).version||'');
-    if(v&&v!==LP_V64_APP_VERSION)showLifePlannerUpdate(v);
-  }catch(_){}
-}
-window.addEventListener('load',()=>{checkLifePlannerUpdate();setInterval(checkLifePlannerUpdate,180000);});
-/* ============ PWA / OFFLINE ============ */
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{ /* silently ignore on file:// or unsupported hosts */ });
-  });
-}
 </script>
-<script id="lp-v64-enhancements">
-/* ============ LIFE PLANNER v6.4 ENHANCEMENTS ============ */
-const LP_V64_APP_VERSION = '6.4';
+<script id="lp-v65-enhancements">
+/* ============ LIFE PLANNER v6.5 ENHANCEMENTS ============ */
+const LP_V64_APP_VERSION = '6.5';
 const LP_FONT_KEY = 'lifePlannerFontSize_v2';
+const LP_UI_SCALE_KEY = 'lifePlannerUIScale_v1';
+const LP_UI_SCALES = { small:0.90, medium:1, large:1.10, xlarge:1.20 };
+function applyLPUIScale(){
+  const key=localStorage.getItem(LP_UI_SCALE_KEY)||'medium';
+  const scale=LP_UI_SCALES[key]||1;
+  document.documentElement.style.setProperty('--lp-ui-scale',String(scale));
+}
+
 const LP_MANUAL_XP_TAG = 'lifePlannerManualXp_v1';
 const LP_FONT_SCALES = { small:0.90, medium:1, large:1.10, xlarge:1.20 };
 
@@ -4917,7 +4950,7 @@ function applyLPFontScale(){
   document.documentElement.style.setProperty('--lp-base-font-size', `calc(clamp(13px, 2.5vw, 16px) * ${scale})`);
 }
 
-function ensureV64Data(){
+function ensureV65Data(){
   if(!DB.motivation || typeof DB.motivation!=='object') DB.motivation={mood:'energize'};
   if(typeof DB.motivation.custom!=='string') DB.motivation.custom='';
   if(!Array.isArray(DB.pomodoro?.manualData)){
@@ -4926,35 +4959,16 @@ function ensureV64Data(){
   }
 }
 
-function saveCustomMotivation(){
-  const el=document.getElementById('settingsMotivationInput');
-  if(!el) return;
-  ensureV64Data();
-  DB.motivation.custom=el.value.trim().slice(0,220);
-  save();
-  renderMotivation();
-  renderSettings();
-  toast(DB.motivation.custom ? '✅ پیام انگیزشی سفارشی ذخیره شد' : '🔁 پیام سفارشی پاک شد و پیام‌های رندوم فعال شدند');
-}
-function resetCustomMotivation(){
-  ensureV64Data();
-  DB.motivation.custom='';
-  save();
-  renderMotivation();
-  renderSettings();
-  toast('🎲 پیام‌های انگیزشی رندوم دوباره فعال شدند');
-}
-
 function renderMotivationV64(){
   if(typeof renderMotivation==='function') renderMotivation();
 }
 
 function renderSettings(){
-  ensureV64Data();
+  ensureV65Data();
   const font=document.getElementById('settingsFontSize');
   if(font) font.value=localStorage.getItem(LP_FONT_KEY)||'medium';
-  const custom=document.getElementById('settingsMotivationInput');
-  if(custom && document.activeElement!==custom) custom.value=DB.motivation.custom||'';
+  const ui=document.getElementById('settingsUIScale');
+  if(ui) ui.value=localStorage.getItem(LP_UI_SCALE_KEY)||'medium';
   const themeMenu=document.getElementById('settingsThemeList');
   if(themeMenu){
     const active=localStorage.getItem(THEME_KEY)||'dark';
@@ -4988,8 +5002,6 @@ function openSettings(){
 window.openSettings=openSettings;
 
 function openSettingsBackup(){
-  const btn=document.getElementById('exportBtn');
-  if(btn){btn.click();return;}
   if(typeof exportBackup==='function') exportBackup();
 }
 function openSettingsImport(){
@@ -5013,6 +5025,12 @@ function setSettingsFontSize(v){
   localStorage.setItem(LP_FONT_KEY,v);
   applyLPFontScale();
   toast('🔤 اندازه فونت ذخیره شد');
+}
+function setSettingsUIScale(v){
+  if(!LP_UI_SCALES[v]) return;
+  localStorage.setItem(LP_UI_SCALE_KEY,v);
+  applyLPUIScale();
+  toast('🧩 اندازه رابط کاربری ذخیره شد');
 }
 
 /* Manual study -> existing XP system, deliberately capped to reduce abuse. */
@@ -5043,7 +5061,7 @@ function showLifePlannerUpdate(v){
     try{
       const reg=await navigator.serviceWorker?.getRegistration();
       if(reg){ await reg.update(); if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'}); }
-      if('caches' in window){ const keys=await caches.keys(); await Promise.all(keys.filter(k=>k!=='life-planner-cache-v36').map(k=>caches.delete(k))); }
+      if('caches' in window){ const keys=await caches.keys(); await Promise.all(keys.filter(k=>k!=='life-planner-cache-v37').map(k=>caches.delete(k))); }
     }catch(_){ }
     location.reload();
   };
@@ -5057,10 +5075,11 @@ async function checkLifePlannerUpdate(){
   }catch(_){ }
 }
 
-/* v6.4 replaces the v6.2 appended body injection with a real view inside the app. */
+/* v6.5 keeps Settings as the single home for app-level controls; motivation customization lives on Dashboard. */
 document.addEventListener('DOMContentLoaded',()=>{
   applyLPFontScale();
-  ensureV64Data();
+  applyLPUIScale();
+  ensureV65Data();
   renderSettings();
   checkLifePlannerUpdate();
   setInterval(checkLifePlannerUpdate,180000);
@@ -5068,9 +5087,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 /* Keep direct theme changes reflected in Settings. */
-const _origUseThemeV64 = window.useTheme;
-if(typeof _origUseThemeV64==='function'){
-  window.useTheme=function(theme){ _origUseThemeV64(theme); renderSettings(); };
+const _origUseThemeV65 = window.useTheme;
+if(typeof _origUseThemeV65==='function'){
+  window.useTheme=function(theme){ _origUseThemeV65(theme); renderSettings(); };
 }
 </script>
 <script id="lp-v64-init-extra">
