@@ -513,9 +513,11 @@ html.crisis-mode body{
 .pomo-history-name{font-size:12.5px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pomo-history-meta{font-size:10.5px;color:var(--txt-dim2);margin-top:3px;}
 .pomo-history-score{font-size:12px;font-weight:900;color:var(--neon);white-space:nowrap;}
-.pomo-focus-overlay{position:fixed;inset:0;z-index:99990;background:radial-gradient(circle at 50% 30%,rgba(0,229,255,.08),transparent 45%),var(--bg);display:none;align-items:center;justify-content:center;padding:24px;}
+.pomo-focus-overlay{position:fixed;inset:0;z-index:1000000;width:100vw;height:100dvh;box-sizing:border-box;overflow:auto;background:radial-gradient(circle at 50% 30%,rgba(0,229,255,.08),transparent 45%),var(--bg);display:none;align-items:center;justify-content:center;padding:24px;padding-bottom:max(24px,env(safe-area-inset-bottom));overscroll-behavior:contain;}
+html.pomo-focus-open,body.pomo-focus-open{overflow:hidden!important;}
+.pomo-focus-overlay:fullscreen{width:100vw;height:100dvh;background:radial-gradient(circle at 50% 30%,rgba(0,229,255,.08),transparent 45%),var(--bg);}
 .pomo-focus-overlay.open{display:flex;}
-.pomo-focus-inner{width:min(720px,96vw);text-align:center;display:grid;gap:16px;}
+.pomo-focus-inner{width:min(720px,96vw);max-height:100%;overflow:auto;text-align:center;display:grid;gap:16px;align-items:center;}
 .pomo-focus-mode{font-size:13px;font-weight:850;color:var(--txt-dim);}
 .pomo-focus-time{font-size:clamp(56px,13vw,110px);line-height:1;font-weight:950;font-family:'Consolas','JetBrains Mono',monospace;letter-spacing:-4px;}
 .pomo-focus-task{font-size:14px;font-weight:800;color:var(--txt-dim);min-height:20px;}
@@ -5199,27 +5201,70 @@ if('serviceWorker' in navigator){
   }
   function getSound(){ return DB.pomodoro.sound||'off'; }
   let audio=null;
+  let audioKind='off';
+  function safeDisconnect(node){ try{node?.disconnect?.();}catch(e){} }
   function stopSound(){
-    try{ if(audio){ audio.nodes.forEach(n=>{try{n.stop?.();}catch(e){}}); audio.ctx.close(); } }catch(e){}
-    audio=null;
-  }
-  function startSound(kind){
-    stopSound(); if(!kind||kind==='off')return;
     try{
-      const ctx=new (window.AudioContext||window.webkitAudioContext)();
-      const master=ctx.createGain(); master.gain.value=.018; master.connect(ctx.destination);
+      if(audio){
+        if(audio.nodes) audio.nodes.forEach(n=>{try{n.stop?.();}catch(e){} safeDisconnect(n);});
+        if(audio.ctx && audio.ctx.state!=='closed') audio.ctx.close().catch(()=>{});
+      }
+    }catch(e){}
+    audio=null; audioKind='off';
+  }
+  function makeNoiseBuffer(ctx,seconds=2,brown=false){
+    const len=Math.max(1,Math.floor(ctx.sampleRate*seconds));
+    const buf=ctx.createBuffer(1,len,ctx.sampleRate); const d=buf.getChannelData(0); let last=0;
+    for(let i=0;i<len;i++){ const white=Math.random()*2-1; last=brown ? (last*0.985 + white*0.06) : white; d[i]=Math.max(-1,Math.min(1,brown?last*3.2:white*0.55)); }
+    return buf;
+  }
+  function addLoopNoise(ctx, master, nodes, opts={}){
+    const src=ctx.createBufferSource(); src.buffer=opts.buffer||makeNoiseBuffer(ctx,2,!!opts.brown); src.loop=true;
+    const filter=ctx.createBiquadFilter(); filter.type=opts.type||'lowpass'; filter.frequency.value=opts.freq||2200; filter.Q.value=opts.q||0.3;
+    const gain=ctx.createGain(); gain.gain.value=opts.gain||0.06;
+    src.connect(filter); filter.connect(gain); gain.connect(master); src.start(); nodes.push(src);
+    return {src,filter,gain};
+  }
+  function addTone(ctx, master, nodes, freq, gainValue, type='sine'){
+    const osc=ctx.createOscillator(); const gain=ctx.createGain(); osc.type=type; osc.frequency.value=freq; gain.gain.value=gainValue; osc.connect(gain); gain.connect(master); osc.start(); nodes.push(osc);
+    return {osc,gain};
+  }
+  async function startSound(kind){
+    stopSound();
+    if(!kind||kind==='off') return false;
+    try{
+      const Ctx=window.AudioContext||window.webkitAudioContext;
+      if(!Ctx) return false;
+      const ctx=new Ctx();
+      if(ctx.state==='suspended') await ctx.resume().catch(()=>{});
+      const master=ctx.createGain(); master.gain.value=0.09; master.connect(ctx.destination);
       const nodes=[];
       if(kind==='rain'){
-        const buffer=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate); const d=buffer.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.45;
-        const src=ctx.createBufferSource(); src.buffer=buffer; src.loop=true; const filter=ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=2800; src.connect(filter); filter.connect(master); src.start(); nodes.push(src);
-      } else {
-        const base={cafe:180,forest:120,space:70}[kind]||100;
-        for(let i=0;i<2;i++){ const osc=ctx.createOscillator(), g=ctx.createGain(); osc.type='sine'; osc.frequency.value=base*(i?1.48:1); g.gain.value=i?0.012:0.018; osc.connect(g); g.connect(master); osc.start(); nodes.push(osc); }
-        const lfo=ctx.createOscillator(), lg=ctx.createGain(); lfo.frequency.value=kind==='space'?.06:.12; lg.gain.value=.012; lfo.connect(lg); lg.connect(master); lfo.start(); nodes.push(lfo,lg);
+        addLoopNoise(ctx,master,nodes,{type:'lowpass',freq:2800,gain:0.12});
+        addLoopNoise(ctx,master,nodes,{type:'highpass',freq:650,gain:0.025});
+      } else if(kind==='cafe'){
+        addLoopNoise(ctx,master,nodes,{brown:true,type:'lowpass',freq:1700,gain:0.16});
+        addLoopNoise(ctx,master,nodes,{type:'bandpass',freq:950,gain:0.045,q:0.8});
+        const hum=addTone(ctx,master,nodes,92,0.012,'sine');
+        const lfo=ctx.createOscillator(), lg=ctx.createGain(); lfo.frequency.value=0.18; lg.gain.value=0.009; lfo.connect(lg); lg.connect(hum.gain); lfo.start(); nodes.push(lfo,lg);
+      } else if(kind==='forest'){
+        addLoopNoise(ctx,master,nodes,{type:'lowpass',freq:1500,gain:0.085});
+        addLoopNoise(ctx,master,nodes,{brown:true,type:'lowpass',freq:420,gain:0.035});
+        const wind=addTone(ctx,master,nodes,170,0.009,'sine');
+        const lfo=ctx.createOscillator(), lg=ctx.createGain(); lfo.frequency.value=0.08; lg.gain.value=0.01; lfo.connect(lg); lg.connect(wind.gain); lfo.start(); nodes.push(lfo,lg);
+      } else if(kind==='space'){
+        addTone(ctx,master,nodes,68,0.018,'sine'); addTone(ctx,master,nodes,102,0.012,'sine'); addTone(ctx,master,nodes,204,0.006,'triangle');
+        const lfo=ctx.createOscillator(), lg=ctx.createGain(); lfo.frequency.value=0.045; lg.gain.value=0.02; lfo.connect(lg); lg.connect(master); lfo.start(); nodes.push(lfo,lg);
       }
-      audio={ctx,nodes};
-    }catch(e){ audio=null; }
+      audio={ctx,nodes}; audioKind=kind; return true;
+    }catch(e){ audio=null; audioKind='off'; return false; }
   }
+  async function restartSoundFromGesture(kind){
+    const ok=await startSound(kind);
+    if(!ok && kind!=='off') toast('⚠️ صدای محیط در این مرورگر در دسترس نیست');
+    return ok;
+  }
+
   function saveAndRender(){ save(); renderPomoV66(); if(typeof renderPomoStats==='function')renderPomoStats(); }
   function renderFocusTools(){
     const root=document.getElementById('pomoV66FocusTools'); if(!root)return;
@@ -5249,7 +5294,7 @@ if('serviceWorker' in navigator){
     const task=document.getElementById('pomo66Task');
     if(task) task.value=DB.pomodoro.session?.taskId||DB.pomodoro.lastTaskId||'';
     task?.addEventListener('change',()=>{ DB.pomodoro.lastTaskId=task.value||''; if(DB.pomodoro.session)DB.pomodoro.session.taskId=task.value||''; save(); renderPomoV66(); });
-    document.getElementById('pomo66Sound')?.addEventListener('change',e=>{ DB.pomodoro.sound=e.target.value; if(DB.pomodoro.session&&DB.pomodoro.session.status==='running')startSound(e.target.value); else if(e.target.value==='off')stopSound(); save(); });
+    document.getElementById('pomo66Sound')?.addEventListener('change',async e=>{ DB.pomodoro.sound=e.target.value; save(); if(e.target.value==='off') stopSound(); else await restartSoundFromGesture(e.target.value); });
     document.getElementById('pomo66FocusMode')?.addEventListener('click',openFocusMode);
   }
   function applyPreset(id){
@@ -5308,16 +5353,54 @@ if('serviceWorker' in navigator){
     el.innerHTML=`<div class="pomo-break-box" dir="rtl"><div class="pomo-v66-title">☕ وقت استراحت</div><div class="pomo-v66-help">۵ دقیقه استراحت یعنی واقعاً چند دقیقه ذهنت رو از کار جدا کنی؛ لازم نیست کار خاصی انجام بدی.</div><div class="pomo-break-list"><div class="pomo-break-tip">🚶 یک دور کوتاه راه برو</div><div class="pomo-break-tip">💧 آب بخور</div><div class="pomo-break-tip">👀 به صفحه نگاه نکن</div><div class="pomo-break-tip">🧘 یکم کشش بده</div></div><div class="settings-actions"><button class="btn" id="pomo66StartBreak">☕ شروع استراحت</button><button class="btn ghost" id="pomo66SkipBreak">⏭️ بعداً</button></div></div>`;
     el.classList.add('open'); document.getElementById('pomo66StartBreak').onclick=()=>{el.classList.remove('open'); if(typeof pomoQuickStart==='function')pomoQuickStart();}; document.getElementById('pomo66SkipBreak').onclick=()=>el.classList.remove('open');
   }
+  let focusFullscreenRequested=false;
+  function setFocusUiOpen(open){
+    document.documentElement.classList.toggle('pomo-focus-open',open);
+    document.body.classList.toggle('pomo-focus-open',open);
+  }
+  async function requestFocusFullscreen(el){
+    if(!el) return false;
+    try{
+      if(document.fullscreenElement===el) return true;
+      if(typeof el.requestFullscreen!=='function') return false;
+      focusFullscreenRequested=true;
+      await el.requestFullscreen({navigationUI:'hide'}).catch(()=>{});
+      return document.fullscreenElement===el;
+    }catch(e){ return false; }
+  }
+  function closeFocusMode(){
+    const el=document.getElementById('pomo66FocusOverlay');
+    if(!el)return;
+    el.classList.remove('open'); setFocusUiOpen(false);
+    try{ if(document.fullscreenElement===el) document.exitFullscreen?.().catch(()=>{}); }catch(e){}
+    focusFullscreenRequested=false;
+    renderPomoV66();
+  }
   function openFocusMode(){
     let el=document.getElementById('pomo66FocusOverlay');
     if(!el){
-      el=document.createElement('div');el.id='pomo66FocusOverlay';el.className='pomo-focus-overlay';el.innerHTML=`<div class="pomo-focus-inner" dir="rtl"><div class="pomo-focus-mode" id="pomo66FocusModeText">🎯 فوکوس</div><div class="pomo-focus-time" id="pomo66FocusTime">25:00</div><div class="pomo-focus-task" id="pomo66FocusTask">بدون تسک</div><div class="pomo-focus-progress"><div id="pomo66FocusProgress"></div></div><div class="pomo-focus-actions"><button class="btn ghost" id="pomo66FocusExit">✕ خروج</button><button class="btn" id="pomo66FocusAction">⏸️ مکث</button></div></div>`; document.body.appendChild(el);
+      el=document.createElement('div');
+      el.id='pomo66FocusOverlay'; el.className='pomo-focus-overlay';
+      el.innerHTML=`<div class="pomo-focus-inner" dir="rtl"><div class="pomo-focus-mode" id="pomo66FocusModeText">🎯 فوکوس</div><div class="pomo-focus-time" id="pomo66FocusTime">25:00</div><div class="pomo-focus-task" id="pomo66FocusTask">بدون تسک</div><div class="pomo-focus-progress"><div id="pomo66FocusProgress"></div></div><div class="pomo-focus-actions"><button class="btn ghost" id="pomo66FocusExit">✕ خروج</button><button class="btn" id="pomo66FocusAction">⏸️ مکث</button></div></div>`;
+      document.body.appendChild(el);
       document.getElementById('pomo66FocusExit').onclick=closeFocusMode;
       document.getElementById('pomo66FocusAction').onclick=()=>{const s=DB.pomodoro.session;if(s?.status==='running')pauseSession();else if(s?.status==='paused')resumeSession();else closeFocusMode();renderFocusOverlay();};
     }
-    el.classList.add('open'); renderFocusOverlay(); try{document.documentElement.requestFullscreen?.().catch(()=>{});}catch(e){}
+    el.classList.add('open'); setFocusUiOpen(true); renderFocusOverlay();
+    requestFocusFullscreen(el);
   }
-  function closeFocusMode(){document.getElementById('pomo66FocusOverlay')?.classList.remove('open');try{document.exitFullscreen?.().catch(()=>{});}catch(e){}}
+  if(!window.__pomoFocusFullscreenBound){
+    window.__pomoFocusFullscreenBound=true;
+    document.addEventListener('fullscreenchange',()=>{
+      const el=document.getElementById('pomo66FocusOverlay');
+      if(!el || !el.classList.contains('open')) return;
+      if(document.fullscreenElement!==el){
+        if(focusFullscreenRequested){ focusFullscreenRequested=false; return; }
+        setFocusUiOpen(true);
+      }
+    });
+  }
+
   function renderFocusOverlay(){
     const s=DB.pomodoro.session; const el=document.getElementById('pomo66FocusOverlay'); if(!el||!el.classList.contains('open'))return;
     const tm=document.getElementById('pomo66FocusTime'), task=document.getElementById('pomo66FocusTask'), mode=document.getElementById('pomo66FocusModeText'), bar=document.getElementById('pomo66FocusProgress'), act=document.getElementById('pomo66FocusAction');
@@ -5337,11 +5420,11 @@ if('serviceWorker' in navigator){
   function renderPomoV66(){ensure();renderFocusTools();renderStatsTools();renderFocusOverlay();}
   const oldStartFocus=window.startFocus, oldStartBreak=window.startBreak, oldPause=window.pauseSession, oldResume=window.resumeSession, oldEnd=window.endSession, oldComplete=window.completePomoSession;
   window.startFocus=function(){
-    ensure(); const task=selectedTask(); DB.pomodoro.session={mode:'focus',status:'running',startAt:Date.now(),endAt:Date.now()+DB.pomodoro.settings.focusMin*60000,totalMs:DB.pomodoro.settings.focusMin*60000,taskId:task?.id||DB.pomodoro.lastTaskId||'',pauseCount:0,plannedMinutes:DB.pomodoro.settings.focusMin}; DB.pomodoro.lastTaskId=task?.id||DB.pomodoro.lastTaskId||''; save(); startSound(getSound()); if(DB.pomodoro.notifications)sendNotification('🍅 فوکوس شروع شد',task?`🎯 ${task.title||task.text||'تسک'}`:'تمرکزت رو شروع کن 💪'); renderPomoUI();renderPomoV66();
+    ensure(); const task=selectedTask(); DB.pomodoro.session={mode:'focus',status:'running',startAt:Date.now(),endAt:Date.now()+DB.pomodoro.settings.focusMin*60000,totalMs:DB.pomodoro.settings.focusMin*60000,taskId:task?.id||DB.pomodoro.lastTaskId||'',pauseCount:0,plannedMinutes:DB.pomodoro.settings.focusMin}; DB.pomodoro.lastTaskId=task?.id||DB.pomodoro.lastTaskId||''; save(); restartSoundFromGesture(getSound()); if(DB.pomodoro.notifications)sendNotification('🍅 فوکوس شروع شد',task?`🎯 ${task.title||task.text||'تسک'}`:'تمرکزت رو شروع کن 💪'); renderPomoUI();renderPomoV66();
   };
-  window.startBreak=function(){ ensure(); DB.pomodoro.session={mode:'break',status:'running',startAt:Date.now(),endAt:Date.now()+DB.pomodoro.settings.breakMin*60000,totalMs:DB.pomodoro.settings.breakMin*60000,pauseCount:0,plannedMinutes:DB.pomodoro.settings.breakMin}; save(); startSound(getSound()); if(DB.pomodoro.notifications)sendNotification('☕ استراحت شروع شد','چند دقیقه از صفحه فاصله بگیر'); renderPomoUI();renderPomoV66(); };
+  window.startBreak=function(){ ensure(); DB.pomodoro.session={mode:'break',status:'running',startAt:Date.now(),endAt:Date.now()+DB.pomodoro.settings.breakMin*60000,totalMs:DB.pomodoro.settings.breakMin*60000,pauseCount:0,plannedMinutes:DB.pomodoro.settings.breakMin}; save(); restartSoundFromGesture(getSound()); if(DB.pomodoro.notifications)sendNotification('☕ استراحت شروع شد','چند دقیقه از صفحه فاصله بگیر'); renderPomoUI();renderPomoV66(); };
   window.pauseSession=function(){ const s=DB.pomodoro.session;if(!s||s.status!=='running')return; s.pauseCount=(s.pauseCount||0)+1; oldPause(); stopSound(); renderFocusOverlay(); };
-  window.resumeSession=function(){ oldResume(); startSound(getSound()); renderFocusOverlay(); };
+  window.resumeSession=function(){ oldResume(); restartSoundFromGesture(getSound()); renderFocusOverlay(); };
   window.endSession=function(){
     const s=DB.pomodoro.session;if(!s)return;
     let mins=0;if(s.mode==='infinite'){const elapsed=(s.baseElapsedMs||0)+(s.status==='running'?Date.now()-s.startAt:0);mins=Math.round(elapsed/60000);}else{const rem=s.status==='running'?Math.max(0,s.endAt-Date.now()):(s.remainingMs||0);mins=Math.max(0,Math.round(((s.totalMs||0)-rem)/60000));}
