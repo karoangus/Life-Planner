@@ -490,7 +490,7 @@ html.crisis-mode body{
 .pomo-day-chip.missed{opacity:.55;}
 
 
-/* ===== POMODORO v6.7 ===== */
+/* ===== POMODORO v6.8 ===== */
 .pomo-v66-tools{display:grid;gap:12px;margin-top:16px;}
 .pomo-v66-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .pomo-v66-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;}
@@ -1116,7 +1116,10 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
           </div>
           <div class="row2">
             <div class="field"><label>تاریخ</label><input type="date" id="pomoManualDate"></div>
-            <div class="field"><label>توضیح (اختیاری)</label><input type="text" id="pomoManualNote" maxlength="120" placeholder="مثلاً ریاضی — فصل معادلات"></div>
+            <div class="field"><label>تسک مرتبط (اختیاری)</label><select id="pomoManualTask"><option value="">بدون تسک</option></select></div>
+          </div>
+          <div class="row2">
+            <div class="field" style="grid-column:1/-1"><label>توضیح (اختیاری)</label><input type="text" id="pomoManualNote" maxlength="120" placeholder="مثلاً ریاضی — فصل معادلات"></div>
           </div>
           <button class="btn" style="width:100%;justify-content:center;" onclick="addManualPomoData()">➕ ثبت داده</button>
         </div>
@@ -1632,7 +1635,7 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">6.7</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">6.8</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -3014,15 +3017,18 @@ function playPomoChime(){
 }
 
 const POMO_XP_PER_MIN = 2;
-function addPomoMinutes(kind, minutes){
-  if(minutes<=0) return;
-  const d = todayISO();
+function addPomoMinutes(kind, minutes, date=todayISO(), opts={}){
+  if(minutes<=0) return 0;
+  DB.pomodoro.history = DB.pomodoro.history || {};
+  const d = date || todayISO();
   DB.pomodoro.history[d] = DB.pomodoro.history[d] || {focus:0, break:0};
   DB.pomodoro.history[d][kind] = (DB.pomodoro.history[d][kind]||0) + minutes;
   if(kind==='focus'){ DB.pomodoro.history[d].sessions = (DB.pomodoro.history[d].sessions||0) + 1; }
   const bonus = 1 + 0.1*(DB.skillTiers.pomoXp||0);
-  addXP(Math.round(minutes * POMO_XP_PER_MIN * bonus));
+  const xp = Math.round(minutes * POMO_XP_PER_MIN * bonus);
+  addXP(xp);
   checkNewRecords();
+  return xp;
 }
 const POMO_GOAL_BONUS_XP = 30;
 function checkPomoGoalBonus(){
@@ -3178,31 +3184,68 @@ function savePomoSettings(){
   toast('✅ تنظیمات پومودورو ذخیره شد');
 }
 
+function renderManualTaskOptions(){
+  const sel=document.getElementById('pomoManualTask'); if(!sel) return;
+  const cur=sel.value;
+  const tasks=(DB.tasks||[]).filter(t=>!t.done);
+  sel.innerHTML='<option value="">بدون تسک</option>'+tasks.map(t=>`<option value="${esc(t.id)}">${esc(t.title||t.text||'تسک')}</option>`).join('');
+  if(tasks.some(t=>String(t.id)===String(cur))) sel.value=cur;
+}
+function migrateLegacyManualPomoData(){
+  if(!Array.isArray(DB.pomodoro?.manualData)) return;
+  DB.pomodoro.history=DB.pomodoro.history||{};
+  DB.pomodoro.sessionHistory=Array.isArray(DB.pomodoro.sessionHistory)?DB.pomodoro.sessionHistory:[];
+  let changed=false;
+  for(const m of DB.pomodoro.manualData){
+    if(!m || !m.id || m.migratedToHistory) continue;
+    const d=m.date||todayISO();
+    DB.pomodoro.history[d]=DB.pomodoro.history[d]||{focus:0,break:0};
+    DB.pomodoro.history[d][m.kind]=(DB.pomodoro.history[d][m.kind]||0)+(Number(m.minutes)||0);
+    if(m.kind==='focus'){
+      DB.pomodoro.history[d].sessions=(DB.pomodoro.history[d].sessions||0)+1;
+      DB.pomodoro.sessionHistory.unshift({id:m.id,date:d,mode:'focus',minutes:Number(m.minutes)||0,plannedMinutes:Number(m.minutes)||0,taskId:m.taskId||'',startedAt:m.createdAt||Date.now(),endedAt:m.createdAt||Date.now(),pauseCount:0,score:100,note:m.note||'',source:'manual'});
+    }
+    m.migratedToHistory=true;
+    changed=true;
+  }
+  if(changed){ DB.pomodoro.sessionHistory=DB.pomodoro.sessionHistory.slice(0,500); save(); }
+}
 function addManualPomoData(){
   const kind=document.getElementById('pomoManualKind')?.value||'focus';
   const minutes=Math.floor(Number(document.getElementById('pomoManualMinutes')?.value||0));
   const date=document.getElementById('pomoManualDate')?.value||todayISO();
   const note=(document.getElementById('pomoManualNote')?.value||'').trim();
+  const taskId=kind==='focus' ? (document.getElementById('pomoManualTask')?.value||'') : '';
   if(!Number.isFinite(minutes)||minutes<1||minutes>1440){toast('⚠️ مدت را بین ۱ تا ۱۴۴۰ دقیقه وارد کن');return;}
+  migrateLegacyManualPomoData();
+  const id=uid();
   if(!Array.isArray(DB.pomodoro.manualData))DB.pomodoro.manualData=[];
-  DB.pomodoro.manualData.push({id:uid(),kind,minutes,date,note,createdAt:Date.now()});
-  let manualXP=0;
-  if(kind==='focus') manualXP=awardManualStudyXP(minutes,date);
-  checkPerfectDay();
+  DB.pomodoro.manualData.push({id,kind,minutes,date,note,taskId,createdAt:Date.now(),migratedToHistory:true});
+  const score=window.recordPomoSession(kind,minutes,{date,taskId,plannedMinutes:minutes,pauseCount:0,startedAt:Date.now()-minutes*60000,endedAt:Date.now(),completed:true,source:'manual',manualId:id,note});
+  if(kind==='focus' && date===todayISO()) checkPomoGoalBonus();
   save();
   document.getElementById('pomoManualMinutes').value='';document.getElementById('pomoManualNote').value='';
-  toast(`✅ ${minutes} دقیقه ${kind==='focus'?'مطالعه':'استراحت'} ثبت شد${manualXP?` · +${manualXP} XP`:''}`);
+  toast(`✅ ${minutes} دقیقه ${kind==='focus'?'مطالعه':'استراحت'} ثبت شد${kind==='focus'?` · امتیاز تمرکز ${score}/100`:''}`);
+  renderManualPomoData(); renderPomoStats(); window.renderPomoV66?.();
 }
-function deleteManualPomoData(id){ DB.pomodoro.manualData=(DB.pomodoro.manualData||[]).filter(x=>x.id!==id); save(); toast('🗑️ ثبت دستی حذف شد'); }
-function getManualPomoTotal(date,kind){return (DB.pomodoro.manualData||[]).filter(x=>x.date===date&&x.kind===kind).reduce((a,x)=>a+(x.minutes||0),0);}
-function getPomoTotal(date,kind){return (DB.pomodoro.history[date]?.[kind]||0)+getManualPomoTotal(date,kind);}
+function deleteManualPomoData(id){
+  const item=(DB.pomodoro.manualData||[]).find(x=>x.id===id);
+  if(!item){return;}
+  toast('🛡️ ثبت‌های دستی مثل پومودورو بخشی از تاریخچه‌ی اصلی هستند و برای جلوگیری از خراب شدن XP/آمار حذف کامل نمی‌شوند.');
+}
+function getManualPomoTotal(date,kind){
+  // Kept only for legacy UI compatibility. The canonical source is pomodoro.history.
+  return 0;
+}
+function getPomoTotal(date,kind){return (DB.pomodoro.history?.[date]?.[kind]||0);}
 function renderManualPomoData(){
   const d=document.getElementById('pomoManualDate');if(d&&!d.value)d.value=todayISO();const date=d?.value||todayISO();
+  renderManualTaskOptions();
   const f=document.getElementById('pomoManualTodayFocus'),b=document.getElementById('pomoManualTodayBreak');
-  if(f)f.textContent=getManualPomoTotal(date,'focus')+'m';if(b)b.textContent=getManualPomoTotal(date,'break')+'m';
+  if(f)f.textContent=getPomoTotal(date,'focus')+'m';if(b)b.textContent=getPomoTotal(date,'break')+'m';
   const list=document.getElementById('pomoManualList');if(!list)return;
   const arr=(DB.pomodoro.manualData||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  list.innerHTML=arr.length?arr.slice(0,30).map(x=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);"><div><div style="font-weight:800;">${x.kind==='focus'?'📚':'☕'} ${x.minutes} دقیقه</div><div class="muted" style="font-size:11.5px;">${x.date}${x.note?' • '+esc(x.note):''}</div></div><button class="btn ghost" style="padding:7px 10px;" onclick="deleteManualPomoData('${x.id}')">🗑️</button></div>`).join(''):'<div class="muted" style="padding:10px 0;">هنوز ثبت دستی نداری.</div>';
+  list.innerHTML=arr.length?arr.slice(0,30).map(x=>{ const taskName=x.taskId?((DB.tasks||[]).find(t=>String(t.id)===String(x.taskId))?.title||'تسک'):''; return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);"><div><div style="font-weight:800;">${x.kind==='focus'?'📚':'☕'} ${x.minutes} دقیقه</div><div class="muted" style="font-size:11.5px;">${x.date}${taskName?' • 🎯 '+esc(taskName):''}${x.note?' • '+esc(x.note):''}</div></div><span class="muted" style="font-size:11px;">همگام شد</span></div>`; }).join(''):'<div class="muted" style="padding:10px 0;">هنوز ثبت دستی نداری.</div>';
 }
 function renderPomoStats(){
   const d = todayISO();
@@ -4933,7 +4976,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='6.7';
+const LP_APP_VERSION='6.8';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
@@ -4968,8 +5011,8 @@ if('serviceWorker' in navigator){
 }
 </script>
 <script id="lp-v66-enhancements">
-/* ============ LIFE PLANNER v6.7 ENHANCEMENTS ============ */
-const LP_V64_APP_VERSION = '6.7';
+/* ============ LIFE PLANNER v6.8 ENHANCEMENTS ============ */
+const LP_V64_APP_VERSION = '6.8';
 const LP_FONT_KEY = 'lifePlannerFontSize_v2';
 const LP_UI_SCALE_KEY = 'lifePlannerUIScale_v1';
 const LP_UI_SCALES = { small:0.90, medium:1, large:1.10, xlarge:1.20 };
@@ -4991,6 +5034,8 @@ function ensureV64Data(){
     if(!DB.pomodoro || typeof DB.pomodoro!=='object') DB.pomodoro={settings:{focusMin:25,breakMin:5,goalMinutes:0},session:null,history:{},pendingNext:null};
     DB.pomodoro.manualData=[];
   }
+  if(!Array.isArray(DB.pomodoro.sessionHistory)) DB.pomodoro.sessionHistory=[];
+  if(typeof migrateLegacyManualPomoData==='function') migrateLegacyManualPomoData();
 }
 
 function renderMotivationV64(){
@@ -5121,7 +5166,7 @@ function showLifePlannerUpdate(v){
     try{
       const reg=await navigator.serviceWorker?.getRegistration();
       if(reg){ await reg.update(); if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'}); }
-      if('caches' in window){ const keys=await caches.keys(); await Promise.all(keys.filter(k=>k!=='life-planner-cache-v38').map(k=>caches.delete(k))); }
+      if('caches' in window){ const keys=await caches.keys(); await Promise.all(keys.filter(k=>k!=='life-planner-cache-v40').map(k=>caches.delete(k))); }
     }catch(_){ }
     location.reload();
   };
@@ -5163,7 +5208,7 @@ if('serviceWorker' in navigator){
 </script>
 
 <script id="lp-v66-pomodoro">
-/* ============ POMODORO v6.7 — focused upgrades, kept intentionally simple ============ */
+/* ============ POMODORO v6.8 — unified manual logging ============ */
 (function(){
   const POMO66_KEY='lifePlannerPomo_v66';
   const PRESETS=[
@@ -5318,23 +5363,26 @@ if('serviceWorker' in navigator){
   }
   function recordSession(mode,minutes,meta={}){
     if(!minutes||minutes<1)return 0;
+    const date=meta.date||todayISO();
     const startedAt=meta.startedAt||Date.now()-minutes*60000;
     const endedAt=meta.endedAt||Date.now();
     let score=0;
     if(mode==='focus'){
       score=scoreForSession(minutes,meta.plannedMinutes||minutes,meta.pauseCount||0,!!meta.completed);
-      DB.pomodoro.sessionHistory.unshift({id:uid(),date:todayISO(),mode:'focus',minutes,plannedMinutes:meta.plannedMinutes||minutes,taskId:meta.taskId||'',startedAt,endedAt,pauseCount:meta.pauseCount||0,score,note:meta.note||''});
+      DB.pomodoro.sessionHistory.unshift({id:meta.manualId||uid(),date,mode:'focus',minutes,plannedMinutes:meta.plannedMinutes||minutes,taskId:meta.taskId||'',startedAt,endedAt,pauseCount:meta.pauseCount||0,score,note:meta.note||'',source:meta.source||'pomodoro'});
       DB.pomodoro.sessionHistory=DB.pomodoro.sessionHistory.slice(0,500);
-      if(meta.taskId){ const t=(DB.tasks||[]).find(x=>x.id===meta.taskId); if(t){ t.pomodoroMinutes=(t.pomodoroMinutes||0)+minutes; t.lastPomodoroAt=endedAt; } }
+      if(meta.taskId){ const t=(DB.tasks||[]).find(x=>String(x.id)===String(meta.taskId)); if(t){ t.pomodoroMinutes=(t.pomodoroMinutes||0)+minutes; t.lastPomodoroAt=endedAt; } }
       updateStreak();
     }
-    addPomoMinutes(mode,minutes);
-    if(mode==='focus' && typeof checkPomoGoalBonus==='function') checkPomoGoalBonus();
-    checkPerfectDay();
+    const xp=addPomoMinutes(mode,minutes,date);
+    if(mode==='focus' && date===todayISO() && typeof checkPomoGoalBonus==='function') checkPomoGoalBonus();
+    if(date===todayISO()) checkPerfectDay();
     save();
     renderPomoV66();
     return score;
   }
+  window.recordPomoSession=recordSession;
+  window.renderPomoV66=renderPomoV66;
   function showResult(data){
     let el=document.getElementById('pomo66Result');
     if(!el){ el=document.createElement('div'); el.id='pomo66Result'; el.className='pomo-result-modal'; document.body.appendChild(el); }
@@ -5435,6 +5483,7 @@ if('serviceWorker' in navigator){
   };
   // Keep the existing tick, but make the focus overlay live while open.
   const oldTick=window.tickPomo; window.tickPomo=function(){oldTick();renderFocusOverlay();};
+  try{ migrateLegacyManualPomoData(); updateStreak(); save(); }catch(_){ }
   // Initial render after DOM is ready; the existing app can call renderAll before this script runs.
   document.addEventListener('DOMContentLoaded',()=>{ensure();setTimeout(()=>{renderPomoV66();},80);});
   if(document.readyState!=='loading')setTimeout(()=>renderPomoV66(),50);
