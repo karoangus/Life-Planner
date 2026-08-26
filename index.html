@@ -97,6 +97,19 @@ html[data-theme="legendaryGold"]{
 @keyframes firefly{0%,100%{opacity:.1;transform:translateY(2px)}45%{opacity:.9}60%{opacity:.3;transform:translateY(-5px)}}
 .city-waterfall-spray{animation:waterSpray 1.3s ease-in-out infinite;}
 @keyframes waterSpray{0%,100%{opacity:.25;transform:scale(.85)}50%{opacity:.7;transform:scale(1.08)}}
+
+/* ===== Life City v7 polish: depth, lighting, parallax ===== */
+.city-frame{perspective:900px; transform-style:preserve-3d; overflow:hidden;}
+#citySvg{transform:translate3d(0,0,0) rotateX(var(--city-tilt-x,0deg)) rotateY(var(--city-tilt-y,0deg)) scale(1.012); transform-origin:50% 78%; transform-style:preserve-3d; will-change:transform; transition:transform .35s ease-out, filter .35s ease; filter:saturate(1.03) contrast(1.015) drop-shadow(0 18px 28px rgba(0,0,0,.18));}
+.city-frame::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(circle at 50% 36%,transparent 38%,rgba(0,0,0,.08) 100%);mix-blend-mode:multiply;opacity:.5;}
+.city-frame::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;background:linear-gradient(180deg,rgba(255,255,255,.08),transparent 22%,transparent 78%,rgba(0,0,0,.14));}
+#citySvg .struct-city .bld,#citySvg .struct-future .bld-f{filter:drop-shadow(6px 7px 5px rgba(0,0,0,.18));}
+#citySvg .struct-house,#citySvg .struct-cabin,#citySvg .struct-tent{filter:drop-shadow(7px 9px 5px rgba(0,0,0,.19));}
+#citySvg .lit-window{filter:drop-shadow(0 0 5px rgba(255,215,107,.5));}
+#citySvg .car-mini{filter:drop-shadow(0 0 5px rgba(0,229,255,.18));}
+.city-frame.city-audio-on .city-hint{background:rgba(16,23,39,.64);box-shadow:0 8px 22px rgba(0,0,0,.2);}
+@media (prefers-reduced-motion:reduce){#citySvg{transition:none!important;transform:scale(1.006)!important}.city-frame::before,.city-frame::after{opacity:.25!important}}
+
 .city-frame{
   --city-sky-top:#5fb3ea; --city-sky-bottom:#cdeeff;
   --city-ground-top:#7bd68a; --city-ground-bottom:#4fa85f;
@@ -490,7 +503,7 @@ html.crisis-mode body{
 .pomo-day-chip.missed{opacity:.55;}
 
 
-/* ===== POMODORO v6.8 ===== */
+/* ===== POMODORO v7.0 ===== */
 .pomo-v66-tools{display:grid;gap:12px;margin-top:16px;}
 .pomo-v66-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .pomo-v66-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;}
@@ -1471,7 +1484,7 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
           <rect id="cityRainTint" x="0" y="0" width="800" height="450" fill="#0b1030"/>
         </svg>
 
-        <div class="city-hint" id="cityHint">برای پخش صدای طبیعت روی 🔇 بزن</div>
+        <div class="city-hint" id="cityHint">برای پخش صدای واقعی روی 🔇 بزن</div>
       </div>
 
       <div class="grid g2" style="margin-top:16px;">
@@ -1635,7 +1648,7 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">6.8</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">7.0</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1731,7 +1744,7 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
     <div class="field"><label>ساعت شروع</label><input type="time" id="eHourStart" value="09:00"></div>
     <div class="field"><label>ساعت پایان</label><input type="time" id="eHourEnd" value="12:00"></div>
   </div>
-  <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="eReminder"><span>🔔 یادآوری این رویداد</span></label>
+  <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="eReminder" onchange="requestEventReminderPermission(this)"><span>🔔 یادآوری این رویداد</span></label>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('eventModalBg')">انصراف</button><button class="btn" onclick="saveEvent()">ذخیره</button></div>
 </div></div>
 
@@ -1979,40 +1992,54 @@ function todayISO(){
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-function sendNotification(title, body){
+let notificationRegPromise=null;
+function ensureNotificationRegistration(){
+  if(!('serviceWorker' in navigator)) return Promise.resolve(null);
+  if(notificationRegPromise) return notificationRegPromise;
+  notificationRegPromise = navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
+    try{ reg.update(); }catch(_){ }
+    return navigator.serviceWorker.ready;
+  }).catch(()=>null);
+  return notificationRegPromise;
+}
+function notificationSupported(){
+  return ('Notification' in window) && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1');
+}
+async function sendNotification(title, body, options={}){
   try{
-    if(!('Notification' in window)) return;
-    if(Notification.permission==='granted'){
-      if('serviceWorker' in navigator && navigator.serviceWorker.controller){
-        navigator.serviceWorker.ready.then(reg=>{
-          reg.showNotification(title, { body, icon:'icon-192.png', badge:'icon-192.png', tag:'life-planner', renotify:true });
-        }).catch(()=>{
-          try{ new Notification(title, {body, icon:'icon-192.png'}); }catch(e2){}
-        });
-      } else {
-        new Notification(title, {body, icon:'icon-192.png'});
-      }
-    } else if(Notification.permission!=='denied'){
-      Notification.requestPermission();
-    }
-  }catch(e){ /* notifications unavailable, ignore silently */ }
+    if(!notificationSupported()) return false;
+    if(Notification.permission!=='granted') return false;
+    const reg=await ensureNotificationRegistration();
+    const payload={body,icon:'icon-192.png',badge:'icon-192.png',dir:'rtl',lang:'fa',tag:options.tag||('lp-'+Date.now()),renotify:!!options.renotify};
+    if(reg){ await reg.showNotification(title,payload); return true; }
+    const n=new Notification(title,payload); n.onclick=()=>window.focus(); return true;
+  }catch(_){ return false; }
 }
 function notifyPermissionStatus(){
-  if(!('Notification' in window)) return 'unsupported';
+  if(!notificationSupported()) return 'unsupported';
   return Notification.permission;
 }
-function requestNotifyPermission(){
-  if(!('Notification' in window)){ toast('⚠️ مرورگرت از نوتیفیکیشن پشتیبانی نمی‌کنه'); return; }
-  if(Notification.permission==='granted'){ toast('✅ نوتیفیکیشن از قبل فعاله'); renderPomoNotifyStatus(); return; }
-  if(Notification.permission==='denied'){ toast('⚠️ نوتیفیکیشن مسدوده — باید از تنظیمات مرورگر/گوشی فعالش کنی'); return; }
-  Notification.requestPermission().then(()=>{ renderPomoNotifyStatus(); sendNotification('🔔 نوتیفیکیشن فعال شد!', 'از این به بعد وقتی پومودورو تموم بشه یا کوئست جدید بیاد، خبرت می‌کنیم'); });
+async function requestNotifyPermission(){
+  if(!notificationSupported()){ toast('⚠️ نوتیفیکیشن فقط روی نسخه نصب‌شده/HTTPS کار می‌کنه'); renderPomoNotifyStatus(); return; }
+  try{
+    const permission=await Notification.requestPermission();
+    DB.pomodoro.notifications = permission==='granted';
+    DB.notifications = {enabled:permission==='granted'};
+    persist();
+    renderPomoNotifyStatus();
+    if(permission==='granted'){
+      await ensureNotificationRegistration();
+      await sendNotification('🔔 نوتیفیکیشن فعاله!','از این به بعد اعلان‌های مهم Life Planner رو می‌گیری.',{tag:'lp-notify-ready',renotify:false});
+    } else if(permission==='denied') toast('⛔ اعلان‌ها مسدود شده‌اند؛ از تنظیمات سایت/گوشی اجازه بده.');
+    else toast('🔕 اجازه اعلان داده نشد.');
+  }catch(_){ toast('⚠️ فعال‌سازی اعلان ناموفق بود'); }
 }
 function renderPomoNotifyStatus(){
-  const el = document.getElementById('pomoNotifyStatus');
-  if(!el) return;
-  const p = notifyPermissionStatus();
-  el.textContent = p==='granted' ? '✅ نوتیفیکیشن فعاله' : p==='denied' ? '⛔ نوتیفیکیشن مسدود شده (از تنظیمات گوشی/مرورگر بازش کن)' : '🔔 نوتیفیکیشن هنوز فعال نشده';
+  const el=document.getElementById('pomoNotifyStatus'); if(!el)return;
+  const p=notifyPermissionStatus();
+  el.textContent=p==='granted'&&DB.pomodoro.notifications!==false?'✅ نوتیفیکیشن فعاله':'⛔ نوتیفیکیشن فعال نیست';
 }
+
 function toast(msg){
   const t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
   clearTimeout(window._tt); window._tt = setTimeout(()=>t.classList.remove('show'), 2200);
@@ -2079,6 +2106,10 @@ function renderPinnedNav(){
   renderMoreViews();
 }
 
+window.__citySunMoonInited = false;
+
+window.__CITY_TRACKS = {day:['audio/city_day_1.ogg','audio/city_day_2.ogg'], night:['audio/city_night_1.ogg','audio/city_night_2.ogg'], rain:['audio/city_rain_1.ogg','audio/city_rain_2.ogg']};
+
 function showView(v){
   const target=document.getElementById('view-'+v);
   if(!target)return;
@@ -2093,26 +2124,14 @@ function showView(v){
   });
 
   if(v==='pomodoro')setTimeout(()=>{renderPomoStats();if(pomoTab==='stats')renderPomoChart();},50);
-  if(v==='city'){
-    citySunMoonInited=false;
-    setTimeout(renderCityScene,30);
-    setTimeout(()=>{
-      if(!citySoundOn){
-        citySoundOn=true;
-        const b=document.getElementById('citySoundBtn');
-        if(b)b.textContent='🔊';
-        startCityAmbience();
-        renderCityScene();
-      }
-    },400);
-  }
+  if(v==='city'){ window.__citySunMoonInited=false; setTimeout(()=>{renderCityScene();syncCityAudioToScene();},30); }
   if(v==='shop')setTimeout(renderXPShop,30);
   if(v==='skills')setTimeout(renderSkillTree,30);
   if(v==='boss')setTimeout(renderBossContent,30);
   if(v==='yvy')setTimeout(renderYVY,30);
-  if(v==='settings')setTimeout(renderSettings,30);
-  if(v!=='city'&&citySoundOn){
-    citySoundOn=false;
+  if(v==='settings')setTimeout(()=>{renderSettings();renderPomoNotifyStatus();},30);
+  if(v!=='city'&&window.__citySoundOn){
+    window.__citySoundOn=false;
     stopCityAmbience();
     const b=document.getElementById('citySoundBtn');
     if(b)b.textContent='🔇';
@@ -2493,7 +2512,7 @@ function getCelestialState(){
   }
   return { sunVisible, sunProgress, moonVisible, moonProgress };
 }
-let citySunMoonInited = false;
+
 function updateCelestialPosition(instant){
   const rig = document.getElementById('citySunMoonRig');
   if(!rig) return;
@@ -2506,9 +2525,9 @@ function updateCelestialPosition(instant){
     translateY = CITY_ARC_LOW * (1 - Math.sin(Math.PI*moonProgress));
     moonOpacity = 1;
   }
-  if(instant || !citySunMoonInited){
+  if(instant || !window.__citySunMoonInited){
     rig.style.transition = 'none';
-    citySunMoonInited = true;
+    window.__citySunMoonInited = true;
     requestAnimationFrame(()=>{ rig.style.transition = 'transform 30s linear, opacity 2s ease'; });
   } else {
     rig.style.transition = 'transform 30s linear, opacity 2s ease';
@@ -2555,17 +2574,18 @@ function renderCityScene(){
   frame.setAttribute('data-ach-flowers', ach.flowers?'1':'0');
 
   const phase = getCityPhase();
+  syncCityAudioToScene();
   frame.setAttribute('data-phase', phase);
   frame.classList.toggle('city-night', phase==='night');
   frame.classList.toggle('city-dark', CITY_DARK_PHASES.includes(phase));
-  frame.classList.toggle('city-rain-active', cityRainOn);
+  frame.classList.toggle('city-rain-active', window.__cityRainOn);
 
   const phaseLabel = {
     predawn1:'🌌 قبل از سحر', predawn2:'🌄 نزدیک سحر', sunrise:'🌅 طلوع آفتاب',
     midday:'☀️ ظهر', sunset:'🌇 غروب آفتاب', moonrise:'🌆 طلوع ماه', night:'🌙 شب',
   }[phase];
   document.getElementById('cityStageSub').textContent = `Level ${DB.level} — ${stage.icon} ${stage.name} · ${phaseLabel}`;
-  document.getElementById('cityHint').textContent = citySoundOn ? '🔊 صدای طبیعت داره پخش می‌شه' : '🔇 صدا قطعه — برای پخش بزن';
+  document.getElementById('cityHint').textContent = window.__citySoundOn ? '🔊 صدای طبیعت داره پخش می‌شه' : '🔇 صدا قطعه — برای پخش بزن';
 
   const listEl = document.getElementById('cityStageList');
   listEl.innerHTML = CITY_STAGES.map(s=>{
@@ -2590,130 +2610,87 @@ function renderCityScene(){
   </div>`).join('');
 }
 
-let cityRainOn = false;
+window.__cityRainOn = false;
 function toggleCityRain(){
-  cityRainOn = !cityRainOn;
-  document.getElementById('cityRainBtn').textContent = cityRainOn ? '☔' : '🌦️';
+  window.__cityRainOn = !window.__cityRainOn;
+  document.getElementById('cityRainBtn').textContent = window.__cityRainOn ? '☔' : '🌦️';
   renderCityScene();
-  updateCityRainAudio();
+  syncCityAudioToScene();
 }
 
-/* ambient nature sound (generative, no external audio files) */
-let cityAudioCtx = null, cityAudioNodes = null, citySoundOn = false, cityChirpTimer = null;
-let cityRainNoiseSrc = null, cityRainGainNode = null;
-let cityRiverNoiseSrc = null, cityRiverGainNode = null, cityWindNoiseSrc = null, cityWindGainNode = null;
-function buildNoiseBuffer(ctx, seconds){
-  const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate*seconds), ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  let last=0;
-  for(let i=0;i<data.length;i++){
-    const white=Math.random()*2-1;
-    last = last*0.985 + white*0.12;
-    data[i]=last;
-  }
-  return buf;
+/* ============ LIFE CITY AUDIO v7 ============ */
+window.__citySoundOn=false; window.__cityAudioEl=null; window.__cityAudioCtx=null; window.__cityAudioGraph=null; window.__cityCurrentTrack=null;
+window.__CITY_TRACKS = window.__CITY_TRACKS || {};
+function citySceneSoundKind(){
+  if(window.__cityRainOn)return 'rain';
+  return isNightNow()?'night':'day';
 }
-function birdChirp(ctx){
-  const base = 2100 + Math.random()*900;
-  [0, 0.11+Math.random()*0.05].forEach((t,i)=>{
-    const osc=ctx.createOscillator(), g=ctx.createGain(), f=ctx.createBiquadFilter();
-    osc.type='sine';
-    const f0=base+(i?300+Math.random()*240:0);
-    osc.frequency.setValueAtTime(f0,ctx.currentTime+t);
-    osc.frequency.exponentialRampToValueAtTime(f0*1.35,ctx.currentTime+t+0.055);
-    osc.frequency.exponentialRampToValueAtTime(f0*.88,ctx.currentTime+t+.12);
-    f.type='bandpass'; f.frequency.value=f0; f.Q.value=5;
-    g.gain.setValueAtTime(.0001,ctx.currentTime+t);
-    g.gain.exponentialRampToValueAtTime(.045,ctx.currentTime+t+.018);
-    g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+t+.14);
-    osc.connect(f); f.connect(g); g.connect(ctx.destination);
-    osc.start(ctx.currentTime+t); osc.stop(ctx.currentTime+t+.16);
-  });
-}
-function cricketChirp(ctx){
-  const freq=4000+Math.random()*650;
-  const pulses=3+Math.floor(Math.random()*3);
-  for(let i=0;i<pulses;i++){
-    const t=i*.075, osc=ctx.createOscillator(), g=ctx.createGain();
-    osc.type='triangle'; osc.frequency.value=freq;
-    g.gain.setValueAtTime(.0001,ctx.currentTime+t);
-    g.gain.exponentialRampToValueAtTime(.018,ctx.currentTime+t+.006);
-    g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+t+.045);
-    osc.connect(g); g.connect(ctx.destination);
-    osc.start(ctx.currentTime+t); osc.stop(ctx.currentTime+t+.05);
-  }
-}
-function startCityAmbience(){
+function cityAudioPrime(){
+  if(window.__cityAudioEl)return;
+  window.__cityAudioEl=new Audio(); window.__cityAudioEl.preload='auto'; window.__cityAudioEl.crossOrigin='anonymous'; window.__cityAudioEl.volume=.55;
+  window.__cityAudioEl.addEventListener('ended',()=>{ if(window.__citySoundOn) playNextCityTrack(true); });
   try{
-    cityAudioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    const ctx=cityAudioCtx;
-    const master=ctx.createGain(); master.gain.value=.72; master.connect(ctx.destination);
-
-    const ambience=ctx.createBufferSource();
-    ambience.buffer=buildNoiseBuffer(ctx,5); ambience.loop=true;
-    const low=ctx.createBiquadFilter(); low.type='lowpass'; low.frequency.value=isNightNow()?420:780;
-    const ag=ctx.createGain(); ag.gain.value=isNightNow()?.018:.028;
-    ambience.connect(low); low.connect(ag); ag.connect(master); ambience.start();
-
-    cityAudioNodes={master,ambience,low,ag};
-
-    // Continuous soft stream: filtered noise gives the river a natural texture.
-    cityRiverNoiseSrc=ctx.createBufferSource();
-    cityRiverNoiseSrc.buffer=buildNoiseBuffer(ctx,4); cityRiverNoiseSrc.loop=true;
-    const rf=ctx.createBiquadFilter(); rf.type='bandpass'; rf.frequency.value=1050; rf.Q.value=.7;
-    cityRiverGainNode=ctx.createGain(); cityRiverGainNode.gain.value=.018;
-    cityRiverNoiseSrc.connect(rf); rf.connect(cityRiverGainNode); cityRiverGainNode.connect(master);
-    cityRiverNoiseSrc.start();
-
-    // Gentle wind layer, quieter at night.
-    cityWindNoiseSrc=ctx.createBufferSource();
-    cityWindNoiseSrc.buffer=buildNoiseBuffer(ctx,6); cityWindNoiseSrc.loop=true;
-    const wf=ctx.createBiquadFilter(); wf.type='lowpass'; wf.frequency.value=420;
-    cityWindGainNode=ctx.createGain(); cityWindGainNode.gain.value=.012;
-    cityWindNoiseSrc.connect(wf); wf.connect(cityWindGainNode); cityWindGainNode.connect(master);
-    cityWindNoiseSrc.start();
-
-    function scheduleChirp(){
-      if(!citySoundOn) return;
-      if(isNightNow()) cricketChirp(ctx); else if(Math.random()<.8) birdChirp(ctx);
-      cityChirpTimer=setTimeout(scheduleChirp,isNightNow()?(1100+Math.random()*1700):(1700+Math.random()*3800));
-    }
-    scheduleChirp();
-    updateCityRainAudio();
-  }catch(e){ cityAudioCtx=null; cityAudioNodes=null; }
+    window.__cityAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const src=window.__cityAudioCtx.createMediaElementSource(window.__cityAudioEl);
+    const filter=window.__cityAudioCtx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=9000; filter.Q.value=.3;
+    const panner=window.__cityAudioCtx.createStereoPanner();
+    const master=window.__cityAudioCtx.createGain(); master.gain.value=.92;
+    const delay=window.__cityAudioCtx.createDelay(1.0); delay.delayTime.value=.07;
+    const feedback=window.__cityAudioCtx.createGain(); feedback.gain.value=.12;
+    src.connect(filter); filter.connect(panner); panner.connect(master); panner.connect(delay); delay.connect(feedback); feedback.connect(delay); delay.connect(master); master.connect(window.__cityAudioCtx.destination);
+    window.__cityAudioGraph={src,filter,panner,master};
+    let phase=0;
+    setInterval(()=>{
+      if(!window.__cityAudioGraph||!window.__citySoundOn)return;
+      phase+=.31; const pan=Math.sin(phase)*.16; window.__cityAudioGraph.panner.pan.setTargetAtTime(pan,window.__cityAudioCtx.currentTime,.55);
+      const cutoff=citySceneSoundKind()==='rain'?10500:(isNightNow()?6500:9000); window.__cityAudioGraph.filter.frequency.setTargetAtTime(cutoff,window.__cityAudioCtx.currentTime,.8);
+    },1200);
+  }catch(_){ window.__cityAudioGraph=null; }
+}
+function chooseCityTrack(kind,avoid=''){
+  const tracks=window.__CITY_TRACKS||{day:['audio/city_day_1.ogg','audio/city_day_2.ogg'],night:['audio/city_night_1.ogg','audio/city_night_2.ogg'],rain:['audio/city_rain_1.ogg','audio/city_rain_2.ogg']}; const pool=tracks[kind]||tracks.day; const choices=pool.filter(x=>x!==avoid); return choices[Math.floor(Math.random()*choices.length)]||pool[0];
+}
+async function playNextCityTrack(forceDifferent=false){
+  if(!window.__citySoundOn)return;
+  cityAudioPrime(); if(!window.__cityAudioEl)return;
+  const kind=citySceneSoundKind();
+  const path=chooseCityTrack(kind,forceDifferent?window.__cityCurrentTrack:''); window.__cityCurrentTrack=path;
+  window.__cityAudioEl.src=path;
+  window.__cityAudioEl.currentTime=0;
+  try{ await window.__cityAudioCtx?.resume(); await window.__cityAudioEl.play(); }catch(_){
+    window.__citySoundOn=false; updateCityAudioUi();
+    toast('🎧 برای پخش صدا، یک‌بار روی دکمه صدا بزن');
+  }
 }
 function stopCityAmbience(){
-  clearTimeout(cityChirpTimer);
-  cityRainNoiseSrc=null; cityRainGainNode=null;
-  cityRiverNoiseSrc=null; cityRiverGainNode=null;
-  cityWindNoiseSrc=null; cityWindGainNode=null;
-  if(cityAudioCtx){try{cityAudioCtx.close();}catch(e){}}
-  cityAudioCtx=null; cityAudioNodes=null;
+  if(window.__cityAudioEl){ try{window.__cityAudioEl.pause();window.__cityAudioEl.currentTime=0;window.__cityAudioEl.removeAttribute('src');window.__cityAudioEl.load();}catch(_){} }
+  try{window.__cityAudioCtx?.suspend();}catch(_){ }
+  window.__cityCurrentTrack=null;
 }
-function updateCityRainAudio(){
-  if(!cityAudioCtx)return;
-  const ctx=cityAudioCtx;
-  if(cityRainOn&&!cityRainNoiseSrc){
-    cityRainNoiseSrc=ctx.createBufferSource(); cityRainNoiseSrc.buffer=buildNoiseBuffer(ctx,3); cityRainNoiseSrc.loop=true;
-    const filter=ctx.createBiquadFilter(); filter.type='highpass'; filter.frequency.value=1200;
-    cityRainGainNode=ctx.createGain(); cityRainGainNode.gain.value=.0001;
-    cityRainNoiseSrc.connect(filter); filter.connect(cityRainGainNode); cityRainGainNode.connect(cityAudioNodes.master||ctx.destination);
-    cityRainNoiseSrc.start(); cityRainGainNode.gain.exponentialRampToValueAtTime(.055,ctx.currentTime+1.6);
-  }else if(!cityRainOn&&cityRainNoiseSrc){
-    const src=cityRainNoiseSrc,g=cityRainGainNode; cityRainNoiseSrc=null;cityRainGainNode=null;
-    g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+1.1);
-    setTimeout(()=>{try{src.stop()}catch(e){}},1200);
-  }
+function updateCityAudioUi(){
+  const b=document.getElementById('citySoundBtn'); if(b)b.textContent=window.__citySoundOn?'🔊':'🔇';
+  const frame=document.getElementById('cityFrame'); if(frame)frame.classList.toggle('city-audio-on',window.__citySoundOn);
+  const hint=document.getElementById('cityHint'); if(hint)hint.textContent=window.__citySoundOn?'🔊 صدای محیطی در حال پخش است':'🔇 صدا خاموشه — برای پخش بزن';
 }
-function toggleCitySound(){
-  citySoundOn = !citySoundOn;
-  document.getElementById('citySoundBtn').textContent = citySoundOn ? '🔊' : '🔇';
-  if(citySoundOn){ startCityAmbience(); } else { stopCityAmbience(); }
-  // just update hint text, don't re-render whole scene
-  const hint = document.getElementById('cityHint');
-  if(hint) hint.textContent = citySoundOn ? '🔊 صدای طبیعت داره پخش می‌شه' : '🔇 صدا قطعه — برای پخش بزن';
+async function toggleCitySound(){
+  window.__citySoundOn=!window.__citySoundOn; updateCityAudioUi();
+  if(window.__citySoundOn) await playNextCityTrack(false); else stopCityAmbience();
+}
+function syncCityAudioToScene(){
+  if(!window.__citySoundOn||!window.__cityAudioEl)return;
+  const desired=citySceneSoundKind();
+  const tracks=window.__CITY_TRACKS||{}; const currentKind=Object.keys(tracks).find(k=>tracks[k].includes(window.__cityCurrentTrack));
+  if(desired!==currentKind) playNextCityTrack(true);
 }
 
+/* Life City depth/parallax controller */
+(function initCityDepth(){
+  const frame=document.getElementById('cityFrame'); if(!frame||frame.__v7Depth)return; frame.__v7Depth=true;
+  let raf=0;
+  const apply=(x,y)=>{cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{const rx=(y-.5)*-2.3, ry=(x-.5)*2.8; frame.style.setProperty('--city-tilt-x',rx.toFixed(2)+'deg'); frame.style.setProperty('--city-tilt-y',ry.toFixed(2)+'deg');});};
+  frame.addEventListener('pointermove',e=>{const r=frame.getBoundingClientRect();apply((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);},{passive:true});
+  frame.addEventListener('pointerleave',()=>apply(.5,.5),{passive:true});
+})();
 
 /* ============ MOTIVATIONAL QUOTES ============ */
 const MOOD_META = {
@@ -4409,10 +4386,10 @@ function renderNotes(){
 
 /* ============ CALENDAR ============ */
 const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
-let editingEventId = null;
-let eventActionCtx = null; // {eventId, dayIdx}
+window.__editingEventId = null;
+window.__eventActionCtx = null; // {eventId, dayIdx}
 function openEventModal(){
-  editingEventId=null;
+  window.__editingEventId=null;
   document.getElementById('eventModalTitle').textContent='📅 رویداد جدید';
   document.getElementById('eTitle').value='';
   document.getElementById('eHourStart').value='09:00';
@@ -4440,6 +4417,20 @@ function formatTimeMinutes(min){
   min = Math.max(0, Math.min(1439, Number(min)||0));
   return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');
 }
+async function requestEventReminderPermission(box){
+  if(!box?.checked)return;
+  if(!notificationSupported()){ box.checked=false; toast('⚠️ اعلان روی این محیط در دسترس نیست'); return; }
+  if(Notification.permission==='granted'){ DB.pomodoro.notifications=true; DB.notifications={enabled:true}; persist(); await ensureNotificationRegistration(); return; }
+  try{
+    const permission=await Notification.requestPermission();
+    if(permission==='granted'){
+      DB.pomodoro.notifications=true; DB.notifications={enabled:true}; persist(); await ensureNotificationRegistration();
+      toast('✅ یادآوری این رویداد فعاله');
+    }else{
+      box.checked=false; toast('⛔ بدون اجازه اعلان، یادآوری فعال نمی‌شه');
+    }
+  }catch(_){ box.checked=false; toast('⚠️ فعال‌سازی یادآوری ناموفق بود'); }
+}
 async function saveEvent(){
   const title=document.getElementById('eTitle').value.trim();
   if(!title){toast('⚠️ عنوان رویداد رو بنویس');return;}
@@ -4455,33 +4446,23 @@ async function saveEvent(){
   if(endMin<=startMin||endMin>2880){toast('⚠️ بازه زمانی نامعتبره');return;}
 
   let reminder=!!document.getElementById('eReminder').checked;
-  if(reminder){
-    if(!('Notification' in window)){
-      reminder=false;
-      toast('⚠️ این مرورگر اعلان رو پشتیبانی نمی‌کنه');
-    }else if(Notification.permission!=='granted'){
-      try{
-        const permission=await Notification.requestPermission();
-        if(permission!=='granted'){
-          reminder=false;
-          toast('🔕 اجازه اعلان داده نشد؛ رویداد بدون یادآور ذخیره شد');
-        }
-      }catch(_){
-        reminder=false;
-        toast('🔕 دسترسی اعلان ممکن نشد؛ رویداد بدون یادآور ذخیره شد');
-      }
-    }
+  if(reminder && Notification.permission!=='granted'){
+    if(!notificationSupported()){ toast('⚠️ اعلان روی این محیط در دسترس نیست'); return; }
+    const permission=await Notification.requestPermission();
+    if(permission!=='granted'){ toast('⛔ اول اجازه نوتیفیکیشن را بده، بعد رویداد را ذخیره کن'); document.getElementById('eReminder').checked=false; return; }
+    DB.pomodoro.notifications=true; DB.notifications={enabled:true}; persist();
+    await ensureNotificationRegistration();
   }
 
   const candidate={title,days,startMin,endMin};
-  const conflict=findEventConflict(candidate,editingEventId);
+  const conflict=findEventConflict(candidate,window.__editingEventId);
   if(conflict){
     toast(`⚠️ «${conflict.title}» مانع ثبت این رویداد است؛ ساعت‌ها تداخل دارند`);
     return;
   }
 
-  if(editingEventId){
-    const ev=DB.events.find(x=>x.id===editingEventId);
+  if(window.__editingEventId){
+    const ev=DB.events.find(x=>x.id===window.__editingEventId);
     if(ev){
       ev.title=title;ev.days=days;ev.startMin=startMin;ev.endMin=endMin;ev.reminder=reminder;
       ev.startHour=Math.floor(startMin/60);ev.endHour=Math.min(24,Math.floor(endMin/60));
@@ -4495,10 +4476,11 @@ async function saveEvent(){
     });
     toast(reminder?'📅 رویداد اضافه شد؛ یادآورش فعاله':'📅 رویداد اضافه شد');
   }
-  editingEventId=null;
+  window.__editingEventId=null;
   closeModal('eventModalBg');
   save();
   renderCalendar();
+  rescheduleAllEventReminders();
 }
 
 function eventSegments(e){
@@ -4526,41 +4508,61 @@ function findEventConflict(candidate,ignoreId=null){
 function reminderStorageKey(date,evId,day){
   return `lifePlanner_eventReminder_${date}_${evId}_${day}`;
 }
-async function checkEventReminders(){
+const reminderTimers=new Map();
+function markReminderSent(key){ localStorage.setItem(key,String(Date.now())); }
+function reminderAlreadySent(key){ const v=Number(localStorage.getItem(key)||0); return v>0 && (Date.now()-v)<20*60*60*1000; }
+function nextEventOccurrence(ev){
   const now=new Date();
-  const day=(now.getDay()+1)%7;
-  const minute=now.getHours()*60+now.getMinutes();
-  const date=todayISO();
-  for(const ev of DB.events){
-    if(!ev.reminder||!eventDays(ev).includes(day))continue;
-    if(eventStartMinutes(ev)!==minute)continue;
-    const key=reminderStorageKey(date,ev.id,day);
-    if(localStorage.getItem(key)==='1')continue;
-    localStorage.setItem(key,'1');
-    const text=`${ev.title} — شروع شد`;
-    try{
-      if('serviceWorker' in navigator){
-        const reg=await navigator.serviceWorker.getRegistration();
-        if(reg) await reg.showNotification('🔔 یادآوری Life Planner',{body:text,tag:`lp-${ev.id}-${date}-${day}`,icon:'icon-192.png',renotify:false});
-        else if('Notification' in window&&Notification.permission==='granted') new Notification('🔔 یادآوری Life Planner',{body:text});
-      }else if('Notification' in window&&Notification.permission==='granted'){
-        new Notification('🔔 یادآوری Life Planner',{body:text});
-      }
-    }catch(_){
-      toast(`🔔 ${text}`);
+  const nowDay=(now.getDay()+1)%7;
+  const nowMin=now.getHours()*60+now.getMinutes();
+  let best=null;
+  eventDays(ev).forEach(day=>{
+    let delta=(day-nowDay+7)%7;
+    const mins=eventStartMinutes(ev);
+    if(delta===0 && mins<=nowMin) delta=7;
+    const target=new Date(now); target.setHours(0,0,0,0); target.setDate(target.getDate()+delta); target.setHours(Math.floor(mins/60),mins%60,0,0);
+    if(!best||target<best) best=target;
+  });
+  return best;
+}
+function scheduleEventReminder(ev){
+  if(!ev.reminder)return;
+  const old=reminderTimers.get(ev.id); if(old)clearTimeout(old);
+  const target=nextEventOccurrence(ev); if(!target)return;
+  const delay=Math.max(1000,target.getTime()-Date.now());
+  const timer=setTimeout(async()=>{
+    reminderTimers.delete(ev.id);
+    const date=dateToLocalISO(target); const day=(target.getDay()+1)%7; const key=reminderStorageKey(date,ev.id,day);
+    if(!reminderAlreadySent(key) && Notification.permission==='granted'){
+      markReminderSent(key);
+      await ensureNotificationRegistration();
+      await sendNotification('🔔 یادآوری Life Planner',`${ev.title} — شروع شد`,{tag:`lp-${ev.id}-${date}`,renotify:true});
     }
+    scheduleEventReminder(ev);
+  },Math.min(delay,2147483647));
+  reminderTimers.set(ev.id,timer);
+}
+function rescheduleAllEventReminders(){ reminderTimers.forEach(t=>clearTimeout(t)); reminderTimers.clear(); DB.events.filter(e=>e.reminder).forEach(scheduleEventReminder); }
+async function checkEventReminders(){
+  if(Notification.permission!=='granted') return;
+  const now=new Date(); const day=(now.getDay()+1)%7; const minute=now.getHours()*60+now.getMinutes(); const date=todayISO();
+  for(const ev of DB.events){
+    if(!ev.reminder||!eventDays(ev).includes(day)||eventStartMinutes(ev)!==minute)continue;
+    const key=reminderStorageKey(date,ev.id,day); if(reminderAlreadySent(key))continue;
+    markReminderSent(key); await sendNotification('🔔 یادآوری Life Planner',`${ev.title} — شروع شد`,{tag:`lp-${ev.id}-${date}`,renotify:true});
   }
 }
 function startEventReminderScheduler(){
-  checkEventReminders();
-  setInterval(checkEventReminders,20000);
+  ensureNotificationRegistration();
+  checkEventReminders(); rescheduleAllEventReminders();
+  setInterval(checkEventReminders,15000);
 }
-function deleteEvent(id){ DB.events = DB.events.filter(x=>x.id!==id); save(); }
+function deleteEvent(id){ DB.events = DB.events.filter(x=>x.id!==id); save(); rescheduleAllEventReminders(); }
 function eventDays(e){ return e.days || (e.day!==undefined ? [e.day] : []); }
 
 function onEventBlockClick(eventId, dayIdx){
   const ev = DB.events.find(x=>x.id===eventId); if(!ev) return;
-  eventActionCtx = { eventId, dayIdx };
+  window.__eventActionCtx = { eventId, dayIdx };
   document.getElementById('eventActionTitle').textContent = `📅 ${ev.title}`;
   const multiDay = eventDays(ev).length > 1;
   document.getElementById('deleteThisDayBtn').style.display = multiDay ? 'flex' : 'none';
@@ -4573,10 +4575,10 @@ function onEventBlockClick(eventId, dayIdx){
   openModal('eventActionModalBg');
 }
 function startEditEvent(){
-  const ctx=eventActionCtx;if(!ctx)return;
+  const ctx=window.__eventActionCtx;if(!ctx)return;
   const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
   closeModal('eventActionModalBg');
-  editingEventId=ev.id;
+  window.__editingEventId=ev.id;
   document.getElementById('eventModalTitle').textContent='✏️ ویرایش رویداد';
   document.getElementById('eTitle').value=ev.title;
   document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
@@ -4587,21 +4589,23 @@ function startEditEvent(){
   openModal('eventModalBg');
 }
 function deleteEventDay(){
-  const ctx = eventActionCtx; if(!ctx) return;
+  const ctx = window.__eventActionCtx; if(!ctx) return;
   const ev = DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
   const days = eventDays(ev).filter(d=>d!==ctx.dayIdx);
   if(days.length){ ev.days = days; delete ev.day; }
   else { DB.events = DB.events.filter(x=>x.id!==ev.id); }
-  eventActionCtx = null;
+  window.__eventActionCtx = null;
   closeModal('eventActionModalBg');
   save();
+  rescheduleAllEventReminders();
 }
 function deleteWholeEvent(){
-  const ctx = eventActionCtx; if(!ctx) return;
+  const ctx = window.__eventActionCtx; if(!ctx) return;
   DB.events = DB.events.filter(x=>x.id!==ctx.eventId);
-  eventActionCtx = null;
+  window.__eventActionCtx = null;
   closeModal('eventActionModalBg');
   save();
+  rescheduleAllEventReminders();
   toast('🗑️ کل رویداد حذف شد');
 }
 function renderCalendar(){
@@ -4976,7 +4980,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='6.8';
+const LP_APP_VERSION='7.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
@@ -4999,20 +5003,20 @@ async function checkLifePlannerUpdate(){
     const r=await fetch('app-version.json?t='+Date.now(),{cache:'no-store'});
     if(!r.ok)return;
     const v=String((await r.json()).version||'');
-    if(v&&v!==LP_V64_APP_VERSION)showLifePlannerUpdate(v);
+    if(v&&v!==LP_V70_APP_VERSION)showLifePlannerUpdate(v);
   }catch(_){}
 }
 window.addEventListener('load',()=>{checkLifePlannerUpdate();setInterval(checkLifePlannerUpdate,180000);});
 /* ============ PWA / OFFLINE ============ */
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{ /* silently ignore on file:// or unsupported hosts */ });
+    ensureNotificationRegistration();
   });
 }
 </script>
 <script id="lp-v66-enhancements">
-/* ============ LIFE PLANNER v6.8 ENHANCEMENTS ============ */
-const LP_V64_APP_VERSION = '6.8';
+/* ============ LIFE PLANNER v7.0 ENHANCEMENTS ============ */
+const LP_V70_APP_VERSION = '7.0';
 const LP_FONT_KEY = 'lifePlannerFontSize_v2';
 const LP_UI_SCALE_KEY = 'lifePlannerUIScale_v1';
 const LP_UI_SCALES = { small:0.90, medium:1, large:1.10, xlarge:1.20 };
@@ -5072,7 +5076,7 @@ function renderSettings(){
       toast(`🎨 تم ${THEME_META[id]?.label||id} فعال شد`);
     });
   }
-  const ver=document.getElementById('settingsVersion'); if(ver) ver.textContent=LP_V64_APP_VERSION;
+  const ver=document.getElementById('settingsVersion'); if(ver) ver.textContent=LP_V70_APP_VERSION;
 }
 function openSettings(){
   showView('settings');
@@ -5155,7 +5159,7 @@ function awardManualStudyXP(minutes, date){
 /* ============ APP UPDATE CHECK ============ */
 let lpV64UpdateShown=false;
 function showLifePlannerUpdate(v){
-  if(lpV64UpdateShown || String(v)===LP_V64_APP_VERSION) return;
+  if(lpV64UpdateShown || String(v)===LP_V70_APP_VERSION) return;
   lpV64UpdateShown=true;
   const x=document.createElement('div');
   x.id='lpUpdateNotice'; x.dir='rtl';
@@ -5176,7 +5180,7 @@ async function checkLifePlannerUpdate(){
     const r=await fetch('app-version.json?t='+Date.now(),{cache:'no-store'});
     if(!r.ok)return;
     const v=String((await r.json()).version||'');
-    if(v&&v!==LP_V64_APP_VERSION)showLifePlannerUpdate(v);
+    if(v&&v!==LP_V70_APP_VERSION)showLifePlannerUpdate(v);
   }catch(_){ }
 }
 
@@ -5208,7 +5212,7 @@ if('serviceWorker' in navigator){
 </script>
 
 <script id="lp-v66-pomodoro">
-/* ============ POMODORO v6.8 — unified manual logging ============ */
+/* ============ POMODORO v7.0 — unified manual logging ============ */
 (function(){
   const POMO66_KEY='lifePlannerPomo_v66';
   const PRESETS=[
