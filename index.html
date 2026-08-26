@@ -107,7 +107,6 @@ html[data-theme="legendaryGold"]{
 #citySvg .struct-house,#citySvg .struct-cabin,#citySvg .struct-tent{filter:drop-shadow(7px 9px 5px rgba(0,0,0,.19));}
 #citySvg .lit-window{filter:drop-shadow(0 0 5px rgba(255,215,107,.5));}
 #citySvg .car-mini{filter:drop-shadow(0 0 5px rgba(0,229,255,.18));}
-.city-frame.city-audio-on .city-hint{background:rgba(16,23,39,.64);box-shadow:0 8px 22px rgba(0,0,0,.2);}
 @media (prefers-reduced-motion:reduce){#citySvg{transition:none!important;transform:scale(1.006)!important}.city-frame::before,.city-frame::after{opacity:.25!important}}
 
 .city-frame{
@@ -503,7 +502,7 @@ html.crisis-mode body{
 .pomo-day-chip.missed{opacity:.55;}
 
 
-/* ===== POMODORO v7.0 ===== */
+/* ===== POMODORO v7.1 ===== */
 .pomo-v66-tools{display:grid;gap:12px;margin-top:16px;}
 .pomo-v66-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .pomo-v66-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;}
@@ -567,7 +566,6 @@ html.pomo-focus-open,body.pomo-focus-open{overflow:hidden!important;}
   display:block; width:100%; height:auto; aspect-ratio:800/450;
   transform-origin:50% 62%; transform:rotateX(7deg) scale(1.045);
 }
-.city-hint{position:absolute; bottom:10px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.45); color:#fff; font-size:11px; padding:5px 12px; border-radius:20px; pointer-events:none; opacity:.85;}
 
 /* structures: hidden by default, shown per data-stage */
 .struct{display:none;}
@@ -1224,7 +1222,7 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
         </div>
         <div class="top-actions">
           <div class="icon-btn" onclick="toggleCityRain()" id="cityRainBtn" title="باران">🌦️</div>
-          <div class="icon-btn" onclick="toggleCitySound()" id="citySoundBtn" title="صدای طبیعت">🔇</div>
+          <div class="icon-btn" onclick="toggleCitySound()" id="citySoundBtn" title="صدای شهر" aria-label="صدای شهر">🔇</div>
           <div class="icon-btn" onclick="showView('profile')" title="بازگشت">↩️</div>
         </div>
       </div>
@@ -1484,7 +1482,7 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
           <rect id="cityRainTint" x="0" y="0" width="800" height="450" fill="#0b1030"/>
         </svg>
 
-        <div class="city-hint" id="cityHint">برای پخش صدای واقعی روی 🔇 بزن</div>
+        <div class="sr-only" id="cityHint" aria-live="polite"></div>
       </div>
 
       <div class="grid g2" style="margin-top:16px;">
@@ -1648,7 +1646,7 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">7.0</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">7.1</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -2108,7 +2106,7 @@ function renderPinnedNav(){
 
 window.__citySunMoonInited = false;
 
-window.__CITY_TRACKS = {day:['audio/city_day_1.ogg','audio/city_day_2.ogg'], night:['audio/city_night_1.ogg','audio/city_night_2.ogg'], rain:['audio/city_rain_1.ogg','audio/city_rain_2.ogg']};
+window.__CITY_TRACKS = {day:['audio/city_day.ogg'], night:['audio/city_night.ogg'], rain:['audio/city_rain.ogg']};
 
 function showView(v){
   const target=document.getElementById('view-'+v);
@@ -2124,7 +2122,7 @@ function showView(v){
   });
 
   if(v==='pomodoro')setTimeout(()=>{renderPomoStats();if(pomoTab==='stats')renderPomoChart();},50);
-  if(v==='city'){ window.__citySunMoonInited=false; setTimeout(()=>{renderCityScene();syncCityAudioToScene();},30); }
+  if(v==='city'){ window.__citySunMoonInited=false; setTimeout(()=>{renderCityScene();syncCityAudioToScene();},30); startCityAmbienceFromGesture().catch(()=>{}); }
   if(v==='shop')setTimeout(renderXPShop,30);
   if(v==='skills')setTimeout(renderSkillTree,30);
   if(v==='boss')setTimeout(renderBossContent,30);
@@ -2585,7 +2583,6 @@ function renderCityScene(){
     midday:'☀️ ظهر', sunset:'🌇 غروب آفتاب', moonrise:'🌆 طلوع ماه', night:'🌙 شب',
   }[phase];
   document.getElementById('cityStageSub').textContent = `Level ${DB.level} — ${stage.icon} ${stage.name} · ${phaseLabel}`;
-  document.getElementById('cityHint').textContent = window.__citySoundOn ? '🔊 صدای طبیعت داره پخش می‌شه' : '🔇 صدا قطعه — برای پخش بزن';
 
   const listEl = document.getElementById('cityStageList');
   listEl.innerHTML = CITY_STAGES.map(s=>{
@@ -2620,7 +2617,7 @@ function toggleCityRain(){
 
 /* ============ LIFE CITY AUDIO v7 ============ */
 window.__citySoundOn=false; window.__cityAudioEl=null; window.__cityAudioCtx=null; window.__cityAudioGraph=null; window.__cityCurrentTrack=null;
-window.__CITY_TRACKS = window.__CITY_TRACKS || {};
+window.__CITY_TRACKS = {day:['audio/city_day.ogg'], night:['audio/city_night.ogg'], rain:['audio/city_rain.ogg']};
 function citySceneSoundKind(){
   if(window.__cityRainOn)return 'rain';
   return isNightNow()?'night':'day';
@@ -2648,7 +2645,7 @@ function cityAudioPrime(){
   }catch(_){ window.__cityAudioGraph=null; }
 }
 function chooseCityTrack(kind,avoid=''){
-  const tracks=window.__CITY_TRACKS||{day:['audio/city_day_1.ogg','audio/city_day_2.ogg'],night:['audio/city_night_1.ogg','audio/city_night_2.ogg'],rain:['audio/city_rain_1.ogg','audio/city_rain_2.ogg']}; const pool=tracks[kind]||tracks.day; const choices=pool.filter(x=>x!==avoid); return choices[Math.floor(Math.random()*choices.length)]||pool[0];
+  const tracks=window.__CITY_TRACKS||{}; const pool=tracks[kind]||tracks.day; const choices=pool.filter(x=>x!==avoid); return choices[Math.floor(Math.random()*choices.length)]||pool[0];
 }
 async function playNextCityTrack(forceDifferent=false){
   if(!window.__citySoundOn)return;
@@ -2670,7 +2667,11 @@ function stopCityAmbience(){
 function updateCityAudioUi(){
   const b=document.getElementById('citySoundBtn'); if(b)b.textContent=window.__citySoundOn?'🔊':'🔇';
   const frame=document.getElementById('cityFrame'); if(frame)frame.classList.toggle('city-audio-on',window.__citySoundOn);
-  const hint=document.getElementById('cityHint'); if(hint)hint.textContent=window.__citySoundOn?'🔊 صدای محیطی در حال پخش است':'🔇 صدا خاموشه — برای پخش بزن';
+}
+async function startCityAmbienceFromGesture(){
+  window.__citySoundOn=true;
+  updateCityAudioUi();
+  await playNextCityTrack(false);
 }
 async function toggleCitySound(){
   window.__citySoundOn=!window.__citySoundOn; updateCityAudioUi();
@@ -4980,7 +4981,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='7.0';
+const LP_APP_VERSION='7.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
@@ -5015,8 +5016,8 @@ if('serviceWorker' in navigator){
 }
 </script>
 <script id="lp-v66-enhancements">
-/* ============ LIFE PLANNER v7.0 ENHANCEMENTS ============ */
-const LP_V70_APP_VERSION = '7.0';
+/* ============ LIFE PLANNER v7.1 ENHANCEMENTS ============ */
+const LP_V70_APP_VERSION = '7.1';
 const LP_FONT_KEY = 'lifePlannerFontSize_v2';
 const LP_UI_SCALE_KEY = 'lifePlannerUIScale_v1';
 const LP_UI_SCALES = { small:0.90, medium:1, large:1.10, xlarge:1.20 };
@@ -5212,7 +5213,7 @@ if('serviceWorker' in navigator){
 </script>
 
 <script id="lp-v66-pomodoro">
-/* ============ POMODORO v7.0 — unified manual logging ============ */
+/* ============ POMODORO v7.1 — unified manual logging ============ */
 (function(){
   const POMO66_KEY='lifePlannerPomo_v66';
   const PRESETS=[

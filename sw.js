@@ -1,6 +1,6 @@
-const CACHE_NAME='life-planner-cache-v41';
+const CACHE_NAME='life-planner-cache-v42';
 self.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});
-const SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./app-version.json','./audio/city_day_1.ogg','./audio/city_day_2.ogg','./audio/city_night_1.ogg','./audio/city_night_2.ogg','./audio/city_rain_1.ogg','./audio/city_rain_2.ogg'];
+const SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./app-version.json','./audio/city_day.ogg','./audio/city_night.ogg','./audio/city_rain.ogg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(SHELL)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE_NAME).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{
