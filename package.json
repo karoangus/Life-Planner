@@ -1,6 +1,6 @@
 {
   "name": "life-planner",
-  "version": "7.4.0",
+  "version": "8.0.0",
   "private": true,
   "description": "برنامه‌ریز هوشمند زندگی — Smart Life Planner (PWA)",
   "scripts": {
