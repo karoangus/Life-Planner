@@ -291,14 +291,21 @@ html[data-theme="light"] .modal-bg{ background:rgba(30,40,70,.35); }
 }
 html[data-theme="light"] .sheet-overlay{ background:rgba(30,40,70,.3); }
 .sheet-drawer{
+  /* PERF: NO backdrop-filter on the drawer. It slides up over nearly the whole
+     screen (max-height:92vh), and a live blur on a moving surface that size is
+     re-sampled on every animation frame — that was the stutter when the More
+     sheet opened, closed, or was swipe-dragged. The page behind the drawer is
+     already dimmed AND blurred by the .sheet-overlay (blurred once, while it
+     sits still), so the glass look is visually identical without this second,
+     per-frame blur. */
   background:linear-gradient(180deg, var(--glass-a), var(--glass-b));
-  backdrop-filter:var(--bf-modal);
-  -webkit-backdrop-filter:var(--bf-modal);
   border:1px solid var(--glass-border);
   border-bottom:none;
   border-radius:var(--r-xl) var(--r-xl) 0 0;
   box-shadow:0 -20px 60px -20px rgba(0,0,0,.5), var(--glass-inset);
   animation:dsSheetUp .32s cubic-bezier(.2,.85,.3,1);
+  /* Keep the slide/drag on the compositor so it never touches layout/paint. */
+  will-change:transform;
 }
 @keyframes dsSheetUp{ from{ transform:translateY(40px); opacity:.4; } }
 
