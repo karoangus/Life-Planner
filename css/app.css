@@ -93,11 +93,18 @@ html[data-theme="legendaryGold"]{
 @keyframes waterSpray{0%,100%{opacity:.25;transform:scale(.85)}50%{opacity:.7;transform:scale(1.08)}}
 
 /* ===== Life City v7 polish: depth, lighting, parallax ===== */
+/* PERF: the whole-SVG filter is gone. Any child animation (drifting fog,
+   clouds, birds, swaying trees…) used to re-rasterize the entire 800x450
+   scene through saturate+contrast+drop-shadow every single frame. The subtle
+   depth it added now comes from a static box-shadow on .city-frame below,
+   which is rasterized once. saturate(1.03)/contrast(1.015) were imperceptible. */
 .city-frame{perspective:900px; transform-style:preserve-3d; overflow:hidden;}
-#citySvg{transform:translate3d(0,0,0) rotateX(var(--city-tilt-x,0deg)) rotateY(var(--city-tilt-y,0deg)) scale(1.012); transform-origin:50% 78%; transform-style:preserve-3d; will-change:transform; transition:transform .35s ease-out, filter .35s ease; filter:saturate(1.03) contrast(1.015) drop-shadow(0 18px 28px rgba(0,0,0,.18));}
+#citySvg{transform:translate3d(0,0,0) rotateX(var(--city-tilt-x,0deg)) rotateY(var(--city-tilt-y,0deg)) scale(1.012); transform-origin:50% 78%; transform-style:preserve-3d; will-change:transform; transition:transform .35s ease-out;}
 .city-frame::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(circle at 50% 36%,transparent 38%,rgba(0,0,0,.08) 100%);mix-blend-mode:multiply;opacity:.5;}
 .city-frame::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;background:linear-gradient(180deg,rgba(255,255,255,.08),transparent 22%,transparent 78%,rgba(0,0,0,.14));}
-#citySvg .struct-city .bld,#citySvg .struct-future .bld-f{filter:drop-shadow(6px 7px 5px rgba(0,0,0,.18));}
+/* PERF: one drop-shadow per building GROUP instead of per building rect — same
+   silhouette softness, a fraction of the filter passes on repaint. */
+#citySvg .struct-city .blds,#citySvg .struct-future .blds-f{filter:drop-shadow(6px 7px 5px rgba(0,0,0,.18));}
 #citySvg .struct-house,#citySvg .struct-cabin,#citySvg .struct-tent{filter:drop-shadow(7px 9px 5px rgba(0,0,0,.19));}
 #citySvg .lit-window{filter:drop-shadow(0 0 5px rgba(255,215,107,.5));}
 #citySvg .car-mini{filter:drop-shadow(0 0 5px rgba(0,229,255,.18));}
@@ -428,9 +435,11 @@ body{ font-size: 1rem; }
 
 /* crisis mode */
 .crisis-modal{border:1px solid rgba(255,84,112,.5); background:linear-gradient(160deg, rgba(255,84,112,.10), var(--panel2) 60%);}
+/* PERF: the banner dropped its backdrop blur (it floats over scrolling content
+   on every frame) — the background is a touch more opaque to compensate. */
 .crisis-banner{
   display:flex; align-items:center; justify-content:center; gap:8px;
-  background:linear-gradient(90deg, rgba(255,84,112,.85), rgba(255,107,107,.85));
+  background:linear-gradient(90deg, rgba(255,84,112,.93), rgba(255,107,107,.93));
   color:#fff; font-size:12.5px; font-weight:800; padding:9px 14px; position:sticky; top:0; z-index:90;
   animation:crisisPulse 2.2s ease-in-out infinite;
 }
@@ -551,7 +560,7 @@ html.pomo-focus-open,body.pomo-focus-open{overflow:hidden!important;}
 
 .city-frame{
   position:relative; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line);
-  box-shadow:var(--shadow); background:#0b1030; perspective:1200px;
+  box-shadow:var(--shadow), 0 18px 28px -18px rgba(0,0,0,.32); background:#0b1030; perspective:1200px;
   transition: --city-sky-top 3s ease, --city-sky-bottom 3s ease, --city-ground-top 3s ease,
     --city-ground-bottom 3s ease, --city-mtn-1 3s ease, --city-mtn-2 3s ease,
     --city-bld 3s ease, --city-bld-future 3s ease, --city-window 3s ease;
@@ -686,16 +695,22 @@ html.pomo-focus-open,body.pomo-focus-open{overflow:hidden!important;}
 /* city stage: lit windows grid + moving cars */
 .bld{opacity:.96;}
 #cityWindowsSmall rect{fill:#4a5470;}
-.city-frame.city-dark #cityWindowsSmall rect.lit{fill:#ffd76b; filter:drop-shadow(0 0 2px rgba(255,215,107,.8));}
+/* PERF: the night glow is one filter on the whole windows group instead of
+   ~80 individual rect filters. Same look, one pass. */
+.city-frame.city-dark #cityWindowsSmall rect.lit{fill:#ffd76b;}
+.city-frame.city-dark #cityWindowsSmall{filter:drop-shadow(0 0 2px rgba(255,215,107,.8));}
 .car-mini1{animation:carLoop1 9s linear infinite;}
 .car-mini2{animation:carLoop2 13s linear infinite reverse;}
 @keyframes carLoop1{from{transform:translate(-40px,404px);} to{transform:translate(840px,404px);}}
 @keyframes carLoop2{from{transform:translate(-40px,404px);} to{transform:translate(840px,404px);}}
 
 /* future stage: neon buildings + drones + fog */
+/* PERF: the neon pulse now animates one filter on the skyline GROUP. All
+   buildings pulsed in lock-step anyway, so the look is identical — but the GPU
+   re-renders a single animated drop-shadow instead of one per building. */
 .bld-f{opacity:.95;}
-.city-frame .struct-future .bld-f{animation:neonPulse 3.4s ease-in-out infinite;}
-@keyframes neonPulse{0%,100%{filter:drop-shadow(0 0 3px rgba(0,229,255,.5));} 50%{filter:drop-shadow(0 0 9px rgba(139,107,255,.75));}}
+.city-frame .struct-future .blds-f{animation:neonPulse 3.4s ease-in-out infinite;}
+@keyframes neonPulse{0%,100%{filter:drop-shadow(0 0 3px rgba(0,229,255,.5)) drop-shadow(6px 7px 5px rgba(0,0,0,.18));} 50%{filter:drop-shadow(0 0 9px rgba(139,107,255,.75)) drop-shadow(6px 7px 5px rgba(0,0,0,.18));}}
 .drone{animation:droneFly 12s ease-in-out infinite;}
 .drone1{transform:translate(200px,160px);}
 .drone2{animation-duration:15s; animation-delay:3s; transform:translate(500px,200px);}

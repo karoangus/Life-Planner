@@ -251,13 +251,8 @@ function showView(v){
     el.classList.toggle('active',el.dataset.view===v);
   });
 
-  if(v==='pomodoro')setTimeout(()=>{renderPomoStats();if(pomoTab==='stats')renderPomoChart();},50);
   if(v==='city'){ window.__citySunMoonInited=false; setTimeout(()=>{renderCityScene();syncCityAudioToScene();},30); startCityAmbienceFromGesture().catch(()=>{}); }
-  if(v==='shop')setTimeout(renderXPShop,30);
-  if(v==='skills')setTimeout(renderSkillTree,30);
-  if(v==='boss')setTimeout(renderBossContent,30);
-  if(v==='yvy')setTimeout(renderYVY,30);
-  if(v==='settings')setTimeout(()=>{renderSettings();renderPomoNotifyStatus();},30);
+  else setTimeout(()=>renderView(v), 30);
   if(v!=='city'&&window.__citySoundOn){
     window.__citySoundOn=false;
     stopCityAmbience();
@@ -347,7 +342,7 @@ function showThemePanel(){
   });
 })();
 setInterval(()=>{ if(document.getElementById('view-city')?.classList.contains('active')) renderCityScene(); }, 60000);
-setInterval(()=>{ if(document.getElementById('view-shop')?.classList.contains('active')) renderXPShop(); }, 1000);
+setInterval(()=>{ if(document.getElementById('view-shop')?.classList.contains('active')) tickXPShop(); }, 1000);
 
 /* chip select helper */
 document.querySelectorAll('.chip-group').forEach(g=>{
@@ -666,8 +661,8 @@ function updateCelestialPosition(instant){
   if(glowEl) glowEl.style.opacity = sunOpacity;
   if(moonEl) moonEl.style.opacity = moonOpacity;
 }
-// Update celestial every 30 seconds for smooth movement
-setInterval(updateCelestialPosition, 30000);
+// Update celestial every 30 seconds for smooth movement (only while the city is on screen)
+setInterval(()=>{ if(document.getElementById('view-city')?.classList.contains('active')) updateCelestialPosition(); }, 30000);
 
 const CITY_BONUS_SLOTS = [
   {x:170,y:400}, {x:250,y:410}, {x:530,y:405}, {x:610,y:415},
@@ -1030,6 +1025,12 @@ function fmtCountdown(ms){
   const m = Math.floor(totalSec/60), s = totalSec%60;
   return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
 }
+/* PERF: this runs every second. The card's HTML is only rebuilt when the quest
+   actually changes; while waiting, just the countdown text and bar width are
+   updated in place, and all DOM work is skipped while the dashboard is hidden
+   (quest generation + notifications still happen regardless). */
+let __questSig = null, __questCountdownEl = null, __questFillEl = null;
+function dashboardActive(){ return !!document.getElementById('view-dashboard')?.classList.contains('active'); }
 function renderQuestBox(){
   const now = Date.now();
   if(!DB.quest.current && now >= DB.quest.nextAt){
@@ -1040,8 +1041,12 @@ function renderQuestBox(){
   }
   const el = document.getElementById('questCard');
   if(!el) return;
-  if(DB.quest.current){
-    const q = DB.quest.current; const meta = QUEST_TIERS[q.tier];
+  const q = DB.quest.current;
+  if(q){
+    const sig = 'q|'+q.tier+'|'+q.xp+'|'+q.text;
+    if(sig === __questSig) return;
+    __questSig = sig; __questCountdownEl = null; __questFillEl = null;
+    const meta = QUEST_TIERS[q.tier];
     el.innerHTML = `<div class="quest-box tier-${q.tier}">
       <div class="quest-top">
         <div class="quest-emoji">${q.icon}</div>
@@ -1060,16 +1065,27 @@ function renderQuestBox(){
     const remain = Math.max(0, DB.quest.nextAt - now);
     const totalWait = Math.max(1, DB.quest.nextAt - (DB.quest.waitStart||now));
     const pct = Math.min(100, Math.max(0, 100 - (remain/totalWait)*100));
-    el.innerHTML = `<div class="quest-box">
-      <div class="quest-waiting">
-        <div class="quest-emoji">⏱️</div>
-        <div class="quest-info">
-          <div class="quest-tier-lbl" style="color:var(--txt-dim);">🎯 مأموریت بعدی</div>
-          <div class="quest-title">تا مأموریت بعدی: <span class="quest-countdown">${fmtCountdown(remain)}</span></div>
+    if(__questSig !== 'wait'){
+      if(!dashboardActive()) return;
+      __questSig = 'wait'; __questCountdownEl = null; __questFillEl = null;
+      el.innerHTML = `<div class="quest-box">
+        <div class="quest-waiting">
+          <div class="quest-emoji">⏱️</div>
+          <div class="quest-info">
+            <div class="quest-tier-lbl" style="color:var(--txt-dim);">🎯 مأموریت بعدی</div>
+            <div class="quest-title">تا مأموریت بعدی: <span class="quest-countdown">${fmtCountdown(remain)}</span></div>
+          </div>
         </div>
-      </div>
-      <div class="quest-wait-track"><div class="quest-wait-fill" style="width:${pct}%"></div></div>
-    </div>`;
+        <div class="quest-wait-track"><div class="quest-wait-fill" style="width:${pct}%"></div></div>
+      </div>`;
+      return;
+    }
+    if(!dashboardActive()) return;
+    __questCountdownEl = __questCountdownEl || el.querySelector('.quest-countdown');
+    __questFillEl = __questFillEl || el.querySelector('.quest-wait-fill');
+    const txt = fmtCountdown(remain);
+    if(__questCountdownEl && __questCountdownEl.textContent !== txt) __questCountdownEl.textContent = txt;
+    if(__questFillEl) __questFillEl.style.width = pct.toFixed(2)+'%';
   }
 }
 setInterval(renderQuestBox, 1000);
@@ -1232,14 +1248,31 @@ function tickPomo(){
 }
 setInterval(tickPomo, 500);
 
+/* PERF: renderPomoUI runs every 500ms while the pomodoro view is open. The
+   buttons, classes, labels and hints are now rebuilt only when the session
+   state actually changes; in between, only the countdown text node moves. */
+let __pomoSig = null;
 function renderPomoUI(){
   const circle = document.getElementById('pomoCircle');
   if(!circle) return;
-  const modeLbl = document.getElementById('pomoModeLbl');
   const timeTxt = document.getElementById('pomoTimeTxt');
+  const s = DB.pomodoro.session;
+  const sig = s
+    ? s.mode+'|'+s.status
+    : 'idle|'+(DB.pomodoro.pendingNext||'')+'|'+DB.pomodoro.settings.focusMin+'|'+DB.pomodoro.settings.breakMin;
+  if(sig === __pomoSig){
+    if(s && s.status==='running' && timeTxt){
+      const val = s.mode==='infinite'
+        ? fmtMMSS((s.baseElapsedMs||0) + (Date.now()-s.startAt))
+        : fmtMMSS(Math.max(0, s.endAt-Date.now()));
+      if(timeTxt.textContent !== val) timeTxt.textContent = val;
+    }
+    return;
+  }
+  __pomoSig = sig;
+  const modeLbl = document.getElementById('pomoModeLbl');
   const hint = document.getElementById('pomoHint');
   const actions = document.getElementById('pomoActions');
-  const s = DB.pomodoro.session;
   circle.classList.remove('running','break-mode','infinite-mode');
   if(!s){
     const next = DB.pomodoro.pendingNext;
@@ -1941,9 +1974,43 @@ function buyTheme(theme){
   renderXPShop();
   toast(`🎉 تم ${meta.label} باز شد!`);
 }
+/* PERF: the shop used to rebuild its entire grid (themes, inventory, costs)
+   every second. The full render now runs only when the data signature changes;
+   the 1s tick (tickXPShop below) just refreshes the wallet number and the
+   boost countdown line. */
+let __shopSig = null;
+function shopDataSig(){
+  const boostLeft = DB.xpBoost ? DB.xpBoost.activeUntil - Date.now() : 0;
+  return [
+    DB.xpWallet||0,
+    (DB.themes.owned||[]).join(','),
+    localStorage.getItem(THEME_KEY)||'dark',
+    boostLeft>0 ? 1 : 0,
+    DB.skillTiers?.shopDiscount||0,
+    DB.streakShields||0,
+    (DB.cityBonusItems||[]).length
+  ].join('|');
+}
+function tickXPShop(){
+  const walletEl = document.getElementById('xpWalletVal');
+  if(!walletEl) return;
+  const w = (DB.xpWallet||0).toLocaleString('en-US');
+  if(walletEl.textContent !== w) walletEl.textContent = w;
+  const statusEl = document.getElementById('xpShopStatus');
+  const boostLeft = DB.xpBoost ? DB.xpBoost.activeUntil - Date.now() : 0;
+  if(statusEl){
+    const txt = boostLeft>0
+      ? `⚡ XP Boost فعاله — تا ${fmtMMSS(boostLeft)} دیگه همه‌ی XP هات دوبرابره`
+      : 'الان بوستی فعال نیست';
+    if(statusEl.textContent !== txt) statusEl.textContent = txt;
+  }
+  const sig = shopDataSig();
+  if(sig !== __shopSig) renderXPShop();
+}
 function renderXPShop(){
   const walletEl = document.getElementById('xpWalletVal');
   if(!walletEl) return;
+  __shopSig = shopDataSig();
   walletEl.textContent = (DB.xpWallet||0).toLocaleString('en-US');
 
   document.getElementById('costBoost').textContent = applyShopDiscount(100)+' XP';
@@ -2297,6 +2364,15 @@ function renderTasks(filter='all'){
   document.getElementById('todayTasks').innerHTML = today.length ? today.slice(0,6).map(taskRow).join('') : `<div class="empty"><div class="ic">🌤️</div>امروز تسکی نداری، یکی اضافه کن!</div>`;
   document.getElementById('todayCount').textContent = today.length + ' تسک';
 }
+/* Dashboard slice of renderTasks — lets renderAll refresh the visible "today"
+   widget without rebuilding the (hidden) full task list. */
+function renderTodayWidget(){
+  const today = sortTasks(DB.tasks.filter(t=>t.date===todayISO() || (!t.date && !t.done)));
+  const el = document.getElementById('todayTasks');
+  if(el) el.innerHTML = today.length ? today.slice(0,6).map(taskRow).join('') : `<div class="empty"><div class="ic">🌤️</div>امروز تسکی نداری، یکی اضافه کن!</div>`;
+  const c = document.getElementById('todayCount');
+  if(c) c.textContent = today.length + ' تسک';
+}
 
 /* ============ HABITS ============ */
 function openHabitModal(){
@@ -2378,6 +2454,14 @@ function renderHabits(){
   else mini.innerHTML = DB.habits.slice(0,4).map(h=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 2px;font-size:13px;">
     <span>${h.icon} ${esc(h.name)}</span><b class="num" style="color:var(--neon)">${habitStreak(h)} روز</b></div>`).join('');
 }
+/* Dashboard slice of renderHabits (see renderTodayWidget note). */
+function renderHabitMini(){
+  const mini = document.getElementById('habitMini');
+  if(!mini) return;
+  if(!DB.habits.length) mini.innerHTML = `<div class="empty" style="padding:10px;">هنوز عادتی نداری</div>`;
+  else mini.innerHTML = DB.habits.slice(0,4).map(h=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 2px;font-size:13px;">
+    <span>${h.icon} ${esc(h.name)}</span><b class="num" style="color:var(--neon)">${habitStreak(h)} روز</b></div>`).join('');
+}
 function deleteHabit(id){ if(!DB.habits.find(x=>x.id===id)) return; DB.habits = DB.habits.filter(x=>x.id!==id); save(); }
 
 /* ============ GOALS ============ */
@@ -2429,6 +2513,15 @@ function renderGoals(){
   </div>`).join('');
 
   const mini = document.getElementById('goalMini');
+  if(!DB.goals.length) mini.innerHTML = `<div class="empty" style="padding:10px;">هنوز هدفی نداری</div>`;
+  else mini.innerHTML = DB.goals.slice(0,4).map(g=>`<div style="margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>${esc(g.title)}</span><b class="num">${g.progress}٪</b></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${g.progress}%"></div></div></div>`).join('');
+}
+/* Dashboard slice of renderGoals (see renderTodayWidget note). */
+function renderGoalMini(){
+  const mini = document.getElementById('goalMini');
+  if(!mini) return;
   if(!DB.goals.length) mini.innerHTML = `<div class="empty" style="padding:10px;">هنوز هدفی نداری</div>`;
   else mini.innerHTML = DB.goals.slice(0,4).map(g=>`<div style="margin-bottom:12px;">
     <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>${esc(g.title)}</span><b class="num">${g.progress}٪</b></div>
@@ -3056,25 +3149,52 @@ function renderDashboard(){
 }
 
 /* ============ RENDER ALL ============ */
+/* PERF: renders for hidden views are skipped — rebuilding every subsystem on
+   each save() was the single biggest source of interaction jank on phones
+   (the calendar grid alone is ~130 nodes). showView() re-renders the incoming
+   view via renderView(), so a view is always fresh when it appears, and the
+   dashboard widgets owned by other renderers (today tasks / habit & goal
+   minis) are refreshed directly while the dashboard is the active view. */
+function viewActive(id){ const el=document.getElementById('view-'+id); return !!(el && el.classList.contains('active')); }
+function renderView(v){
+  const jobs = {
+    dashboard: ()=>{ renderDashboard(); renderTodayWidget(); renderHabitMini(); renderGoalMini(); renderQuestBox(); },
+    tasks:     ()=>renderTasks(document.querySelector('#taskFilters .sel')?.dataset.f || 'all'),
+    calendar:  ()=>renderCalendar(),
+    habits:    ()=>renderHabits(),
+    goals:     ()=>renderGoals(),
+    notes:     ()=>renderNotes(),
+    profile:   ()=>renderProfile(),
+    pomodoro:  ()=>{ renderPomoUI(); renderPomoStats(); if(pomoTab==='stats') renderPomoChart(); },
+    shop:      ()=>renderXPShop(),
+    skills:    ()=>renderSkillTree(),
+    boss:      ()=>renderBossContent(),
+    yvy:       ()=>renderYVY(),
+    settings:  ()=>{ if(typeof renderSettings==='function') renderSettings(); if(typeof renderPomoNotifyStatus==='function') renderPomoNotifyStatus(); }
+  };
+  const job = jobs[v];
+  if(job){ try{ job(); }catch(err){ console.error('[Life Planner render error]', v, err); } }
+}
 function renderAll(){
   // Keep the app alive if one independent renderer encounters a bad/old state.
   // This is deliberately defensive: it does not change the UI or data model.
+  const onDashboard = viewActive('dashboard');
   const jobs = [
     ['XP', ()=>renderXP()],
-    ['Tasks', ()=>renderTasks(document.querySelector('#taskFilters .sel')?.dataset.f || 'all')],
-    ['Habits', ()=>renderHabits()],
-    ['Goals', ()=>renderGoals()],
-    ['Notes', ()=>renderNotes()],
-    ['Calendar', ()=>renderCalendar()],
-    ['Dashboard', ()=>renderDashboard()],
-    ['Quest', ()=>renderQuestBox()],
-    ['Profile', ()=>renderProfile()],
-    ['Pomodoro UI', ()=>renderPomoUI()],
-    ['Pomodoro stats', ()=>renderPomoStats()],
-    ['Skills', ()=>renderSkillTree()],
-    ['Boss', ()=>renderBossContent()],
-    ['YVY', ()=>renderYVY()],
-    ['Settings', ()=>{ if(typeof renderSettings==='function') renderSettings(); }]
+    ['Tasks', ()=>{ if(viewActive('tasks')) renderTasks(document.querySelector('#taskFilters .sel')?.dataset.f || 'all'); else if(onDashboard) renderTodayWidget(); }],
+    ['Habits', ()=>{ if(viewActive('habits')) renderHabits(); else if(onDashboard) renderHabitMini(); }],
+    ['Goals', ()=>{ if(viewActive('goals')) renderGoals(); else if(onDashboard) renderGoalMini(); }],
+    ['Notes', ()=>{ if(viewActive('notes')) renderNotes(); }],
+    ['Calendar', ()=>{ if(viewActive('calendar')) renderCalendar(); }],
+    ['Dashboard', ()=>{ if(onDashboard) renderDashboard(); }],
+    ['Quest', ()=>{ if(onDashboard) renderQuestBox(); }],
+    ['Profile', ()=>{ if(viewActive('profile')) renderProfile(); }],
+    ['Pomodoro UI', ()=>{ if(viewActive('pomodoro')) renderPomoUI(); }],
+    ['Pomodoro stats', ()=>{ if(viewActive('pomodoro')) renderPomoStats(); }],
+    ['Skills', ()=>{ if(viewActive('skills')) renderSkillTree(); }],
+    ['Boss', ()=>{ if(viewActive('boss')) renderBossContent(); }],
+    ['YVY', ()=>{ if(viewActive('yvy')) renderYVY(); }],
+    ['Settings', ()=>{ if(viewActive('settings') && typeof renderSettings==='function') renderSettings(); }]
   ];
   for(const [name, job] of jobs){
     try { job(); }
@@ -3111,7 +3231,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='7.3';
+const LP_APP_VERSION='7.4';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
@@ -3137,7 +3257,8 @@ async function checkLifePlannerUpdate(){
     if(v&&v!==LP_APP_VERSION)showLifePlannerUpdate(v);
   }catch(_){}
 }
-window.addEventListener('load',()=>{checkLifePlannerUpdate();setInterval(checkLifePlannerUpdate,180000);});
+/* PERF: the update check now runs only from enhancements.js (one network
+   poll every 3 minutes instead of two identical ones). */
 /* ============ PWA / OFFLINE ============ */
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
