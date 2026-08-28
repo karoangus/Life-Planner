@@ -1,0 +1,14 @@
+{
+  "name": "life-planner",
+  "version": "7.2.0",
+  "private": true,
+  "description": "برنامه‌ریز هوشمند زندگی — Smart Life Planner (PWA)",
+  "scripts": {
+    "test": "node tests/app.test.mjs"
+  },
+  "devDependencies": {
+    "@sparticuz/chromium": "^149.0.0",
+    "puppeteer-core": "^25.9.0",
+    "playwright": "^1.62.1"
+  }
+}
