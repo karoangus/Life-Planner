@@ -1,7 +1,26 @@
 :root{
   --r-sm:12px; --r-md:16px; --r-lg:22px; --r-xl:28px;
-  --glass-blur:18px;
   --dur:.25s; --dur-slow:.4s;
+  /* Perf budget for the glass skin. Every blurred surface costs GPU time on
+     each frame it overlaps movement (the fixed bottom nav while scrolling most
+     of all), so the whole backdrop-filter chains live here and get slimmer on
+     phone-sized screens. The look barely changes because the backdrops behind
+     the glass are flat gradients — less blur over a flat area looks the same. */
+  --bf-glass: blur(14px) saturate(1.5);
+  --bf-nav:   blur(16px) saturate(1.45);
+  --bf-modal: blur(18px) saturate(1.4);
+  --bf-overlay: blur(8px) saturate(1.2);
+}
+@media (max-width:820px){
+  :root{
+    /* Phones: same saturate, roughly half the blur radius. The blur is the
+       expensive half of the chain (cost scales with radius); over the app's
+       smooth gradient backdrops the smaller radius is visually equivalent. */
+    --bf-glass: blur(10px) saturate(1.5);
+    --bf-nav:   blur(12px) saturate(1.45);
+    --bf-modal: blur(12px) saturate(1.4);
+    --bf-overlay: blur(6px) saturate(1.2);
+  }
 }
 
 :root{
@@ -58,8 +77,8 @@ html[data-theme="legendaryGold"]{
 .glass-surface{
   background:linear-gradient(165deg, var(--glass-a), var(--glass-b));
   border:1px solid var(--glass-border);
-  backdrop-filter:blur(var(--glass-blur)) saturate(1.5);
-  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.5);
+  backdrop-filter:var(--bf-glass);
+  -webkit-backdrop-filter:var(--bf-glass);
   box-shadow:var(--shadow-card), var(--glass-inset);
 }
 
@@ -69,27 +88,29 @@ html[data-theme="legendaryGold"]{
 .boss-card, .xp-wallet-card, .pomo-v66-card, .theme-card{
   background:linear-gradient(165deg, var(--glass-a), var(--glass-b));
   border:1px solid var(--glass-border);
-  backdrop-filter:blur(var(--glass-blur)) saturate(1.5);
-  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.5);
+  backdrop-filter:var(--bf-glass);
+  -webkit-backdrop-filter:var(--bf-glass);
   box-shadow:var(--shadow-card), var(--glass-inset);
   border-radius:var(--r-lg);
   transition:border-color var(--dur), box-shadow var(--dur), transform var(--dur);
 }
-.card.hover:hover, .goal-card:hover, .habit-card:hover,
-.skill-card:hover, .shop-item-card:hover{
-  border-color:var(--glass-border-hi);
-  box-shadow:var(--shadow-card), var(--glass-inset), 0 0 24px -10px var(--neon-55);
+@media (hover:hover){
+  .card.hover:hover, .goal-card:hover, .habit-card:hover,
+  .skill-card:hover, .shop-item-card:hover{
+    border-color:var(--glass-border-hi);
+    box-shadow:var(--shadow-card), var(--glass-inset), 0 0 24px -10px var(--neon-55);
+  }
 }
 
 .quest-box{
-  backdrop-filter:blur(var(--glass-blur)) saturate(1.5);
-  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.5);
+  backdrop-filter:var(--bf-glass);
+  -webkit-backdrop-filter:var(--bf-glass);
   border-radius:var(--r-lg);
   box-shadow:var(--shadow-card), var(--glass-inset), 0 0 30px -14px var(--neon-55);
 }
 .crisis-modal{
-  backdrop-filter:blur(var(--glass-blur));
-  -webkit-backdrop-filter:blur(var(--glass-blur));
+  backdrop-filter:var(--bf-glass);
+  -webkit-backdrop-filter:var(--bf-glass);
   border-radius:var(--r-lg);
 }
 
@@ -115,33 +136,38 @@ html[data-theme="light"] .pinned-nav-row{
 .task-row{ transition:background var(--dur), border-color var(--dur); }
 .task-row:active{ background:var(--neon-15); }
 
-.chip-opt, .pomo-preset, .wd, .jalali-day, .lp-cal-day,
-.settings-theme-option, .pomo-day-chip, .habit-ic,
-.skill-ic, .wallet-row, .boss-countdown-box{
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
-}
+/* NOTE (perf): chips, week-dots, calendar cells, icon tiles and other small
+   elements no longer carry backdrop-filter. Their backgrounds are opaque (or
+   sit on near-flat glass), so a blur was invisible — but each one still cost a
+   GPU blur pass. The weekly calendar alone blurred 7 full-height columns. */
 
 .toast{
   bottom:96px !important;
   background:linear-gradient(165deg, var(--glass-a), var(--glass-b));
   border:1px solid var(--glass-border-hi);
-  backdrop-filter:blur(20px) saturate(1.4);
-  -webkit-backdrop-filter:blur(20px) saturate(1.4);
+  backdrop-filter:var(--bf-glass);
+  -webkit-backdrop-filter:var(--bf-glass);
   box-shadow:var(--shadow-card), var(--glass-inset);
   border-radius:var(--r-md);
 }
 
+/* The sticky crisis banner lost its backdrop blur (it scrolls over the whole
+   page) and its pulsing box-shadow, which repainted every frame. The pulse now
+   animates only opacities — compositor-friendly — with the glow on a
+   pseudo-element so the banner still breathes exactly like before. */
 .crisis-banner{
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
   border-radius:var(--r-md);
+  animation:crisisPulse 2.2s ease-in-out infinite;
 }
-@keyframes crisisPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(255,84,112,0);}50%{opacity:.92;box-shadow:0 0 26px -8px rgba(255,84,112,.5);}}
+.crisis-banner::after{
+  content:''; position:absolute; inset:0; border-radius:inherit;
+  pointer-events:none; box-shadow:0 0 26px -8px rgba(255,84,112,.5);
+  animation:crisisGlowPulse 2.2s ease-in-out infinite;
+}
+@keyframes crisisPulse{0%,100%{opacity:1;}50%{opacity:.92;}}
+@keyframes crisisGlowPulse{0%,100%{opacity:0;}50%{opacity:1;}}
 
 .icon-btn{
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
   border-radius:var(--r-md) !important;
 }
 
@@ -155,8 +181,8 @@ html[data-theme="light"] .pinned-nav-row{
   height:64px; box-sizing:border-box;
   border-radius:24px;
   background:var(--nav-bg);
-  backdrop-filter:blur(22px) saturate(1.45);
-  -webkit-backdrop-filter:blur(22px) saturate(1.45);
+  backdrop-filter:var(--bf-nav);
+  -webkit-backdrop-filter:var(--bf-nav);
   border:1px solid var(--glass-border-hi);
   box-shadow:0 18px 40px -14px rgba(0,0,0,.6), var(--glass-inset);
   padding:6px 10px;
@@ -191,23 +217,25 @@ html.crisis-mode .bottom-nav{
   box-shadow:0 6px 18px -6px var(--neon-55), inset 0 1px 0 rgba(255,255,255,.28);
   transition:transform .2s cubic-bezier(.2,.8,.3,1), box-shadow .2s, filter .2s;
 }
-.btn:hover{
-  transform:translateY(-1px);
-  box-shadow:0 10px 26px -8px var(--neon-75), inset 0 1px 0 rgba(255,255,255,.32);
-  filter:brightness(1.05);
+@media (hover:hover){
+  .btn:hover{
+    transform:translateY(-1px);
+    box-shadow:0 10px 26px -8px var(--neon-75), inset 0 1px 0 rgba(255,255,255,.32);
+    filter:brightness(1.05);
+  }
 }
 .btn:active{ transform:translateY(0) scale(.98); box-shadow:0 4px 12px -6px var(--neon-55), inset 0 1px 0 rgba(255,255,255,.2); }
 .btn.ghost{
   background:var(--glass-a);
   border:1px solid var(--glass-border);
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
   box-shadow:var(--glass-inset);
 }
-.btn.ghost:hover{
-  border-color:var(--neon-35);
-  box-shadow:var(--glass-inset), 0 0 16px -8px var(--neon-55);
-  filter:none;
+@media (hover:hover){
+  .btn.ghost:hover{
+    border-color:var(--neon-35);
+    box-shadow:var(--glass-inset), 0 0 16px -8px var(--neon-55);
+    filter:none;
+  }
 }
 .btn.danger{ box-shadow:0 6px 18px -6px rgba(255,84,112,.5), inset 0 1px 0 rgba(255,255,255,.25); }
 
@@ -242,15 +270,15 @@ html[data-theme="light"] .quest-wait-track{
 
 .modal-bg{
   background:rgba(3,5,12,.55);
-  backdrop-filter:blur(10px) saturate(1.2);
-  -webkit-backdrop-filter:blur(10px) saturate(1.2);
+  backdrop-filter:var(--bf-overlay);
+  -webkit-backdrop-filter:var(--bf-overlay);
 }
 html[data-theme="light"] .modal-bg{ background:rgba(30,40,70,.35); }
 .modal{
   background:linear-gradient(170deg, var(--glass-a), var(--glass-b));
   border:1px solid var(--glass-border-hi);
-  backdrop-filter:blur(24px) saturate(1.4);
-  -webkit-backdrop-filter:blur(24px) saturate(1.4);
+  backdrop-filter:var(--bf-modal);
+  -webkit-backdrop-filter:var(--bf-modal);
   border-radius:var(--r-xl);
   box-shadow:0 30px 70px -20px rgba(0,0,0,.6), var(--glass-inset);
   animation:dsModalIn .3s cubic-bezier(.2,.85,.3,1);
@@ -258,14 +286,14 @@ html[data-theme="light"] .modal-bg{ background:rgba(30,40,70,.35); }
 @keyframes dsModalIn{ from{ opacity:0; transform:translateY(16px) scale(.97); } }
 .sheet-overlay{
   background:rgba(3,5,12,.5);
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:var(--bf-overlay);
+  -webkit-backdrop-filter:var(--bf-overlay);
 }
 html[data-theme="light"] .sheet-overlay{ background:rgba(30,40,70,.3); }
 .sheet-drawer{
   background:linear-gradient(180deg, var(--glass-a), var(--glass-b));
-  backdrop-filter:blur(24px) saturate(1.4);
-  -webkit-backdrop-filter:blur(24px) saturate(1.4);
+  backdrop-filter:var(--bf-modal);
+  -webkit-backdrop-filter:var(--bf-modal);
   border:1px solid var(--glass-border);
   border-bottom:none;
   border-radius:var(--r-xl) var(--r-xl) 0 0;
@@ -314,6 +342,13 @@ html[data-theme="legendaryGold"]{
 @keyframes dsViewIn{ from{ opacity:0; transform:translateY(8px); } }
 
 :focus-visible{ outline:2px solid var(--neon-35); outline-offset:2px; border-radius:8px; }
+
+/* Kill the double-tap-zoom delay on touch devices without changing visuals. */
+.btn, .icon-btn, .chip-opt, .pomo-preset, .bnav-item, .bnav-more,
+.sheet-nav-item, .sheet-close, .sheet-xp, .task-row, .habit-card,
+.jalali-day, .settings-theme-option, .pomo-day-chip, .wd{
+  touch-action:manipulation;
+}
 
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{
