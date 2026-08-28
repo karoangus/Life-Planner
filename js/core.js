@@ -56,8 +56,12 @@ function loadStore(){
   if(typeof db.history !== 'object' || Array.isArray(db.history)) db.history = {};
   if(typeof db.xp    !== 'number') db.xp    = 0;
   if(typeof db.level !== 'number' || db.level < 1) db.level = 1;
-  // ensure each task has extraDeadlines
-  db.tasks.forEach(t=>{ if(!Array.isArray(t.extraDeadlines)) t.extraDeadlines=[]; });
+  // ensure each task has extraDeadlines, subtasks and a workflow status
+  db.tasks.forEach(t=>{
+    if(!Array.isArray(t.extraDeadlines)) t.extraDeadlines=[];
+    if(!Array.isArray(t.subtasks)) t.subtasks=[];
+    if(!t.status) t.status='notstarted';
+  });
   return db;
 }
 let DB = loadStore();
@@ -2257,6 +2261,7 @@ let editingTaskId = null;
 function openTaskModal(id){
   editingTaskId = id || null;
   document.querySelectorAll('#tPriority .chip-opt').forEach(o=>o.classList.remove('sel'));
+  document.querySelectorAll('#tStatus .chip-opt').forEach(o=>o.classList.remove('sel'));
   if(id){
     const t = DB.tasks.find(x=>x.id===id);
     document.getElementById('tTitle').value = t.title;
@@ -2266,6 +2271,8 @@ function openTaskModal(id){
     document.getElementById('tEst').value = t.est||'';
     document.getElementById('tNote').value = t.note||'';
     document.querySelector('#tPriority [data-v="'+t.priority+'"]').classList.add('sel');
+    const statusOpt = document.querySelector('#tStatus [data-v="'+(t.status||'notstarted')+'"]');
+    if(statusOpt) statusOpt.classList.add('sel'); else document.querySelector('#tStatus [data-v="notstarted"]')?.classList.add('sel');
     // load extra deadlines
     const wrap = document.getElementById('extraDeadlinesWrap');
     wrap.innerHTML = '';
@@ -2278,10 +2285,23 @@ function openTaskModal(id){
       row.innerHTML = `<input type="text" id="${rid}_d" readonly value="${isoToJalaliText(dl)}" onclick="openJalaliPicker('${rid}_v','${rid}_d')" style="flex:1;"><input type="hidden" id="${rid}_v" value="${dl}"><button class="btn ghost sm" type="button" onclick="this.closest('.extra-deadline-row').remove()" style="padding:8px 10px; flex-shrink:0;">✕</button>`;
       wrap.appendChild(row);
     });
+    // load subtasks
+    const stWrap = document.getElementById('subtaskWrap');
+    stWrap.innerHTML = '';
+    (t.subtasks||[]).forEach(s=>{
+      const row = document.createElement('div');
+      row.className = 'subtask-edit-row';
+      row.setAttribute('data-sid', s.id);
+      row.innerHTML = `<input type="checkbox" class="subtask-edit-check" ${s.done?'checked':''}><input type="text" class="subtask-edit-title" placeholder="عنوان زیرتسک" value="${esc(s.title)}"><button class="btn ghost sm" type="button" onclick="removeSubtaskEditRow(this)">✕</button>`;
+      stWrap.appendChild(row);
+    });
   } else {
     ['tTitle','tCat','tDate','tDateDisplay','tEst','tNote'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('extraDeadlinesWrap').innerHTML='';
+    document.getElementById('subtaskWrap').innerHTML='';
+    const nt = document.getElementById('newSubtaskTitle'); if(nt) nt.value='';
     document.querySelector('#tPriority [data-v="medium"]').classList.add('sel');
+    document.querySelector('#tStatus [data-v="notstarted"]').classList.add('sel');
   }
   openModal('taskModalBg');
 }
@@ -2307,45 +2327,104 @@ function getExtraDeadlines(){
   });
   return dates;
 }
+/* subtask editor helpers (edit modal) */
+function addSubtaskInput(){
+  const wrap = document.getElementById('subtaskWrap');
+  if(!wrap) return;
+  const titleInput = document.getElementById('newSubtaskTitle');
+  const val = titleInput ? titleInput.value.trim() : '';
+  const row = document.createElement('div');
+  row.className = 'subtask-edit-row';
+  row.setAttribute('data-sid', uid());
+  row.innerHTML = `<input type="checkbox" class="subtask-edit-check"><input type="text" class="subtask-edit-title" placeholder="عنوان زیرتسک" value="${esc(val)}"><button class="btn ghost sm" type="button" onclick="removeSubtaskEditRow(this)">✕</button>`;
+  wrap.appendChild(row);
+  if(titleInput) titleInput.value='';
+  const inp = row.querySelector('.subtask-edit-title');
+  if(inp) setTimeout(()=>inp.focus(),0);
+}
+function removeSubtaskEditRow(btn){
+  const row = btn.closest('.subtask-edit-row');
+  if(row) row.remove();
+}
+function getSubtasksFromModal(){
+  const out = [];
+  document.querySelectorAll('#subtaskWrap .subtask-edit-row').forEach(row=>{
+    const title = row.querySelector('.subtask-edit-title')?.value.trim();
+    if(!title) return;
+    out.push({ id: row.getAttribute('data-sid') || uid(), title, done: !!row.querySelector('.subtask-edit-check')?.checked });
+  });
+  return out;
+}
 function saveTask(){
   const title = document.getElementById('tTitle').value.trim();
   if(!title){ toast('⚠️ عنوان تسک رو بنویس'); return; }
   const priority = document.querySelector('#tPriority .sel').dataset.v;
+  const status = document.querySelector('#tStatus .sel')?.dataset.v || 'notstarted';
   const extraDeadlines = getExtraDeadlines();
+  const subtasks = getSubtasksFromModal();
   const data = {
     title, cat: document.getElementById('tCat').value.trim(),
-    date: document.getElementById('tDate').value, priority,
+    date: document.getElementById('tDate').value, priority, status,
     est: document.getElementById('tEst').value, note: document.getElementById('tNote').value.trim(),
-    extraDeadlines
+    extraDeadlines, subtasks
   };
   if(editingTaskId){
     const existing = DB.tasks.find(x=>x.id===editingTaskId);
     if(!existing){ toast('⚠️ تسک یافت نشد'); closeModal('taskModalBg'); return; }
     Object.assign(existing, data);
+    // keep a completed task consistent: a done task must have all subtasks done
+    if(existing.done) (existing.subtasks||[]).forEach(s=>{ s.done = true; });
   } else {
     DB.tasks.push({id:uid(), done:false, created:todayISO(), ...data});
   }
   closeModal('taskModalBg'); save(); toast('✅ تسک ذخیره شد');
   checkCriticalCrisis();
 }
+function applyTaskCompletion(t){
+  t.doneDate = todayISO();
+  (t.subtasks||[]).forEach(s=>{ s.done = true; });
+  const critBonus = t.priority==='critical' ? 5*(DB.skillTiers.criticalBonus||0) : 0;
+  addXP((t.priority==='critical'?25:t.priority==='high'?18:t.priority==='medium'?12:8) + critBonus);
+  logHistory('tasks',1);
+  DB.stats.tasksCompleted = (DB.stats.tasksCompleted||0) + 1;
+  checkPerfectDay();
+  hitBossFromTask(t.id);
+  checkNewRecords();
+  if(t.priority==='critical' && DB.crisis.active) resolveCrisisSuccess();
+}
+function applyTaskUncompletion(t){
+  (t.subtasks||[]).forEach(s=>{ s.done = false; });
+}
 function toggleTask(id){
   const t = DB.tasks.find(x=>x.id===id);
   if(!t){ console.warn('toggleTask: id not found', id); return; }
   t.done = !t.done;
-  if(t.done){
-    t.doneDate = todayISO();
-    const critBonus = t.priority==='critical' ? 5*(DB.skillTiers.criticalBonus||0) : 0;
-    addXP((t.priority==='critical'?25:t.priority==='high'?18:t.priority==='medium'?12:8) + critBonus);
-    logHistory('tasks',1);
-    DB.stats.tasksCompleted = (DB.stats.tasksCompleted||0) + 1;
-    checkPerfectDay();
-    hitBossFromTask(id);
-    checkNewRecords();
-    if(t.priority==='critical' && DB.crisis.active) resolveCrisisSuccess();
+  if(t.done) applyTaskCompletion(t);
+  else applyTaskUncompletion(t);
+  if(!DB.stats.weeklyPerfectUnlocked && isWeeklyPerfect()) DB.stats.weeklyPerfectUnlocked = true;
+  save();
+  checkCriticalCrisis();
+}
+function toggleSubtask(taskId, subId){
+  const t = DB.tasks.find(x=>x.id===taskId);
+  if(!t) return;
+  const subs = t.subtasks||[];
+  const sub = subs.find(s=>s.id===subId);
+  if(!sub) return;
+  sub.done = !sub.done;
+  if(t.done && !sub.done){
+    // reopening the task from a subtask — no XP refund, matches manual un-complete
+    t.done = false;
+  } else if(!t.done && subs.length>0 && subs.every(s=>s.done)){
+    // all subtasks checked → the main task is automatically completed
+    t.done = true;
+    applyTaskCompletion(t);
+    toast('🎉 همهی زیرتسکها تکمیل شدن — تسک اصلی هم انجام شد!');
   }
   if(!DB.stats.weeklyPerfectUnlocked && isWeeklyPerfect()) DB.stats.weeklyPerfectUnlocked = true;
   save();
   checkCriticalCrisis();
+  if(window.__taskActionId===taskId) renderTaskActionDetails();
 }
 function deleteTask(id){
   removeBossTaskRef(id);
@@ -2367,29 +2446,174 @@ function colorForCategory(name){
   for(let i=0;i<key.length;i++){ hash = key.charCodeAt(i) + ((hash<<5)-hash); }
   return CAT_PALETTE[Math.abs(hash) % CAT_PALETTE.length];
 }
+const TASK_STATUS_META = {
+  notstarted: { label:'شروع نشده',  icon:'⬜', color:'#9aa4b8' },
+  inprogress: { label:'در حال انجام', icon:'▶️', color:'#2ee6a6' },
+  queued:     { label:'در صف',      icon:'📥', color:'#4d7fff' },
+  paused:     { label:'متوقف',      icon:'⏸️', color:'#ffb545' },
+};
+function statusLabel(s){ return TASK_STATUS_META[s] ? TASK_STATUS_META[s].label : TASK_STATUS_META.notstarted.label; }
+function statusIcon(s){ return TASK_STATUS_META[s] ? TASK_STATUS_META[s].icon : TASK_STATUS_META.notstarted.icon; }
+function subtaskProgressHtml(t){
+  const subs = t.subtasks||[];
+  if(!subs.length) return '';
+  const done = subs.filter(s=>s.done).length;
+  const pct = Math.round(done/subs.length*100);
+  return `<div class="subtask-progress">
+    <div class="subtask-bar-track"><div class="subtask-bar-fill" style="width:${pct}%"></div></div>
+    <span class="subtask-count num">${done}/${subs.length} · ${pct}٪</span>
+  </div>`;
+}
 function taskRow(t){
   const c = t.cat ? colorForCategory(t.cat) : null;
   const extraDls = (t.extraDeadlines||[]).filter(Boolean);
   const extraDlHtml = extraDls.length
     ? extraDls.map(d=>`<span style="font-size:10.5px;color:var(--warn);background:rgba(255,181,69,.1);padding:1px 6px;border-radius:6px;border:1px solid rgba(255,181,69,.3);">⚑ ${isoToJalaliText(d)}</span>`).join('')
     : '';
+  const statusPill = !t.done ? `<span class="pill st-${esc(t.status||'notstarted')}">${statusIcon(t.status)} ${statusLabel(t.status)}</span>` : '';
+  const subHtml = subtaskProgressHtml(t);
   return `<div class="task-row">
     <div class="chk ${t.done?'done':''}" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
-    <div class="task-body" onclick="openTaskModal('${t.id}')">
+    <div class="task-body" onclick="openTaskDetails('${t.id}')">
       <div class="task-title ${t.done?'done':''}">${esc(t.title)}</div>
       <div class="task-meta">
         <span class="pill ${t.priority}">${prLabel(t.priority)}</span>
+        ${statusPill}
         ${t.cat?`<span class="pill" style="background:${c}22; color:${c};">${esc(t.cat)}</span>`:''}
         ${t.date?`<span style="font-size:11px;color:var(--txt-dim2)">📅 ${isoToJalaliText(t.date)}</span>`:''}
         ${extraDlHtml}
         ${t.est?`<span style="font-size:11px;color:var(--txt-dim2)">⏱ ${t.est} دقیقه</span>`:''}
       </div>
+      ${subHtml}
     </div>
     <div class="task-del" onclick="deleteTask('${t.id}')">🗑️</div>
   </div>`;
 }
 function prLabel(p){ return {low:'پایین',medium:'متوسط',high:'بالا',critical:'بحرانی'}[p]||p; }
 function esc(s){ return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+/* ============ TASK DETAILS MENU (v10) ============ */
+window.__taskActionId = null;
+function taskRewardSummary(t){
+  if(t.done) return '✅ این تسک انجام شده و پاداشش گرفته شده.';
+  const base = t.priority==='critical'?25:t.priority==='high'?18:t.priority==='medium'?12:8;
+  const critBonus = t.priority==='critical' ? 5*(DB.skillTiers.criticalBonus||0) : 0;
+  let amount = base + critBonus;
+  const boosted = DB.xpBoost && Date.now() < (DB.xpBoost.activeUntil||0);
+  const shown = boosted ? amount*2 : amount;
+  const parts = [`⚡ <b class="num">+${shown} XP</b>`];
+  if(boosted) parts.push('×۲ بوست فعال');
+  parts.push('✅ +۱ تسک انجام‌شده');
+  const b = DB.boss.active;
+  if(b && b.taskIds.includes(t.id)) parts.push('⚔️ ضربه به باس هفتگی');
+  return parts.join(' · ');
+}
+function openTaskDetails(id){
+  const t = DB.tasks.find(x=>x.id===id);
+  if(!t){ toast('⚠️ تسک یافت نشد'); return; }
+  window.__taskActionId = id;
+  document.getElementById('taskActionTitle').textContent = `✅ ${t.title}`;
+  renderTaskActionDetails();
+  openModal('taskActionModalBg');
+}
+function renderTaskActionDetails(){
+  const id = window.__taskActionId;
+  const t = id ? DB.tasks.find(x=>x.id===id) : null;
+  if(!t) return;
+  const c = t.cat ? colorForCategory(t.cat) : null;
+  const subs = t.subtasks||[];
+  const doneSubs = subs.filter(s=>s.done).length;
+  const pct = subs.length ? Math.round(doneSubs/subs.length*100) : 0;
+
+  const pills = [
+    `<span class="pill ${t.priority}">${prLabel(t.priority)}</span>`,
+    ...(t.done?[`<span class="pill done-label">✓ انجام شده</span>`]:[`<span class="pill st-${esc(t.status||'notstarted')}">${statusIcon(t.status)} ${statusLabel(t.status)}</span>`]),
+    ...(t.cat?[`<span class="pill" style="background:${c}22; color:${c};">${esc(t.cat)}</span>`]:[])
+  ].join('');
+
+  const dates = [];
+  if(t.date) dates.push(`📅 ${isoToJalaliText(t.date)}`);
+  (t.extraDeadlines||[]).filter(Boolean).forEach(d=>dates.push(`⚑ ${isoToJalaliText(d)}`));
+  const infoLines = [];
+  infoLines.push(dates.length ? dates.join(' · ') : '🗓️ بدون ددلاین');
+  infoLines.push(t.est ? `⏱ ${t.est} دقیقه` : '⏱ بدون زمان تخمینی');
+  if(t.note) infoLines.push(`📝 ${esc(t.note)}`);
+  if(t.created) infoLines.push(`🕓 ساخته‌شده: ${isoToJalaliText(t.created)}`);
+
+  const statusChanger = t.done ? '' : `
+    <div class="task-action-status">
+      <div class="task-action-lbl">🔄 وضعیت تسک</div>
+      <div class="task-action-status-btns">
+        ${Object.keys(TASK_STATUS_META).map(k=>`<button type="button" class="chip-opt ${t.status===k?'sel':''}" onclick="setTaskStatus('${t.id}','${k}')">${TASK_STATUS_META[k].icon} ${TASK_STATUS_META[k].label}</button>`).join('')}
+      </div>
+    </div>`;
+
+  const subHtml = subs.length
+    ? `<div class="subtask-list">
+        <div class="task-action-lbl">🧩 زیرتسک‌ها — <span class="num">${doneSubs}/${subs.length} · ${pct}٪</span></div>
+        ${subs.map(s=>`<div class="subtask-item ${s.done?'done':''}" onclick="toggleSubtask('${t.id}','${s.id}')"><div class="subtask-check">${s.done?'✓':''}</div><span class="subtask-item-title">${esc(s.title)}</span></div>`).join('')}
+      </div>`
+    : `<div class="subtask-list-empty">🧩 زیرتسکی ندارد — از «ویرایش» می‌توانی چند زیرتسک بسازی.</div>`;
+
+  document.getElementById('taskActionDetails').innerHTML = `
+    <div class="task-action-pills">${pills}</div>
+    <div class="task-action-info">${infoLines.join('<br>')}</div>
+    <div class="task-action-rewards"><div class="task-action-lbl">🎁 پاداش تکمیل</div>${taskRewardSummary(t)}</div>
+    ${statusChanger}
+    ${subHtml}`;
+
+  const toggleBtn = document.getElementById('taskActionToggleBtn');
+  if(toggleBtn){
+    toggleBtn.innerHTML = t.done ? '↩️ برگردوندن به حالت انجام‌نشده' : '✅ انجام شد!';
+    toggleBtn.classList.toggle('ghost', t.done);
+  }
+}
+function toggleTaskFromAction(){
+  const id = window.__taskActionId;
+  if(!id) return;
+  closeModal('taskActionModalBg');
+  window.__taskActionId = null;
+  toggleTask(id);
+}
+function startEditTaskFromAction(){
+  const id = window.__taskActionId;
+  if(!id) return;
+  closeModal('taskActionModalBg');
+  window.__taskActionId = null;
+  openTaskModal(id);
+}
+function deleteTaskFromAction(){
+  const id = window.__taskActionId;
+  if(!id) return;
+  if(!confirm('این تسک حذف بشه؟')) return;
+  closeModal('taskActionModalBg');
+  window.__taskActionId = null;
+  deleteTask(id);
+  toast('🗑️ تسک حذف شد');
+}
+function setTaskStatus(id, status){
+  const t = DB.tasks.find(x=>x.id===id);
+  if(!t || !TASK_STATUS_META[status]) return;
+  t.status = status;
+  save();
+  renderTaskActionDetails();
+  toast(`${TASK_STATUS_META[status].icon} وضعیت تسک: ${TASK_STATUS_META[status].label}`);
+}
+function pickRandomTask(){
+  const f = document.querySelector('#taskFilters .sel')?.dataset.f || 'all';
+  let pool = sortTasks(DB.tasks).filter(t=>!t.done);
+  if(f==='critical') pool = pool.filter(t=>t.priority==='critical');
+  else if(f==='high') pool = pool.filter(t=>t.priority==='high');
+  else if(f==='done') pool = [];
+  if(currentCatFilter) pool = pool.filter(t=>(t.cat||'').trim()===currentCatFilter);
+  if(!pool.length){
+    toast(f==='done' ? '🎲 توی «انجام‌شده» تسک بازی وجود نداره — یک فیلتر دیگه انتخاب کن' : '🎲 تسک انجام‌نشده‌ای در این فیلتر پیدا نشد');
+    return;
+  }
+  const chosen = pool[Math.floor(Math.random()*pool.length)];
+  toast(`🎲 تسک تصادفی: «${chosen.title}»`);
+  openTaskDetails(chosen.id);
+}
 
 let currentStatusFilter = 'all';
 let currentCatFilter = null;
@@ -3180,8 +3404,12 @@ document.getElementById('importFile').onchange = (e)=>{
       if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
       if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
       if(!DB.newRecordFlags) DB.newRecordFlags = {};
-      // ensure tasks have extraDeadlines array
-      (DB.tasks||[]).forEach(t=>{ if(!t.extraDeadlines) t.extraDeadlines=[]; });
+      // ensure tasks have extraDeadlines, subtasks and a workflow status
+      (DB.tasks||[]).forEach(t=>{
+        if(!Array.isArray(t.extraDeadlines)) t.extraDeadlines=[];
+        if(!Array.isArray(t.subtasks)) t.subtasks=[];
+        if(!t.status) t.status='notstarted';
+      });
       localStorage.setItem(STORE_KEY, JSON.stringify(DB));
       renderAll();
       toast('✅ بازیابی کامل شد — ' + (DB.tasks||[]).length + ' تسک بازگردانده شد');
@@ -3302,7 +3530,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='9.1';
+const LP_APP_VERSION='10.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

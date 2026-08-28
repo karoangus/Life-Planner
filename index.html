@@ -160,7 +160,10 @@
     <div class="view" id="view-tasks">
       <div class="topbar">
         <div><h1>مدیریت تسک‌ها</h1><div class="sub">همه‌ی کارها، اولویت‌ها و ددلاین‌ها یک‌جا</div></div>
-        <div class="top-actions"><button class="btn" onclick="openTaskModal()">➕ تسک جدید</button></div>
+        <div class="top-actions">
+          <button class="btn ghost" onclick="pickRandomTask()" title="انتخاب تصادفی یک تسک برای شروع">🎲 رندوم</button>
+          <button class="btn" onclick="openTaskModal()">➕ تسک جدید</button>
+        </div>
       </div>
       <div class="card">
         <div class="chip-group" style="margin-bottom:12px;" id="taskFilters">
@@ -869,6 +872,14 @@
       <div class="chip-opt" data-v="critical">بحرانی</div>
     </div>
   </div>
+  <div class="field"><label>وضعیت</label>
+    <div class="chip-group" id="tStatus">
+      <div class="chip-opt sel" data-v="notstarted">⬜ شروع نشده</div>
+      <div class="chip-opt" data-v="inprogress">▶️ در حال انجام</div>
+      <div class="chip-opt" data-v="queued">📥 در صف</div>
+      <div class="chip-opt" data-v="paused">⏸️ متوقف</div>
+    </div>
+  </div>
   <div class="row2">
     <div class="field"><label>زمان تخمینی (دقیقه)</label><input type="number" id="tEst" placeholder="۳۰"></div>
     <div class="field"><label>یادداشت</label><input type="text" id="tNote" placeholder="اختیاری"></div>
@@ -877,6 +888,14 @@
     <label>ددلاین‌های اضافه <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری)</span></label>
     <div id="extraDeadlinesWrap" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
     <button class="btn ghost sm" type="button" onclick="addExtraDeadline()" style="width:100%; justify-content:center;">➕ اضافه کردن ددلاین</button>
+  </div>
+  <div class="field">
+    <label>زیرتسک‌ها <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری — با تیک زدن همه، تسک اصلی خودکار انجام می‌شود)</span></label>
+    <div id="subtaskWrap" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="newSubtaskTitle" placeholder="مثلاً: جمع‌آوری منابع">
+      <button class="btn ghost sm" type="button" onclick="addSubtaskInput()" style="flex-shrink:0;">➕ اضافه</button>
+    </div>
   </div>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('taskModalBg')">انصراف</button><button class="btn" onclick="saveTask()">ذخیره</button></div>
 </div></div>
@@ -949,6 +968,17 @@
     <button class="btn danger" id="deleteThisDayBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteEventDay()">🗑️ حذف فقط این روز</button>
     <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteWholeEvent()">🗑️ حذف کل رویداد (همه‌ی روزها)</button>
     <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="closeModal('eventActionModalBg')">انصراف</button>
+  </div>
+</div></div>
+
+<div class="modal-bg" id="taskActionModalBg"><div class="modal">
+  <h2 id="taskActionTitle">✅ تسک</h2>
+  <div id="taskActionDetails"></div>
+  <div class="modal-actions" style="flex-direction:column;">
+    <button class="btn" id="taskActionToggleBtn" style="width:100%; justify-content:center;" onclick="toggleTaskFromAction()">✅ انجام شد!</button>
+    <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="startEditTaskFromAction()">✏️ ویرایش</button>
+    <button class="btn danger" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteTaskFromAction()">🗑️ حذف</button>
+    <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="closeModal('taskActionModalBg')">انصراف</button>
   </div>
 </div></div>
 
