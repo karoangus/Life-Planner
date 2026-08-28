@@ -413,6 +413,12 @@ function renderXP(){
   setEl('xpBarSheet','width', pct+'%');
   setEl('xpTitleIconSheet','text', t.icon);
   setEl('xpTitleNameSheet','text', t.title);
+  // v9.1: the dashboard hero shows the same level/XP strip (safe no-op elsewhere)
+  setEl('dashXpLevel','text', DB.level);
+  setEl('dashXpText','text', txt);
+  setEl('dashXpBar','width', pct+'%');
+  setEl('dashXpTitleIcon','text', t.icon);
+  setEl('dashXpTitleName','text', t.title);
 }
 function renderProfile(){
   const need = DB.level*100;
@@ -3223,7 +3229,7 @@ function renderDashboard(){
 function viewActive(id){ const el=document.getElementById('view-'+id); return !!(el && el.classList.contains('active')); }
 function renderView(v){
   const jobs = {
-    dashboard: ()=>{ renderDashboard(); renderTodayWidget(); renderHabitMini(); renderGoalMini(); renderQuestBox(); },
+    dashboard: ()=>{ renderXP(); renderDashboard(); renderTodayWidget(); renderHabitMini(); renderGoalMini(); renderQuestBox(); },
     tasks:     ()=>renderTasks(document.querySelector('#taskFilters .sel')?.dataset.f || 'all'),
     calendar:  ()=>renderCalendar(),
     habits:    ()=>renderHabits(),
@@ -3296,7 +3302,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='9';
+const LP_APP_VERSION='9.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

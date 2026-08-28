@@ -62,14 +62,49 @@
 
     <!-- DASHBOARD -->
     <div class="view active" id="view-dashboard">
-      <div class="topbar">
-        <div><h1 id="greetTitle">سلام 👋</h1><div class="sub" id="todayStr"></div></div>
-        <div class="top-actions">
-          <div class="icon-btn" onclick="openTaskModal()">➕</div>
-        </div>
-      </div>
 
-      <div class="card motivation-card">
+      <!-- ░░ HERO ░░ سلام + سطح/XP + حلقه‌ی پیشرفت + آمار سریع + میان‌برها -->
+      <header class="dash-hero">
+        <div class="topbar dash-hero-top">
+          <div class="dash-hero-titles">
+            <h1 id="greetTitle">سلام 👋</h1>
+            <div class="sub" id="todayStr"></div>
+          </div>
+          <div class="top-actions">
+            <div class="icon-btn" onclick="openTaskModal()">➕</div>
+          </div>
+        </div>
+
+        <div class="dash-xp" onclick="showView('profile')">
+          <div class="dash-xp-badge"><span class="num" id="dashXpLevel">1</span><span class="dash-xp-badge-ic" id="dashXpTitleIcon">🌱</span></div>
+          <div class="dash-xp-main">
+            <div class="dash-xp-row"><span id="dashXpTitleName">تازه‌کار</span><span class="num" id="dashXpText">0/100</span></div>
+            <div class="dash-xp-track"><div class="dash-xp-fill" id="dashXpBar"></div></div>
+          </div>
+        </div>
+
+        <div class="dash-metrics">
+          <div class="progress-ring-wrap dash-ring">
+            <div class="donut" id="donutWrap"><span id="donutText">0٪</span></div>
+            <div class="dash-ring-cap">پیشرفت کل · <b class="num" id="doneTasksN">0</b> از <b class="num" id="totalTasksN">0</b></div>
+          </div>
+          <div class="grid g4 dash-stats">
+            <div class="stat-card dash-stat dash-stat-done"><div class="glow" style="background:#00e5ff"></div><div class="ic">✅</div><div class="val num" id="statDone">0</div><div class="lbl">تسک انجام‌شده امروز</div></div>
+            <div class="stat-card dash-stat dash-stat-streak"><div class="glow" style="background:#8b6bff"></div><div class="ic">🔥</div><div class="val num" id="statStreak">0</div><div class="lbl">بلندترین استریک فعال</div></div>
+            <div class="stat-card dash-stat dash-stat-goals"><div class="glow" style="background:#2ee6a6"></div><div class="ic">🎯</div><div class="val num" id="statGoals">0٪</div><div class="lbl">میانگین پیشرفت اهداف</div></div>
+            <div class="stat-card dash-stat dash-stat-score"><div class="glow" style="background:#ffb545"></div><div class="ic">⚡</div><div class="val num" id="statScore">0</div><div class="lbl">امتیاز بهره‌وری امروز</div></div>
+          </div>
+        </div>
+
+        <div class="dash-quick">
+          <button class="dash-q" type="button" onclick="openTaskModal()"><span class="dash-q-ic">➕</span>تسک جدید</button>
+          <button class="dash-q" type="button" onclick="showView('pomodoro')"><span class="dash-q-ic">🍅</span>تمرکز</button>
+          <button class="dash-q" type="button" onclick="showView('habits')"><span class="dash-q-ic">🔥</span>عادت‌ها</button>
+          <button class="dash-q" type="button" onclick="showView('calendar')"><span class="dash-q-ic">📅</span>تقویم</button>
+        </div>
+      </header>
+
+      <div class="card motivation-card dash-motivation">
         <div class="motivation-row">
           <div class="motivation-ic">✨</div>
           <div style="flex:1; min-width:0;">
@@ -98,41 +133,26 @@
         </div>
       </div>
 
-      <div id="questCard"></div>
+      <!-- ░░ MOSAIC ░░ کاشی‌های داشبورد -->
+      <div class="dash-grid">
+        <section class="dash-tile dash-tile-quest">
+          <div id="questCard"></div>
+        </section>
 
-      <div class="grid g4" style="margin-bottom:16px;">
-        <div class="stat-card"><div class="glow" style="background:#00e5ff"></div><div class="ic">✅</div><div class="val num" id="statDone">0</div><div class="lbl">تسک انجام‌شده امروز</div></div>
-        <div class="stat-card"><div class="glow" style="background:#8b6bff"></div><div class="ic">🔥</div><div class="val num" id="statStreak">0</div><div class="lbl">بلندترین استریک فعال</div></div>
-        <div class="stat-card"><div class="glow" style="background:#2ee6a6"></div><div class="ic">🎯</div><div class="val num" id="statGoals">0٪</div><div class="lbl">میانگین پیشرفت اهداف</div></div>
-        <div class="stat-card"><div class="glow" style="background:#ffb545"></div><div class="ic">⚡</div><div class="val num" id="statScore">0</div><div class="lbl">امتیاز بهره‌وری امروز</div></div>
-      </div>
-
-      <div class="grid g2">
-        <div class="card">
+        <section class="dash-tile dash-tile-tasks">
           <div class="card-head"><h3>📋 برنامه‌ی امروز</h3><span class="muted" id="todayCount">۰ تسک</span></div>
           <div id="todayTasks"></div>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          <div class="card">
-            <div class="card-head"><h3>📈 پیشرفت کلی</h3></div>
-            <div class="progress-ring-wrap">
-              <div class="donut" id="donutWrap"><span id="donutText">0٪</span></div>
-              <div style="font-size:12.5px; color:var(--txt-dim); line-height:1.9;">
-                از <b id="totalTasksN" class="num" style="color:var(--txt)">0</b> تسک کل،
-                <b id="doneTasksN" class="num" style="color:var(--ok)">0</b> انجام شده.
-              </div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-head"><h3>🔥 استریک عادت‌ها</h3></div>
-            <div id="habitMini"></div>
-          </div>
-        </div>
-      </div>
+        </section>
 
-      <div class="card" style="margin-top:16px;">
-        <div class="card-head"><h3>🎯 اهداف در جریان</h3></div>
-        <div id="goalMini"></div>
+        <section class="dash-tile dash-tile-habits">
+          <div class="card-head"><h3>🔥 استریک عادت‌ها</h3><button class="dash-more" type="button" onclick="showView('habits')">همه ›</button></div>
+          <div id="habitMini"></div>
+        </section>
+
+        <section class="dash-tile dash-tile-goals">
+          <div class="card-head"><h3>🎯 اهداف در جریان</h3><button class="dash-more" type="button" onclick="showView('goals')">همه ›</button></div>
+          <div id="goalMini"></div>
+        </section>
       </div>
     </div>
 

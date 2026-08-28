@@ -919,3 +919,208 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 /* UI scale is applied only to content wrappers, leaving the fixed bottom nav stable and clickable. */
 .main{zoom:var(--lp-ui-scale,1);}
 @media(max-width:520px){.motivation-custom-actions .btn{min-width:100%;}}
+
+/* ============================================================
+   DASHBOARD v9.1 — hero + mosaic layout
+   Scoped to #view-dashboard so no other view is affected.
+   PERF notes: no backdrop-filter, no blur() glow layers
+   (the four old .stat-card .glow filters are disabled below),
+   only transform/opacity transitions, gradients painted once.
+   ============================================================ */
+
+/* ---------- HERO ---------- */
+#view-dashboard .dash-hero{
+  position:relative; overflow:hidden;
+  margin-bottom:10px; padding:14px 14px 14px;
+  border:1px solid var(--line2); border-radius:18px;
+  background:
+    radial-gradient(95% 130% at 100% 0%, color-mix(in srgb, var(--neon) 16%, transparent), transparent 62%),
+    linear-gradient(165deg, var(--panel), var(--panel2));
+  box-shadow: var(--shadow-card, var(--shadow));
+}
+#view-dashboard .dash-hero::before{
+  content:''; position:absolute; inset:0 0 auto 0; height:3px;
+  background:var(--grad); opacity:.9;
+}
+#view-dashboard .dash-hero-top{margin-bottom:11px; align-items:flex-start; gap:10px;}
+#view-dashboard .dash-hero-titles{min-width:0;}
+#view-dashboard .dash-hero-top h1{margin:0; font-size:19px; font-weight:900; letter-spacing:-.2px;}
+#view-dashboard .dash-hero-top .sub{font-size:11.5px; color:var(--txt-dim2); margin-top:3px; font-weight:600;}
+#view-dashboard .dash-hero-top .icon-btn{width:36px; height:36px; border-radius:11px; flex-shrink:0;}
+
+/* level + XP strip */
+#view-dashboard .dash-xp{
+  display:flex; align-items:center; gap:10px; cursor:pointer;
+  margin-bottom:10px; padding:8px 10px;
+  border:1px solid var(--line); border-radius:14px;
+  background: color-mix(in srgb, var(--neon) 7%, transparent);
+}
+#view-dashboard .dash-xp-badge{
+  display:flex; align-items:center; gap:3px; flex-shrink:0;
+  height:34px; padding:0 9px; border-radius:11px;
+  background:var(--grad); color:#04121a; font-weight:900; font-size:13px;
+}
+#view-dashboard .dash-xp-badge-ic{font-size:12px;}
+#view-dashboard .dash-xp-main{flex:1; min-width:0;}
+#view-dashboard .dash-xp-row{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  margin-bottom:5px; font-size:11.5px; font-weight:800; color:var(--txt);
+}
+#view-dashboard .dash-xp-row .num{font-size:11px; font-weight:700; color:var(--txt-dim);}
+#view-dashboard .dash-xp-track{height:6px; border-radius:20px; background:var(--track); overflow:hidden;}
+#view-dashboard .dash-xp-fill{height:100%; width:0; border-radius:20px; background:var(--grad); transition:width .45s ease;}
+
+/* ring + quick stats */
+#view-dashboard .dash-metrics{
+  display:flex; align-items:center; gap:12px;
+  padding:10px; border:1px solid var(--line); border-radius:16px;
+  background:var(--panel2);
+}
+#view-dashboard .dash-ring{flex-direction:column; align-items:center; gap:7px; flex-shrink:0;}
+#view-dashboard .dash-ring .donut{
+  width:76px; height:76px;
+  box-shadow:0 0 0 1px var(--line) inset;
+}
+#view-dashboard .dash-ring .donut::before{
+  content:''; position:absolute; inset:9px; border-radius:50%; background:var(--panel2);
+}
+#view-dashboard .dash-ring .donut span{position:relative; z-index:1; font-size:15px; font-weight:900;}
+#view-dashboard .dash-ring-cap{
+  max-width:90px; text-align:center; font-size:10px; line-height:1.7; color:var(--txt-dim);
+}
+#view-dashboard .dash-ring-cap b{color:var(--txt);}
+
+#view-dashboard .dash-stats{flex:1; min-width:0; gap:8px; grid-template-columns:repeat(2,minmax(0,1fr));}
+#view-dashboard .dash-stat{
+  display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-rows:auto auto;
+  align-items:center; column-gap:8px;
+  padding:8px 10px; border-radius:13px;
+  background:var(--panel); border:1px solid var(--line);
+}
+/* PERF: the old decorative blur() layers are hidden — 4 filters less to paint. */
+#view-dashboard .dash-stat .glow{display:none;}
+#view-dashboard .dash-stat::after{content:''; position:absolute; inset:0 0 auto 0; height:2px; opacity:.8;}
+#view-dashboard .dash-stat-done::after{background:var(--neon);}
+#view-dashboard .dash-stat-streak::after{background:var(--violet);}
+#view-dashboard .dash-stat-goals::after{background:var(--ok);}
+#view-dashboard .dash-stat-score::after{background:var(--warn);}
+#view-dashboard .dash-stat-done .ic{color:var(--neon);}
+#view-dashboard .dash-stat-streak .ic{color:var(--violet);}
+#view-dashboard .dash-stat-goals .ic{color:var(--ok);}
+#view-dashboard .dash-stat-score .ic{color:var(--warn);}
+#view-dashboard .dash-stat .ic{grid-column:1; grid-row:1 / span 2; font-size:17px; margin-bottom:0; opacity:1;}
+#view-dashboard .dash-stat .val{grid-column:2; grid-row:1; font-size:18px; line-height:1.2; letter-spacing:-.3px;}
+#view-dashboard .dash-stat .lbl{grid-column:2; grid-row:2; font-size:10px; line-height:1.45; margin-top:0; color:var(--txt-dim);}
+
+/* shortcut buttons */
+#view-dashboard .dash-quick{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin-top:10px;}
+#view-dashboard .dash-q{
+  display:flex; align-items:center; justify-content:center; gap:6px; min-width:0;
+  padding:9px 4px; font:inherit; font-size:11px; font-weight:800; color:var(--txt);
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  cursor:pointer; transition:transform .15s ease, border-color .15s ease, color .15s ease;
+}
+#view-dashboard .dash-q-ic{font-size:13px; line-height:1; flex-shrink:0;}
+#view-dashboard .dash-q:active{transform:scale(.96);}
+@media(hover:hover){ #view-dashboard .dash-q:hover{border-color:var(--neon); color:var(--neon);} }
+@media(max-width:400px){
+  #view-dashboard .dash-stat .lbl{
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  #view-dashboard .dash-quick{gap:6px;}
+  #view-dashboard .dash-q{font-size:10px; padding:9px 2px; gap:4px; white-space:nowrap; overflow:hidden;}
+  #view-dashboard .dash-q-ic{font-size:12px;}
+}
+@media(max-width:340px){ #view-dashboard .dash-quick{grid-template-columns:repeat(2,minmax(0,1fr));} }
+
+/* ---------- MOTIVATION (compact) ---------- */
+#view-dashboard .dash-motivation{margin-bottom:10px; padding:12px 13px; border-radius:16px;}
+#view-dashboard .dash-motivation .motivation-row{align-items:center; gap:10px;}
+#view-dashboard .dash-motivation .motivation-ic{width:34px; height:34px; border-radius:11px; font-size:16px;}
+#view-dashboard .dash-motivation .motivation-text{font-size:13px; line-height:1.85;}
+#view-dashboard .dash-motivation .motivation-mood-toggle{margin-top:5px; font-size:10.5px;}
+#view-dashboard .dash-motivation .motivation-custom-actions{margin-top:8px;}
+
+/* ---------- MOSAIC TILES ---------- */
+#view-dashboard .dash-grid{display:grid; gap:10px; grid-template-columns:minmax(0,1fr);}
+#view-dashboard .dash-tile{
+  min-width:0; padding:12px 13px; contain:layout style;
+  background:var(--panel); border:1px solid var(--line); border-radius:16px;
+}
+#view-dashboard .dash-tile .card-head{margin-bottom:10px; gap:8px;}
+#view-dashboard .dash-tile-quest{padding:0; background:none; border:0; border-radius:0;}
+#view-dashboard .dash-tile-quest #questCard .quest-box{margin-bottom:0;}
+#view-dashboard .dash-more{
+  font:inherit; font-size:10.5px; font-weight:800; color:var(--txt-dim2);
+  background:none; border:0; padding:0; cursor:pointer;
+}
+#view-dashboard .dash-more:active{color:var(--neon);}
+@media(hover:hover){ #view-dashboard .dash-more:hover{color:var(--neon);} }
+
+/* today's tasks inside the dashboard */
+#view-dashboard #todayTasks .task-row{
+  padding:8px 9px; gap:10px; margin-bottom:6px;
+  background:var(--panel2); border:1px solid var(--line); border-radius:13px;
+}
+#view-dashboard #todayTasks .task-row:last-child{margin-bottom:0;}
+#view-dashboard #todayTasks .task-title{font-size:12.5px;}
+@media(hover:hover){
+  #view-dashboard #todayTasks .task-row:hover{background:var(--hover); border-color:var(--line2);}
+}
+@media(hover:none){ #view-dashboard #todayTasks .task-del{opacity:.45;} }
+
+/* habit mini rows (JS-generated markup, restyled here) */
+#view-dashboard #habitMini > div{
+  display:flex !important; align-items:center; gap:8px;
+  padding:8px 10px !important; margin-bottom:6px;
+  background:var(--panel2); border:1px solid var(--line); border-radius:12px;
+  font-size:12.5px !important;
+}
+#view-dashboard #habitMini > div:last-child{margin-bottom:0;}
+#view-dashboard #habitMini > div > span{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+#view-dashboard #habitMini > div > b{
+  flex-shrink:0; font-size:10.5px; font-weight:900; padding:2px 8px; border-radius:20px;
+  color:var(--neon) !important;
+  background:var(--neon-15, rgba(0,229,255,.12));
+  border:1px solid color-mix(in srgb, var(--neon) 22%, transparent);
+}
+
+/* goal mini rows (JS-generated markup, restyled here) */
+#view-dashboard #goalMini > div{margin-bottom:9px !important;}
+#view-dashboard #goalMini > div:last-child{margin-bottom:0 !important;}
+#view-dashboard #goalMini > div > div:first-child{
+  display:flex !important; align-items:center; gap:8px;
+  margin-bottom:5px !important; font-size:11.5px !important;
+}
+#view-dashboard #goalMini > div > div:first-child > span{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+#view-dashboard #goalMini > div > div:first-child > b{
+  flex-shrink:0; font-size:11px; font-weight:900; color:var(--neon);
+  padding:1px 7px; border-radius:20px;
+  background:var(--neon-15, rgba(0,229,255,.12));
+  border:1px solid color-mix(in srgb, var(--neon) 22%, transparent);
+}
+#view-dashboard #goalMini .bar-track{height:7px; margin-top:0; border-radius:20px;}
+
+#view-dashboard .empty{padding:16px 10px; font-size:12px;}
+#view-dashboard .empty .ic{font-size:22px;}
+
+/* ---------- RESPONSIVE MOSAIC ---------- */
+@media(min-width:560px){
+  #view-dashboard .dash-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  #view-dashboard .dash-tile-quest{grid-column:1 / -1;}
+  #view-dashboard .dash-tile-tasks{grid-column:1 / -1;}
+}
+@media(min-width:900px){
+  #view-dashboard .dash-grid{
+    grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); align-items:start;
+  }
+  #view-dashboard .dash-tile-tasks{grid-column:1; grid-row:2 / span 2;}
+  #view-dashboard .dash-tile-habits{grid-column:2; grid-row:2;}
+  #view-dashboard .dash-tile-goals{grid-column:2; grid-row:3;}
+}
+@media(min-width:1180px){
+  #view-dashboard .dash-stats{grid-template-columns:repeat(4,minmax(0,1fr));}
+}
+@media(prefers-reduced-motion:reduce){
+  #view-dashboard *{transition:none !important; animation:none !important;}
+}
