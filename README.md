@@ -1,0 +1,139 @@
+<div dir="rtl">
+
+# 🌆 برنامه‌ریز هوشمند زندگی — Life Planner
+
+یک **برنامه‌ریز شخصی فارسی** که کارهای روزانه، عادت‌ها، اهداف و پومودورو را با **گیمیفیکیشن** ترکیب کرده: با پیشرفت، شهری را می‌سازی، باس می‌گیری و با بهترین نسخه‌ی خودت رقابت می‌کنی.
+
+- 📱 **PWA**: قابل نصب روی گوشی، **کاملاً آفلاین** کار می‌کند
+- 🇮🇷 کاملاً **فارسی و راست‌به‌چپ** (RTL)
+- ⚡ بدون هیچ وابستگی و بدون بیلد — فقط فایل‌های استاتیک
+- 🔒 داده‌ها **فقط روی دستگاه کاربر** (localStorage)؛ هیچ سروری درگیر نیست
+
+**نسخه فعلی: 7.2**
+
+---
+
+## 🖼️ نما
+
+| داشبورد | تسک‌ها |
+|---|---|
+| ![داشبورد](docs/screenshots/dashboard.png) | ![تسک‌ها](docs/screenshots/tasks.png) |
+
+| عادت‌ها | اهداف |
+|---|---|
+| ![عادت‌ها](docs/screenshots/habits.png) | ![اهداف](docs/screenshots/goals.png) |
+
+| پومودورو | Life City |
+|---|---|
+| ![پومودورو](docs/screenshots/pomodoro.png) | ![شهر](docs/screenshots/city.png) |
+
+![XP Shop](docs/screenshots/shop.png)
+
+---
+
+## ✨ امکانات
+
+### برنامه‌ریز
+- ✅ **تسک‌ها** با اولویت (معمولی / بالا / فوری)، دسته، تاریخ و ددلاین‌های اضافی
+- 🔥 **ردیاب عادت‌ها** با استریک (زنجیره‌ی پیاپی) و شبکه‌ی هفتگی
+- 🎯 **اهداف** با سطح (روزانه تا مادام‌العمر) و درصد پیشرفت
+- 📅 **تقویم هفتگی** با رویداد و یادآوری
+- 📝 **یادداشت‌ها** با سنجاق کردن
+- 🍅 **پومودورو** با پریست‌ها، صدای محیطِ ساختگی (باران/کافه/جنگل/فضا با Web Audio)، ثبت دستی فوکوس و آمار
+
+### گیمیفیکیشن
+- 🏙️ **Life City**: شهری که با هر سطح جدید بزرگ می‌شود (از کلبه‌ی چوبی تا شهر آینده)
+- ⚔️ **باس هفتگی**: یک هدف بزرگ را به نبرد تبدیل کن
+- 🪞 **You VS You**: مقایسه‌ی امروز با بهترین رکوردت و این هفته با هفته‌ی قبل
+- 🌳 **درخت مهارت**: ارتقای XP، تخفیف فروشگاه، شانس جعبه و ...
+- 🛍️ **XP Shop**: XP Boost، جعبه‌ی شگفت‌انگیز (Mystery Box)، سپر استریک
+- ⚡ **مأموریت‌های روزانه** با تیئرهای Easy تا Special
+- 🌟 **Perfect Day**: جشن وقتی همه‌چیز را کامل کردی
+- 🚨 **حالت بحران**: شمارش معکوس وقتی عقب افتادی
+- 🌧️ صدای محیط شهر (روز/شب/باران) و ۵ تم (تاریک، روشن + ۳ تم ویژه با XP)
+
+### زیرساخت
+- 📴 PWA با Service Worker: آفلاین کامل + **تشخیص خودکار آپدیت**
+- ⭐ ۴ تم ویژه + اسکیل فونت و اسکیل رابط کاربری
+- 💾 پشتیبان‌گیری و بازیابی + بکاپ خودکار
+- 🔔 نوتیفیکیشن روزانه و یادآوری
+
+---
+
+## 🚀 اجرا
+
+فایل‌ها کاملاً استاتیک هستند. دو روش:
+
+**روش ۱ — لوکال:** فقط `index.html` را در مرورگر باز کن. (برای نوتیفیکیشن و PWA بهتر است با یک سرور استاتیک اجرا شود؛ مثلاً `npx serve` یا `python3 -m http.server` در این پوشه.)
+
+**روش ۲ — GitHub Pages:** این ریپو را فعال‌سازی GitHub Pages کن (منبع: شاخه‌ی `main`) و سایت در `<username>.github.io/Life-Planner` بالا می‌آید.
+
+---
+
+## 📁 ساختار پروژه
+
+```
+index.html            ← صفحه‌ی اصلی (فقط ساختار HTML؛ بدون کد و بدون CSS)
+css/app.css           ← همه‌ی استایل‌ها
+js/core.js            ← هسته: تم، مخزن داده (DB)، رندر، گیمیفیکیشن، آپدیت‌چک
+js/enhancements.js    ← تنظیمات (فونت/UI/تم)، پشتیبان‌گیری، دیالوگ آپدیت
+js/sw-register.js     ← ثبت Service Worker
+js/pomodoro.js        ← ماژول پومودورو (IIFE مستقل، گلوبال نمی‌سازد)
+sw.js                 ← Service Worker (کش آفلاین + آپدیت‌چک)
+manifest.json         ← مانیفست PWA
+app-version.json      ← نسخه‌ی برنامه برای آپدیت‌چک (تک منبع نسخه)
+audio/                ← صداهای محیط شهر
+legacy/               ← فایل‌های قدیمی و استفاده‌نشده (نگه‌داری فقط برای مرجع)
+tests/app.test.mjs    ← تست کارکردی (اجرا: npm test)
+.github/workflows/    ← CI: هر پویش/PR روی main، تست‌ها را می‌زند
+```
+
+**نکته‌ی مهم برای ویرایش‌ها:** ترتیب لود اسکریپت‌ها در `index.html` مهم است:
+`core.js` → `enhancements.js` → `sw-register.js` → `pomodoro.js`.
+همچنین چون HTML از handlerهای inline مثل `onclick="saveTask()"` استفاده می‌کند،
+تابع‌های `core.js` باید در scope سراسری بمانند (ES module استفاده نکنید).
+
+---
+
+## 🔢 راهنمای تغییر نسخه (مهم)
+
+وقتی آپدیت جدیدی می‌سازید، این کارها را انجام دهید:
+
+1. `app-version.json` → `"version"` را یک واحد جلو ببرید (مثلاً 7.2 → 7.3).
+2. در `js/core.js`، خط اولِ بخش `APP UPDATE CHECK` یعنی `const LP_APP_VERSION='...'` را هم همان عدد کنید.
+3. اگر فایل‌های `css/` یا `js/` یا `sw.js` عوض شده‌اند، در `sw.js` شماره‌ی کش را
+   یک واحد جلو ببرید: `const CACHE_NAME='life-planner-cache-v...'`.
+
+با این کار، کاربرهای قدیمی به‌صورت خودکار پیام «نسخه‌ی جدید موجود است» را می‌بینند و کش تازه می‌شود.
+
+---
+
+## 🧪 تست
+
+```bash
+npm install
+npm test
+```
+
+تست در یک مرورگر headless واقعی برنامه را بارگذاری می‌کند، تسک می‌سازد، کامل می‌کند،
+بررسی می‌کند XP اضافه شده، داده بعد از ریلود باقی مانده، و صفحات اصلی بدون خطا رندر می‌شوند.
+همین تست در هر Push و Pull Request به `main` روی GitHub به‌صورت خودکار اجرا می‌شود (badge: Tests).
+
+</div>
+
+---
+
+## English
+
+**Smart Life Planner** — a fully Persian, RTL, offline-first PWA that combines a
+daily planner (tasks, habits, goals, calendar, notes, pomodoro) with heavy
+gamification: you grow a city (Life City), fight a weekly boss, spend XP in a
+shop, and compete against your own best records (You VS You).
+
+- Pure static site — no backend, no dependencies, no build step
+- All user data stays on-device (localStorage)
+- Service worker with offline cache + automatic update detection
+- Functional test suite runs in CI on every push/PR to `main`
+
+See the Persian section above for the full feature list, project structure and
+versioning guide.
