@@ -530,7 +530,7 @@ function getCityAchievements(){
     flowers: !!DB.stats.weeklyPerfectUnlocked || isWeeklyPerfect(),
   };
 }
-let cityStarsBuilt = false, cityRainBuilt = false, cityWindowsBuilt = false, cityFlowersBuilt = false;
+let cityStarsBuilt = false, cityRainBuilt = false, cityWindowsBuilt = false, cityFlowersBuilt = false, cityNeonBuilt = false;
 function buildCityStars(){
   if(cityStarsBuilt) return; cityStarsBuilt = true;
   const g = document.getElementById('cityStars');
@@ -580,6 +580,22 @@ function buildCityFlowers(){
     const c = colors[Math.floor(Math.random()*colors.length)];
     html += `<circle cx="${x}" cy="${y}" r="4" fill="${c}"/>`;
   }
+  g.innerHTML = html;
+}
+function buildCityNeonLines(){
+  if(cityNeonBuilt) return; cityNeonBuilt = true;
+  const g = document.getElementById('cityNeonLines');
+  if(!g) return;
+  const buildings = [
+    {x:120,y:170,w:60,h:230}, {x:200,y:120,w:75,h:280}, {x:300,y:200,w:55,h:200},
+    {x:460,y:140,w:70,h:260}, {x:550,y:190,w:58,h:210}, {x:625,y:100,w:75,h:300},
+  ];
+  let html='';
+  buildings.forEach(b=>{
+    html += `<line x1="${b.x}" y1="${b.y}" x2="${b.x}" y2="${b.y+b.h}" class="neon-line"/>`;
+    html += `<line x1="${b.x+b.w}" y1="${b.y}" x2="${b.x+b.w}" y2="${b.y+b.h}" class="neon-line"/>`;
+    html += `<line x1="${b.x}" y1="${b.y}" x2="${b.x+b.w}" y2="${b.y}" class="neon-line"/>`;
+  });
   g.innerHTML = html;
 }
 function getCityPhase(){
@@ -665,23 +681,72 @@ function updateCelestialPosition(instant){
 setInterval(()=>{ if(document.getElementById('view-city')?.classList.contains('active')) updateCelestialPosition(); }, 30000);
 
 const CITY_BONUS_SLOTS = [
-  {x:170,y:400}, {x:250,y:410}, {x:530,y:405}, {x:610,y:415},
-  {x:690,y:400}, {x:110,y:410}, {x:460,y:412}, {x:380,y:415},
+  {x:100,y:414}, {x:195,y:410}, {x:290,y:414}, {x:385,y:410},
+  {x:480,y:414}, {x:575,y:410}, {x:670,y:414}, {x:735,y:410},
 ];
+/* Vector art for Life City bonus items — drawn as real objects (grounded with
+   shadows) instead of emoji glyphs, which rendered inconsistently and could
+   show as empty boxes on some devices. Each shape is centered at (0,0) with
+   the ground at y=0, and is placed via a translate transform. */
+function cityBonusArt(type){
+  switch(type){
+    case 'tree':
+      return `<ellipse cx="0" cy="1" rx="17" ry="4.5" fill="#000" opacity=".22"/>
+        <rect x="-2.5" y="-16" width="5" height="16" rx="2" fill="#7a4a2b"/>
+        <circle cx="0" cy="-26" r="15" fill="#3fae6a"/>
+        <circle cx="-9" cy="-18" r="10" fill="#379d5d"/>
+        <circle cx="9" cy="-18" r="9" fill="#45b96f"/>
+        <circle cx="0" cy="-34" r="11" fill="#4fc07a"/>`;
+    case 'bench':
+      return `<ellipse cx="0" cy="1" rx="21" ry="4.5" fill="#000" opacity=".22"/>
+        <rect x="-20" y="-12" width="40" height="5" rx="2.5" fill="#c08a52"/>
+        <rect x="-20" y="-24" width="40" height="7" rx="3" fill="#8a5a34"/>
+        <rect x="-17" y="-7" width="4" height="7" fill="#6b4a2b"/>
+        <rect x="13" y="-7" width="4" height="7" fill="#6b4a2b"/>
+        <rect x="-17" y="-24" width="4" height="12" fill="#6b4a2b"/>
+        <rect x="13" y="-24" width="4" height="12" fill="#6b4a2b"/>`;
+    case 'lamp':
+      return `<ellipse cx="0" cy="1" rx="13" ry="3.5" fill="#000" opacity=".22"/>
+        <rect x="-2" y="-46" width="4" height="46" rx="2" fill="#4a5578"/>
+        <path d="M-5,-44 L5,-44 L4,-51 L-4,-51 Z" fill="#3a4260"/>
+        <circle cx="0" cy="-46" r="5" fill="#ffd76b"/>
+        <circle cx="0" cy="-46" r="12" fill="#ffd76b" opacity=".25" class="lamp-glow"/>
+        <ellipse cx="0" cy="1" rx="20" ry="5" fill="#ffd76b" opacity=".10"/>`;
+    case 'fountain':
+      return `<ellipse cx="0" cy="1" rx="21" ry="5" fill="#000" opacity=".22"/>
+        <ellipse cx="0" cy="-1" rx="20" ry="6" fill="#a8b0c4"/>
+        <ellipse cx="0" cy="-3" rx="16" ry="4" fill="#5a9ec8"/>
+        <rect x="-2" y="-22" width="4" height="18" fill="#c2c9da"/>
+        <ellipse cx="0" cy="-23" rx="8" ry="3.5" fill="#c2c9da"/>
+        <path d="M-7,-26 q0,-16 7,-16 q7,0 7,16" fill="none" stroke="#dff4ff" stroke-width="2" opacity=".85" class="fountain-arc"/>
+        <circle cx="0" cy="-24" r="2.2" fill="#dff4ff"/>`;
+    case 'building':
+      return `<ellipse cx="0" cy="1" rx="17" ry="4.5" fill="#000" opacity=".22"/>
+        <rect x="-14" y="-42" width="28" height="42" rx="2" fill="#7f8aa8"/>
+        <rect x="-11" y="-48" width="22" height="6" rx="1.5" fill="#5f6a88"/>
+        <rect x="-10" y="-36" width="6" height="6" fill="#ffd76b" class="bonus-win lit"/>
+        <rect x="4" y="-36" width="6" height="6" fill="#4a5470"/>
+        <rect x="-10" y="-25" width="6" height="6" fill="#4a5470"/>
+        <rect x="4" y="-25" width="6" height="6" fill="#ffd76b" class="bonus-win lit"/>
+        <rect x="-3" y="-16" width="6" height="16" fill="#4a3a28"/>`;
+    default:
+      return `<ellipse cx="0" cy="1" rx="14" ry="4" fill="#000" opacity=".22"/>
+        <circle cx="0" cy="-10" r="10" fill="#8b6bff"/>`;
+  }
+}
 function renderCityBonusItems(){
   const g = document.getElementById('cityBonusItems');
   if(!g) return;
   const items = (DB.cityBonusItems||[]).slice(0, CITY_BONUS_SLOTS.length);
   g.innerHTML = items.map((type,i)=>{
     const pos = CITY_BONUS_SLOTS[i];
-    const icon = CITY_BONUS_ICONS[type] || '🎁';
-    return `<text x="${pos.x}" y="${pos.y}" font-size="26" text-anchor="middle">${icon}</text>`;
+    return `<g class="city-bonus" transform="translate(${pos.x},${pos.y})">${cityBonusArt(type)}</g>`;
   }).join('');
 }
 function renderCityScene(){
   const frame = document.getElementById('cityFrame');
   if(!frame) return;
-  buildCityStars(); buildCityRain(); buildCityWindows(); buildCityFlowers();
+  buildCityStars(); buildCityRain(); buildCityWindows(); buildCityFlowers(); buildCityNeonLines();
   renderCityBonusItems();
   updateCelestialPosition();
 
@@ -3231,7 +3296,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='8';
+const LP_APP_VERSION='9';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

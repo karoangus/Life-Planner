@@ -1,4 +1,4 @@
-const CACHE_NAME='life-planner-cache-v46';
+const CACHE_NAME='life-planner-cache-v47';
 self.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});
 const SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./app-version.json','./css/app.css','./css/design-system.css','./js/core.js','./js/enhancements.js','./js/sw-register.js','./js/pomodoro.js','./audio/city_day.ogg','./audio/city_night.ogg','./audio/city_rain.ogg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(SHELL)));self.skipWaiting();});

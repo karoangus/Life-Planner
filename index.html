@@ -410,6 +410,18 @@
 
           <g id="citySunMoonRig">
             <circle id="citySunGlow" cx="650" cy="80" r="70" fill="url(#sunGlow)"/>
+            <g id="citySunRays" aria-hidden="true">
+              <g transform="translate(650,80)" class="sun-rays">
+                <line x1="0" y1="-42" x2="0" y2="-76"/>
+                <line x1="0" y1="-42" x2="0" y2="-76" transform="rotate(45)"/>
+                <line x1="0" y1="-42" x2="0" y2="-76" transform="rotate(90)"/>
+                <line x1="0" y1="-42" x2="0" y2="-76" transform="rotate(135)"/>
+                <line x1="0" y1="-42" x2="0" y2="-76" transform="rotate(180)"/>
+                <line x1="0" y1="-42" x2="0" y2="-76" transform="rotate(225)"/>
+                <line x1="0" y1="-42" x2="0" y2="-76" transform="rotate(270)"/>
+                <line x1="0" y1="-42" x2="0" y2="-76" transform="rotate(315)"/>
+              </g>
+            </g>
             <circle id="citySun" cx="650" cy="80" r="30" fill="#ffd76b"/>
             <g id="cityMoon">
               <circle cx="650" cy="80" r="26" fill="#eef1fb"/>
@@ -419,11 +431,13 @@
             </g>
           </g>
 
+          <g id="cityFarHills" aria-hidden="true">
+            <path d="M0,300 L110,236 L240,300 L400,240 L570,300 L710,228 L800,300 L800,330 L0,330 Z" fill="var(--city-mtn-2)" opacity="0.4"/>
+          </g>
           <g id="cityMountains">
             <polygon points="520,300 610,175 690,300" fill="var(--city-mtn-2)"/>
             <polygon points="600,300 705,150 800,300" fill="var(--city-mtn-1)"/>
           </g>
-
           <g id="cityClouds">
             <g transform="translate(60,60)"><g class="cloud cloud1"><ellipse cx="0" cy="0" rx="34" ry="14" fill="#fff"/><ellipse cx="24" cy="-6" rx="24" ry="12" fill="#fff"/><ellipse cx="-24" cy="4" rx="20" ry="10" fill="#fff"/></g></g>
             <g transform="translate(320,40)"><g class="cloud cloud2"><ellipse cx="0" cy="0" rx="28" ry="11" fill="#fff"/><ellipse cx="20" cy="-5" rx="18" ry="9" fill="#fff"/></g></g>
@@ -567,6 +581,30 @@
               <rect x="470" y="200" width="65" height="200" class="bld"/>
               <rect x="555" y="240" width="55" height="160" class="bld"/>
               <rect x="630" y="170" width="70" height="230" class="bld"/>
+            </g>
+            <g class="city-rooftops" aria-hidden="true">
+              <line x1="160" y1="230" x2="160" y2="196" stroke="#3a4260" stroke-width="3"/>
+              <line x1="155" y1="204" x2="165" y2="204" stroke="#3a4260" stroke-width="2"/>
+              <line x1="245" y1="180" x2="245" y2="150" stroke="#3a4260" stroke-width="3"/>
+              <circle cx="245" cy="150" r="3" fill="#ff5470" class="blink-dot"/>
+              <g transform="translate(327,250)">
+                <rect x="-1.5" y="-24" width="3" height="24" fill="#3a4260"/>
+                <rect x="-1.5" y="-30" width="3" height="6" fill="#3a4260"/>
+                <ellipse cx="0" cy="-30" rx="11" ry="7" fill="#6a7290"/>
+                <ellipse cx="0" cy="-33" rx="11" ry="5" fill="#8a93a8"/>
+              </g>
+              <g transform="translate(502,200)">
+                <rect x="-3" y="-16" width="6" height="16" fill="#3a4260"/>
+                <g class="rooftop-smoke">
+                  <circle cx="0" cy="-18" r="3" class="puff p1"/>
+                  <circle cx="2" cy="-24" r="4" class="puff p2"/>
+                </g>
+              </g>
+              <g transform="translate(582,240)">
+                <rect x="-3" y="-22" width="4" height="22" fill="#3a4260"/>
+                <rect x="-22" y="-32" width="44" height="12" rx="2" fill="#141b32"/>
+                <rect x="-19" y="-29" width="38" height="6" fill="#00e5ff" opacity=".85" class="billboard-light"/>
+              </g>
             </g>
             <g id="cityWindowsSmall"></g>
             <g id="cityCars">

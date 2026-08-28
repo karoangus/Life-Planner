@@ -117,7 +117,7 @@ html[data-theme="legendaryGold"]{
 .task-row, .note-actions, .sheet-nav-item, .sheet-xp,
 .pinned-nav-row, .yvy-record-row, .milestone-row,
 .city-entry-row, .shop-inv-row, .boss-task-row, .pomo-history-item,
-.jalali-weekdays, .lp-cal-head, .event-short, .ev-block{
+.jalali-weekdays, .lp-cal-head{
   background:linear-gradient(165deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
   border:1px solid var(--glass-border);
   border-radius:var(--r-md);
