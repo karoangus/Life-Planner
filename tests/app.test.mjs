@@ -171,19 +171,21 @@ if (!useFallback) {
     check(`view renders: ${view}`, hasView);
   }
 
-  // Extra v10.1 checks (not counted in failures, just info)
+  // Extra v10.2 checks
   const hasInboxFilter = indexHtml.includes('data-f="inbox"');
   const hasInprogressFilter = indexHtml.includes('data-f="inprogress"');
   const hasQueuedFilter = indexHtml.includes('data-f="queued"');
+  const hasPausedFilter = indexHtml.includes('data-f="paused"');
+  const hasNotstartedFilter = indexHtml.includes('data-f="notstarted"');
   const hasInboxModal = indexHtml.includes('inboxQuickModalBg');
   const hasStatusOrder = coreJs.includes('STATUS_ORDER') && coreJs.includes('inprogress:0');
   const hasRewardGrid = coreJs.includes('reward-grid') && appCss.includes('reward-grid');
-  const hasVersionBump = versionJson.version === '10.1' && pkgJson.version === '10.1.0' && coreJs.includes("LP_APP_VERSION='10.1'");
-  console.log(`ℹ️ v10.1 extra: inboxFilter=${hasInboxFilter} inprogress=${hasInprogressFilter} queued=${hasQueuedFilter} inboxModal=${hasInboxModal} statusOrder=${hasStatusOrder} rewardGrid=${hasRewardGrid} versionBump=${hasVersionBump}`);
-  check('v10.1 inbox filter present', hasInboxFilter && hasInprogressFilter && hasQueuedFilter);
-  check('v10.1 inbox modal present', hasInboxModal);
-  check('v10.1 status sorting present', hasStatusOrder);
-  check('v10.1 reward display fixed', hasRewardGrid);
+  const hasVersionBump = versionJson.version === '10.2' && pkgJson.version === '10.2.0' && coreJs.includes("LP_APP_VERSION='10.2'");
+  console.log(`ℹ️ v10.2 extra: inboxFilter=${hasInboxFilter} inprogress=${hasInprogressFilter} queued=${hasQueuedFilter} pausedFilter=${hasPausedFilter} notstartedFilter=${hasNotstartedFilter} inboxModal=${hasInboxModal} statusOrder=${hasStatusOrder} rewardGrid=${hasRewardGrid} versionBump=${hasVersionBump}`);
+  check('v10.2 status filters present (paused & notstarted)', hasPausedFilter && hasNotstartedFilter && hasInprogressFilter && hasQueuedFilter && hasInboxFilter);
+  check('v10.2 inbox modal present', hasInboxModal);
+  check('v10.2 status sorting present', hasStatusOrder);
+  check('v10.2 reward display fixed', hasRewardGrid);
   // Note: these 4 extra checks will be beyond the 12 required, but we keep failures counting - we need to adjust?
   // We have now 12+4=16 checks. For backward compat, we consider success if first 12 pass.
   // So we will not fail if extra checks fail? But we already checked them as part of failures.

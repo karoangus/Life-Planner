@@ -2505,10 +2505,6 @@ function subtaskProgressHtml(t){
 }
 function taskRow(t){
   const c = t.cat ? colorForCategory(t.cat) : null;
-  const extraDls = (t.extraDeadlines||[]).filter(Boolean);
-  const extraDlHtml = extraDls.length
-    ? extraDls.map(d=>`<span style="font-size:10.5px;color:var(--warn);background:rgba(255,181,69,.1);padding:1px 6px;border-radius:6px;border:1px solid rgba(255,181,69,.3);">⚑ ${isoToJalaliText(d)}</span>`).join('')
-    : '';
   const isInbox = !!t.inbox;
   const inboxPill = isInbox ? `<span class="pill inbox-pill">📥 Inbox</span>` : '';
   const statusPill = !t.done && !isInbox ? `<span class="pill st-${esc(t.status||'notstarted')}">${statusIcon(t.status)} ${statusLabel(t.status)}</span>` : '';
@@ -2522,8 +2518,6 @@ function taskRow(t){
         <span class="pill ${t.priority}">${prLabel(t.priority)}</span>
         ${statusPill}
         ${t.cat?`<span class="pill" style="background:${c}22; color:${c};">${esc(t.cat)}</span>`:''}
-        ${t.date?`<span style="font-size:11px;color:var(--txt-dim2)">📅 ${isoToJalaliText(t.date)}</span>`:''}
-        ${extraDlHtml}
         ${t.est?`<span style="font-size:11px;color:var(--txt-dim2)">⏱ ${t.est} دقیقه</span>`:''}
       </div>
       ${subHtml}
@@ -2673,6 +2667,8 @@ function pickRandomTask(){
   let pool = sortTasks(DB.tasks).filter(t=>!t.done && !t.inbox);
   if(f==='inprogress') pool = pool.filter(t=>(t.status||'notstarted')==='inprogress');
   else if(f==='queued') pool = pool.filter(t=>(t.status||'notstarted')==='queued');
+  else if(f==='paused') pool = pool.filter(t=>(t.status||'notstarted')==='paused');
+  else if(f==='notstarted') pool = pool.filter(t=>(t.status||'notstarted')==='notstarted');
   else if(f==='inbox') pool = [];
   else if(f==='critical') pool = pool.filter(t=>t.priority==='critical');
   else if(f==='high') pool = pool.filter(t=>t.priority==='high');
@@ -3623,7 +3619,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='10.1';
+const LP_APP_VERSION='10.2';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
