@@ -71,7 +71,7 @@
             <div class="sub" id="todayStr"></div>
           </div>
           <div class="top-actions">
-            <div class="icon-btn" onclick="openTaskModal()">➕</div>
+            <div class="icon-btn" onclick="openInboxQuickAdd()">📥</div>
           </div>
         </div>
 
@@ -97,7 +97,7 @@
         </div>
 
         <div class="dash-quick">
-          <button class="dash-q" type="button" onclick="openTaskModal()"><span class="dash-q-ic">➕</span>تسک جدید</button>
+          <button class="dash-q" type="button" onclick="openInboxQuickAdd()"><span class="dash-q-ic">📥</span>Inbox سریع</button>
           <button class="dash-q" type="button" onclick="showView('pomodoro')"><span class="dash-q-ic">🍅</span>تمرکز</button>
           <button class="dash-q" type="button" onclick="showView('habits')"><span class="dash-q-ic">🔥</span>عادت‌ها</button>
           <button class="dash-q" type="button" onclick="showView('calendar')"><span class="dash-q-ic">📅</span>تقویم</button>
@@ -167,11 +167,10 @@
       </div>
       <div class="card">
         <div class="chip-group" style="margin-bottom:12px;" id="taskFilters">
-          <div class="chip-opt sel" data-f="all">همه</div>
-          <div class="chip-opt" data-f="active">در انتظار</div>
-          <div class="chip-opt" data-f="done">انجام‌شده</div>
-          <div class="chip-opt" data-f="critical">بحرانی</div>
-          <div class="chip-opt" data-f="high">بالا</div>
+          <div class="chip-opt sel" data-f="all">📁 همه</div>
+          <div class="chip-opt" data-f="inprogress">▶️ در حال انجام</div>
+          <div class="chip-opt" data-f="queued">📥 در صف</div>
+          <div class="chip-opt" data-f="inbox">📥 Inbox</div>
         </div>
         <div class="chip-group" style="margin-bottom:16px;" id="categoryFilters"></div>
         <div id="allTasks"></div>
@@ -898,6 +897,14 @@
     </div>
   </div>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('taskModalBg')">انصراف</button><button class="btn" onclick="saveTask()">ذخیره</button></div>
+</div></div>
+
+<!-- v10.1 Inbox Quick Capture -->
+<div class="modal-bg" id="inboxQuickModalBg"><div class="modal">
+  <h2>📥 تسک سریع — Inbox</h2>
+  <p class="muted" style="font-size:12.5px; margin:6px 0 14px;">فقط عنوان رو بنویس، سریع ذخیره می‌شه. بعداً از بخش تسک‌ها کاملش کن و وارد برنامه اصلی کن.</p>
+  <div class="field"><label>عنوان تسک</label><input type="text" id="inboxTitle" placeholder="مثلاً: ایده ویدیو جدید، خرید کتاب، تماس با..."></div>
+  <div class="modal-actions"><button class="btn ghost" onclick="closeModal('inboxQuickModalBg')">انصراف</button><button class="btn" onclick="saveInboxTask()">➕ افزودن به Inbox</button></div>
 </div></div>
 
 <div class="modal-bg" id="habitModalBg"><div class="modal">
