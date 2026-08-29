@@ -236,10 +236,15 @@
       <!-- FOCUS TAB -->
       <div class="pomo-pane active" id="pomoPane-focus">
         <div class="pomo-hero">
+          <div class="pomo-session-badge" id="pomoSessionBadge">
+            <div class="pomo-session-title" id="pomoSessionTitle">🍅 دور ۱ • جلسه ۱ از ۴</div>
+            <div class="pomo-dots-row" id="pomoSessionDots"></div>
+          </div>
           <div class="pomo-mode-lbl" id="pomoModeLbl">فوکوس</div>
           <div class="pomo-circle" id="pomoCircle">
             <span id="pomoTimeTxt">25:00</span>
           </div>
+          <div class="pomo-minute-badge" id="pomoMinuteBadge">⏱️ دقیقه ۱ از ۲۵</div>
           <div class="pomo-hint" id="pomoHint">برای شروع بزن، یا چند ثانیه نگه‌دار برای فوکوس بی‌نهایت ♾️</div>
           <div class="pomo-actions" id="pomoActions">
             <button class="btn" id="pomoStartBtn" onclick="pomoQuickStart()">▶️ شروع</button>
@@ -305,10 +310,14 @@
       <!-- SETTINGS TAB -->
       <div class="pomo-pane" id="pomoPane-settings">
         <div class="card">
-          <div class="card-head"><h3>⚙️ تنظیمات پومودورو</h3></div>
+          <div class="card-head"><h3>⚙️ تنظیمات پومودورو (مدل Focus To-Do)</h3></div>
           <div class="row2">
             <div class="field"><label>مدت فوکوس (دقیقه)</label><input type="number" id="pomoSetFocus" min="1" max="180" value="25"></div>
-            <div class="field"><label>مدت استراحت (دقیقه)</label><input type="number" id="pomoSetBreak" min="1" max="60" value="5"></div>
+            <div class="field"><label>مدت استراحت کوتاه (دقیقه)</label><input type="number" id="pomoSetBreak" min="1" max="60" value="5"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>مدت استراحت طولانی (دقیقه)</label><input type="number" id="pomoSetLongBreak" min="1" max="90" value="15"></div>
+            <div class="field"><label>تعداد جلسات هر دور</label><input type="number" id="pomoSetCycleCount" min="1" max="12" value="4"></div>
           </div>
           <div class="field"><label>هدف روزانه</label>
             <div class="row2">

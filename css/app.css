@@ -537,7 +537,14 @@ html.crisis-mode body{
 /* pomodoro */
 .pomo-pane{display:none;}
 .pomo-pane.active{display:block;}
-.pomo-hero{display:flex; flex-direction:column; align-items:center; gap:14px; padding:36px 20px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);}
+.pomo-hero{display:flex; flex-direction:column; align-items:center; gap:12px; padding:30px 20px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); position:relative;}
+.pomo-session-badge{display:flex; align-items:center; justify-content:center; gap:10px; padding:6px 16px; border-radius:24px; background:var(--panel2); border:1px solid var(--line2); box-shadow:0 2px 10px rgba(0,0,0,.15); margin-bottom:2px;}
+.pomo-session-title{font-size:12.5px; font-weight:900; color:var(--txt); display:flex; align-items:center; gap:6px;}
+.pomo-dots-row{display:inline-flex; align-items:center; gap:5px; direction:ltr;}
+.pomo-dot{font-size:14px; line-height:1; display:inline-flex; align-items:center; justify-content:center; transition:transform .2s ease;}
+.pomo-dot.active{transform:scale(1.22); filter:drop-shadow(0 0 5px var(--neon));}
+.pomo-dot.done{filter:drop-shadow(0 0 2px rgba(255,84,112,.4));}
+.pomo-dot.pending{opacity:.45;}
 .pomo-mode-lbl{font-size:14px; font-weight:800; letter-spacing:.3px; color:var(--txt-dim);}
 .pomo-circle{
   width:220px; height:220px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -548,57 +555,92 @@ html.crisis-mode body{
 .pomo-circle.break-mode.running{border-color:var(--violet); box-shadow:0 0 30px rgba(139,107,255,.18);}
 .pomo-circle.infinite-mode{border-color:#ffcc33; box-shadow:0 0 34px rgba(255,204,51,.25);}
 .pomo-circle.holding{transform:scale(0.94); box-shadow:0 0 40px rgba(255,204,51,.5);}
-.pomo-hint{font-size:12px; color:var(--txt-dim2); text-align:center; max-width:280px;}
+.pomo-minute-badge{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:850; padding:4px 14px; border-radius:16px; background:rgba(0,229,255,.08); border:1px solid rgba(0,229,255,.24); color:var(--neon); margin-top:-2px;}
+html[data-theme="light"] .pomo-minute-badge{background:rgba(8,145,178,.1); border-color:rgba(8,145,178,.3); color:var(--neon);}
+.pomo-hint{font-size:12px; color:var(--txt-dim2); text-align:center; max-width:300px; line-height:1.6;}
 .pomo-actions{display:flex; gap:10px; margin-top:4px;}
 .pomo-actions .btn{min-width:120px; justify-content:center;}
-.pomo-day-chip{width:52px; text-align:center; padding:10px 4px; border-radius:12px; background:var(--bg2); border:1px solid var(--line);}
+.pomo-day-chip{width:56px; text-align:center; padding:10px 4px; border-radius:12px; background:var(--bg2); border:1px solid var(--line);}
 .pomo-day-chip .d{font-size:10.5px; color:var(--txt-dim2); margin-bottom:4px;}
 .pomo-day-chip .s{font-size:16px;}
 .pomo-day-chip.met{border-color:rgba(46,230,166,.5); background:rgba(46,230,166,.08);}
 .pomo-day-chip.missed{opacity:.55;}
 
 
-/* ===== POMODORO v7.1 ===== */
+/* ===== POMODORO v11.0 (Focus To-Do Edition) ===== */
 .pomo-v66-tools{display:grid;gap:12px;margin-top:16px;}
 .pomo-v66-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .pomo-v66-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;}
 .pomo-v66-title{font-size:13.5px;font-weight:900;margin-bottom:5px;display:flex;align-items:center;gap:7px;}
 .pomo-v66-help{font-size:11.5px;line-height:1.8;color:var(--txt-dim2);margin-bottom:10px;}
 .pomo-preset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-.pomo-preset{border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:12px;padding:10px 8px;cursor:pointer;text-align:center;font:inherit;font-size:11.5px;font-weight:800;}
+.pomo-preset{border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:12px;padding:10px 8px;cursor:pointer;text-align:center;font:inherit;font-size:11.5px;font-weight:800;transition:border-color .15s, transform .1s;}
+.pomo-preset:active{transform:scale(0.97);}
 .pomo-preset.active{border-color:var(--neon);box-shadow:0 0 0 1px color-mix(in srgb,var(--neon) 30%,transparent);}
 .pomo-preset small{display:block;color:var(--txt-dim2);font-size:10px;margin-top:3px;font-weight:700;}
 .pomo-select,.pomo-sound-select{width:100%;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:12px;padding:10px 11px;font:inherit;outline:none;}
+.pomo-sound-row{display:flex;align-items:center;gap:8px;}
+.pomo-vol-wrap{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:13px;color:var(--txt-dim2);}
+.pomo-vol-slider{width:80px;height:6px;border-radius:3px;accent-color:var(--neon);cursor:pointer;}
 .pomo-v66-mini{font-size:11px;color:var(--txt-dim2);}
 .pomo-score{font-size:20px;font-weight:950;color:var(--neon);font-family:'Consolas','JetBrains Mono',monospace;}
 .pomo-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
-.pomo-stat-mini{padding:12px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);}
-.pomo-stat-mini .n{font-size:20px;font-weight:950;font-family:'Consolas','JetBrains Mono',monospace;}
-.pomo-stat-mini .l{font-size:10.5px;color:var(--txt-dim2);margin-top:4px;font-weight:700;}
+.pomo-stat-mini{padding:12px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);text-align:center;}
+.pomo-stat-mini .n{font-size:19px;font-weight:950;font-family:'Consolas','JetBrains Mono',monospace;color:var(--txt);}
+.pomo-stat-mini .l{font-size:10.5px;color:var(--txt-dim2);margin-top:4px;font-weight:700;line-height:1.4;}
 .pomo-history-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
 .pomo-history-item:last-child{border-bottom:none;}
 .pomo-history-main{min-width:0;}
 .pomo-history-name{font-size:12.5px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pomo-history-meta{font-size:10.5px;color:var(--txt-dim2);margin-top:3px;}
 .pomo-history-score{font-size:12px;font-weight:900;color:var(--neon);white-space:nowrap;}
-.pomo-focus-overlay{position:fixed;inset:0;z-index:1000000;width:100vw;height:100dvh;box-sizing:border-box;overflow:auto;background:radial-gradient(circle at 50% 30%,rgba(0,229,255,.08),transparent 45%),var(--bg);display:none;align-items:center;justify-content:center;padding:24px;padding-bottom:max(24px,env(safe-area-inset-bottom));overscroll-behavior:contain;}
+
+/* Fullscreen Focus Overlay (Focus To-Do Inspired) */
+.pomo-focus-overlay{
+  position:fixed;inset:0;z-index:1000000;width:100vw;height:100dvh;box-sizing:border-box;overflow:auto;
+  background:radial-gradient(circle at 50% 30%,rgba(0,229,255,.09),transparent 55%),var(--bg);
+  display:none;align-items:center;justify-content:center;padding:24px;padding-bottom:max(24px,env(safe-area-inset-bottom));overscroll-behavior:contain;
+}
 html.pomo-focus-open,body.pomo-focus-open{overflow:hidden!important;}
-.pomo-focus-overlay:fullscreen{width:100vw;height:100dvh;background:radial-gradient(circle at 50% 30%,rgba(0,229,255,.08),transparent 45%),var(--bg);}
+.pomo-focus-overlay:fullscreen{width:100vw;height:100dvh;background:radial-gradient(circle at 50% 30%,rgba(0,229,255,.09),transparent 55%),var(--bg);}
 .pomo-focus-overlay.open{display:flex;}
-.pomo-focus-inner{width:min(720px,96vw);max-height:100%;overflow:auto;text-align:center;display:grid;gap:16px;align-items:center;}
-.pomo-focus-mode{font-size:13px;font-weight:850;color:var(--txt-dim);}
-.pomo-focus-time{font-size:clamp(56px,13vw,110px);line-height:1;font-weight:950;font-family:'Consolas','JetBrains Mono',monospace;letter-spacing:-4px;}
-.pomo-focus-task{font-size:14px;font-weight:800;color:var(--txt-dim);min-height:20px;}
+.pomo-focus-inner{
+  width:min(680px,96vw);max-height:100%;overflow:auto;text-align:center;display:grid;gap:14px;align-items:center;
+  background:var(--panel);border:1px solid var(--line2);border-radius:28px;padding:24px 20px;box-shadow:var(--shadow);
+}
+.pomo-focus-topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.pomo-focus-badge{padding:6px 14px;border-radius:18px;background:var(--panel2);border:1px solid var(--line);font-size:12px;font-weight:900;color:var(--txt);}
+.pomo-focus-top-actions{display:flex;gap:6px;}
+.pomo-focus-icon-btn{width:34px;height:34px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.pomo-focus-icon-btn:hover{background:var(--hover);}
+.pomo-focus-dots-row{display:flex;justify-content:center;align-items:center;gap:8px;direction:ltr;margin:-2px 0 2px;}
+.pomo-focus-circle-wrap{padding:14px 10px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);display:grid;gap:6px;place-items:center;}
+.pomo-focus-mode{font-size:13.5px;font-weight:900;color:var(--txt-dim);}
+.pomo-focus-time{font-size:clamp(56px,13vw,100px);line-height:1;font-weight:950;font-family:'Consolas','JetBrains Mono',monospace;letter-spacing:-3px;color:var(--txt);}
+.pomo-focus-minute-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:850;padding:4px 14px;border-radius:14px;background:rgba(0,229,255,.09);border:1px solid rgba(0,229,255,.25);color:var(--neon);}
+.pomo-focus-task-card{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 16px;border-radius:14px;background:var(--bg2);border:1px solid var(--line);max-width:90%;margin:0 auto;}
+.pomo-focus-task-name{font-size:13px;font-weight:850;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pomo-focus-progress{height:10px;border-radius:20px;background:var(--panel2);overflow:hidden;border:1px solid var(--line);}
 .pomo-focus-progress>div{height:100%;width:0;background:var(--grad);transition:width .4s ease;}
-.pomo-focus-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;}
-.pomo-result-modal,.pomo-break-modal{position:fixed;inset:0;z-index:99991;background:rgba(4,6,14,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px;}
+.pomo-focus-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+.pomo-focus-sound-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 14px;border-radius:16px;background:var(--panel2);border:1px solid var(--line);font-size:12px;color:var(--txt-dim2);flex-wrap:wrap;}
+.pomo-focus-sound-sel{border:1px solid var(--line);background:var(--bg2);color:var(--txt);border-radius:10px;padding:6px 10px;font:inherit;font-size:11.5px;outline:none;}
+
+/* Result and Break Modals (z-index higher than focus overlay) */
+.pomo-result-modal,.pomo-break-modal{position:fixed;inset:0;z-index:10000050;background:rgba(4,6,14,.76);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px;}
 .pomo-result-modal.open,.pomo-break-modal.open{display:flex;}
-.pomo-result-box,.pomo-break-box{width:min(470px,94vw);background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:20px;}
-.pomo-result-score{text-align:center;font-size:46px;font-weight:950;color:var(--neon);font-family:'Consolas','JetBrains Mono',monospace;}
+.pomo-result-box,.pomo-break-box{width:min(470px,94vw);background:var(--panel);border:1px solid var(--line2);border-radius:22px;box-shadow:var(--shadow);padding:22px;}
+.pomo-result-score{text-align:center;font-size:48px;font-weight:950;color:var(--neon);font-family:'Consolas','JetBrains Mono',monospace;margin:4px 0;}
 .pomo-break-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 16px;}
 .pomo-break-tip{padding:10px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);font-size:11.5px;font-weight:750;text-align:center;}
-@media(max-width:700px){.pomo-preset-grid{grid-template-columns:1fr 1fr}.pomo-stat-grid{grid-template-columns:1fr 1fr}.pomo-v66-row{grid-template-columns:1fr}.pomo-break-list{grid-template-columns:1fr 1fr;}}
+
+@media(max-width:700px){
+  .pomo-preset-grid{grid-template-columns:1fr 1fr;}
+  .pomo-stat-grid{grid-template-columns:1fr 1fr;}
+  .pomo-v66-row{grid-template-columns:1fr;}
+  .pomo-break-list{grid-template-columns:1fr 1fr;}
+  .pomo-focus-inner{padding:18px 14px;border-radius:20px;}
+}
 
 /* ===== LIFE CITY ===== */
 @property --city-sky-top{syntax:'<color>'; inherits:true; initial-value:#5fb3ea;}
