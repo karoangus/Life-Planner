@@ -1385,18 +1385,22 @@ function renderPomoUI(){
 }
 
 function fillPomoSettingsForm(){
-  document.getElementById('pomoSetFocus').value = DB.pomodoro.settings.focusMin;
-  document.getElementById('pomoSetBreak').value = DB.pomodoro.settings.breakMin;
-  document.getElementById('pomoSetGoalH').value = Math.floor(DB.pomodoro.settings.goalMinutes/60);
-  document.getElementById('pomoSetGoalM').value = DB.pomodoro.settings.goalMinutes%60;
+  document.getElementById('pomoSetFocus').value = DB.pomodoro.settings.focusMin || 25;
+  document.getElementById('pomoSetBreak').value = DB.pomodoro.settings.breakMin || 5;
+  if(document.getElementById('pomoSetLongBreak')) document.getElementById('pomoSetLongBreak').value = DB.pomodoro.settings.longBreakMin || 15;
+  if(document.getElementById('pomoSetCycleCount')) document.getElementById('pomoSetCycleCount').value = DB.pomodoro.settings.cycleCount || 4;
+  document.getElementById('pomoSetGoalH').value = Math.floor((DB.pomodoro.settings.goalMinutes||0)/60);
+  document.getElementById('pomoSetGoalM').value = (DB.pomodoro.settings.goalMinutes||0)%60;
   renderPomoNotifyStatus();
 }
 function savePomoSettings(){
   const f = parseInt(document.getElementById('pomoSetFocus').value) || 25;
   const b = parseInt(document.getElementById('pomoSetBreak').value) || 5;
+  const lb = parseInt(document.getElementById('pomoSetLongBreak')?.value) || (DB.pomodoro.settings.longBreakMin || 15);
+  const cy = parseInt(document.getElementById('pomoSetCycleCount')?.value) || (DB.pomodoro.settings.cycleCount || 4);
   const gh = parseInt(document.getElementById('pomoSetGoalH').value) || 0;
   const gm = parseInt(document.getElementById('pomoSetGoalM').value) || 0;
-  DB.pomodoro.settings = { focusMin:Math.max(1,f), breakMin:Math.max(1,b), goalMinutes:Math.max(0, gh*60+gm) };
+  DB.pomodoro.settings = { focusMin:Math.max(1,f), breakMin:Math.max(1,b), longBreakMin:Math.max(1,lb), cycleCount:Math.max(1,cy), goalMinutes:Math.max(0, gh*60+gm) };
   save();
   toast('✅ تنظیمات پومودورو ذخیره شد');
 }
@@ -1459,37 +1463,58 @@ function renderManualPomoData(){
   const d=document.getElementById('pomoManualDate');if(d&&!d.value)d.value=todayISO();const date=d?.value||todayISO();
   renderManualTaskOptions();
   const f=document.getElementById('pomoManualTodayFocus'),b=document.getElementById('pomoManualTodayBreak');
-  if(f)f.textContent=getPomoTotal(date,'focus')+'m';if(b)b.textContent=getPomoTotal(date,'break')+'m';
+  const totalF = getPomoTotal(date,'focus'), totalB = getPomoTotal(date,'break');
+  if(f) f.textContent = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalF) : (totalF+'m');
+  if(b) b.textContent = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalB) : (totalB+'m');
   const list=document.getElementById('pomoManualList');if(!list)return;
   const arr=(DB.pomodoro.manualData||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  list.innerHTML=arr.length?arr.slice(0,30).map(x=>{ const taskName=x.taskId?((DB.tasks||[]).find(t=>String(t.id)===String(x.taskId))?.title||'تسک'):''; return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);"><div><div style="font-weight:800;">${x.kind==='focus'?'📚':'☕'} ${x.minutes} دقیقه</div><div class="muted" style="font-size:11.5px;">${x.date}${taskName?' • 🎯 '+esc(taskName):''}${x.note?' • '+esc(x.note):''}</div></div><span class="muted" style="font-size:11px;">همگام شد</span></div>`; }).join(''):'<div class="muted" style="padding:10px 0;">هنوز ثبت دستی نداری.</div>';
+  list.innerHTML=arr.length?arr.slice(0,30).map(x=>{ const taskName=x.taskId?((DB.tasks||[]).find(t=>String(t.id)===String(x.taskId))?.title||'تسک'):''; const durFmt = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(x.minutes) : `${x.minutes} دقیقه`; return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);"><div><div style="font-weight:800;">${x.kind==='focus'?'📚':'☕'} ${durFmt} (${x.minutes}m)</div><div class="muted" style="font-size:11.5px;">${x.date}${taskName?' • 🎯 '+esc(taskName):''}${x.note?' • '+esc(x.note):''}</div></div><span class="muted" style="font-size:11px;">همگام شد</span></div>`; }).join(''):'<div class="muted" style="padding:10px 0;">هنوز ثبت دستی نداری.</div>';
 }
 function renderPomoStats(){
   const d = todayISO();
   const today = DB.pomodoro.history[d] || {focus:0, break:0};
   const totalFocus=getPomoTotal(d,'focus'), totalBreak=getPomoTotal(d,'break');
-  document.getElementById('pomoTodayFocus').textContent = totalFocus+'m';
-  document.getElementById('pomoTodayBreak').textContent = totalBreak+'m';
+  const fmtFocus = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalFocus) : (totalFocus+'m');
+  const fmtBreak = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalBreak) : (totalBreak+'m');
+  const elF = document.getElementById('pomoTodayFocus');
+  const elB = document.getElementById('pomoTodayBreak');
+  if(elF) elF.textContent = totalFocus>=60 ? `${fmtFocus} (${totalFocus}m)` : fmtFocus;
+  if(elB) elB.textContent = totalBreak>=60 ? `${fmtBreak} (${totalBreak}m)` : fmtBreak;
+
   const goal = DB.pomodoro.settings.goalMinutes||0;
   const pct = goal ? Math.min(100, (totalFocus/goal)*100) : 0;
-  document.getElementById('pomoGoalBar').style.width = pct+'%';
-  document.getElementById('pomoGoalTxt').textContent = `${totalFocus} / ${goal} دقیقه`;
+  const bar = document.getElementById('pomoGoalBar');
+  if(bar) bar.style.width = pct+'%';
+  const goalTxt = document.getElementById('pomoGoalTxt');
+  if(goalTxt){
+    const fmtGoal = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(goal) : `${goal} دقیقه`;
+    goalTxt.textContent = goal ? `${fmtFocus} از ${fmtGoal}` : `${fmtFocus}`;
+  }
   const statusEl = document.getElementById('pomoGoalStatus');
-  if(!goal){ statusEl.textContent = 'هنوز هدف روزانه‌ای توی تنظیمات مشخص نکردی'; statusEl.style.color='var(--txt-dim2)'; }
-  else if(totalFocus>=goal){ statusEl.textContent='✅ هدف امروز رو کامل کردی، آفرین!'; statusEl.style.color='var(--ok)'; }
-  else { statusEl.textContent = `${Math.max(0,goal-totalFocus)} دقیقه تا رسیدن به هدف امروز مونده`; statusEl.style.color='var(--warn)'; }
+  if(statusEl){
+    if(!goal){ statusEl.textContent = 'هنوز هدف روزانه‌ای توی تنظیمات مشخص نکردی'; statusEl.style.color='var(--txt-dim2)'; }
+    else if(totalFocus>=goal){ statusEl.textContent='✅ هدف امروز رو کامل کردی، آفرین!'; statusEl.style.color='var(--ok)'; }
+    else {
+      const remMins = Math.max(0, goal-totalFocus);
+      const remFmt = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(remMins) : `${remMins} دقیقه`;
+      statusEl.textContent = `${remFmt} تا رسیدن به هدف امروز مونده`;
+      statusEl.style.color='var(--warn)';
+    }
+  }
 
   const days = last7();
   const dayLbl = days.map(dd=>new Date(dd).toLocaleDateString('fa-IR',{weekday:'short'}));
   const wc = document.getElementById('pomoWeekChecklist');
-  wc.innerHTML = days.map((dd,i)=>{
-    const rec = DB.pomodoro.history[dd] || {focus:0};
-    const focusTotal=getPomoTotal(dd,'focus');
-    const met = goal>0 && focusTotal>=goal;
-    const cls = goal>0 ? (met?'met':'missed') : '';
-    const sym = goal>0 ? (met?'✅':'▫️') : '⏺️';
-    return `<div class="pomo-day-chip ${cls}"><div class="d">${dayLbl[i]}</div><div class="s">${sym}</div><div class="d num">${focusTotal}m</div></div>`;
-  }).join('');
+  if(wc){
+    wc.innerHTML = days.map((dd,i)=>{
+      const focusTotal=getPomoTotal(dd,'focus');
+      const met = goal>0 && focusTotal>=goal;
+      const cls = goal>0 ? (met?'met':'missed') : '';
+      const sym = goal>0 ? (met?'✅':'▫️') : '⏺️';
+      const durStr = focusTotal>=60 ? (typeof formatPomoHours==='function'?formatPomoHours(focusTotal):`${Math.round(focusTotal/60*10)/10}h`) : `${focusTotal}m`;
+      return `<div class="pomo-day-chip ${cls}" title="${typeof formatPomoTimeFa==='function'?formatPomoTimeFa(focusTotal):focusTotal+' دقیقه'}"><div class="d">${dayLbl[i]}</div><div class="s">${sym}</div><div class="d num">${durStr}</div></div>`;
+    }).join('');
+  }
 }
 function renderPomoChart(){
   const canvas = document.getElementById('chartPomo');
@@ -3619,7 +3644,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='10.2';
+const LP_APP_VERSION='11.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
