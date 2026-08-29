@@ -6,7 +6,7 @@
    Self-contained IIFE — does not add unnecessary globals.
    ============================================================ */
 
-/* ============ POMODORO v11.0 (Focus To-Do Edition) ============ */
+/* ============ POMODORO v11.1 (Focus To-Do Edition) ============ */
 (function(){
   const PRESETS = [
     { id:'classic', label:'کلاسیک', focus:25, break:5, icon:'🍅' },
@@ -17,14 +17,19 @@
 
   const SOUNDS = [
     { id:'off',    label:'🔇 خاموش',            icon:'🔇' },
-    { id:'rain',   label:'🌧️ باران و رعد آرام',  icon:'🌧️' },
-    { id:'forest', label:'🌲 جنگل و پرندگان',    icon:'🌲' },
-    { id:'cafe',   label:'☕ کافه دنج',          icon:'☕' },
+    { id:'rain',   label:'🌧️ باران و رعد آرام',  icon:'🌧️', file:'audio/rain.mp3' },
+    { id:'forest', label:'🌲 جنگل و پرندگان',    icon:'🌲', file:'audio/forest.mp3' },
+    { id:'cafe',   label:'☕ کافه دنج',          icon:'☕', file:'audio/cafe.mp3' },
     { id:'ocean',  label:'🌊 امواج دریا',        icon:'🌊' },
-    { id:'fire',   label:'🔥 آتش و شومینه',      icon:'🔥' },
+    { id:'fire',   label:'🔥 آتش و شومینه',      icon:'🔥', file:'audio/fire.mp3' },
     { id:'clock',  label:'⏰ تیک‌تاک ساعت',      icon:'⏰' },
     { id:'space',  label:'🌌 فضای تمرکز عمیق',   icon:'🌌' }
   ];
+  // Lookup so a sound id can resolve to its mp3 file (or undefined → procedural)
+  function getSoundFile(id){
+    const s = SOUNDS.find(x => x.id === id);
+    return s && s.file ? s.file : null;
+  }
 
   function ensure(){
     if(!DB.pomodoro || typeof DB.pomodoro!=='object'){
@@ -100,16 +105,68 @@
 
   /* -------------------------------------------------------------
      HIGH-QUALITY PROCEDURAL WEB AUDIO ENGINE (Realistic & 100% Offline)
+     Plus v11.1: real MP3 ambient sounds for the 4 user-provided files
+     (rain / forest / cafe / fire). Other kinds stay procedural.
   ------------------------------------------------------------- */
   let audio = null;
   let audioKind = 'off';
   let audioIntervals = [];
+  let fileAudio = null;   // v11.1: HTMLAudioElement used for real MP3 loops
 
   function safeDisconnect(node){ try{ node?.disconnect?.(); }catch(_){} }
+
+  function stopFileAudio(){
+    if(!fileAudio) return;
+    try{
+      fileAudio.pause();
+      fileAudio.currentTime = 0;
+      fileAudio.removeAttribute('src');
+      fileAudio.load();
+    }catch(_){}
+    fileAudio = null;
+  }
+
+  function setFileAudioVolume(v){
+    if(!fileAudio) return;
+    try{ fileAudio.volume = Math.max(0, Math.min(1, v)); }catch(_){}
+  }
+
+  // v11.1: start a real MP3 as a seamless looping ambient. Returns true on success.
+  async function startFileSound(src){
+    stopFileAudio();
+    try{
+      const el = new Audio(src);
+      el.preload = 'auto';
+      el.loop = true;
+      el.crossOrigin = 'anonymous';
+      // use 0 first then ramp up to avoid a click on first frame
+      el.volume = 0;
+      fileAudio = el;
+      try{ await el.play(); }catch(_){
+        // autoplay blocked: keep element ready; will start on next user gesture
+      }
+      // ramp volume to the user-chosen value
+      const target = Math.max(0, Math.min(1, getSoundVolume()));
+      const start = Date.now();
+      const dur = 350;
+      const ramp = setInterval(()=>{
+        if(!fileAudio) { clearInterval(ramp); return; }
+        const t = Math.min(1, (Date.now() - start) / dur);
+        try{ fileAudio.volume = target * t; }catch(_){}
+        if(t >= 1) clearInterval(ramp);
+      }, 40);
+      return true;
+    }catch(_){
+      fileAudio = null;
+      return false;
+    }
+  }
 
   function stopSound(){
     audioIntervals.forEach(id => { try{ clearInterval(id); }catch(_){} });
     audioIntervals = [];
+    // Stop the MP3-based ambient if one is playing
+    stopFileAudio();
     try{
       if(audio){
         if(audio.gain && audio.ctx && audio.ctx.state !== 'closed'){
@@ -193,6 +250,13 @@
   async function startSound(kind){
     stopSound();
     if(!kind || kind === 'off') return false;
+    // v11.1: real MP3 files take priority over the procedural engine
+    const fileSrc = getSoundFile(kind);
+    if(fileSrc){
+      const ok = await startFileSound(fileSrc);
+      if(ok){ audioKind = kind; return true; }
+      // fall through to procedural fallback if MP3 fails to start
+    }
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if(!Ctx) return false;
@@ -405,6 +469,8 @@
     const v = Math.max(0, Math.min(1, Number(val)));
     DB.pomodoro.soundVolume = v;
     save();
+    // v11.1: keep the MP3 ambient at the same audible level as the procedural mix
+    if(fileAudio){ setFileAudioVolume(v); }
     if(audio && audio.gain && audio.ctx){
       try {
         audio.gain.gain.setTargetAtTime(Math.max(0.0001, v * 0.18), audio.ctx.currentTime, 0.08);
@@ -414,6 +480,10 @@
   window.setPomoSoundVolume = setSoundVolume;
 
   async function restartSoundFromGesture(kind){
+    // v11.1: for MP3 ambients, a user gesture lets us actually call .play()
+    if(kind && getSoundFile(kind) && fileAudio && fileAudio.paused){
+      try{ await fileAudio.play(); }catch(_){}
+    }
     const ok = await startSound(kind);
     if(!ok && kind !== 'off') toast('⚠️ صدای محیط در این مرورگر در دسترس نیست');
     return ok;
@@ -1283,6 +1353,17 @@
     renderMainSessionBadge();
     renderFocusOverlay();
   };
+
+  /* v11.1: keep the fullscreen Focus Mode timer ticking once per second.
+     The core.js setInterval captures the function reference at definition
+     time, so simply overriding window.tickPomo there does not propagate.
+     We add a self-contained tick here that runs only while the Focus Mode
+     overlay is open, so the visible countdown stays in sync. */
+  setInterval(()=>{
+    const el = document.getElementById('pomo66FocusOverlay');
+    if(!el || !el.classList.contains('open')) return;
+    renderFocusOverlay();
+  }, 500);
 
   try {
     if(typeof migrateLegacyManualPomoData === 'function') migrateLegacyManualPomoData();
