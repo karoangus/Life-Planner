@@ -56,11 +56,12 @@ function loadStore(){
   if(typeof db.history !== 'object' || Array.isArray(db.history)) db.history = {};
   if(typeof db.xp    !== 'number') db.xp    = 0;
   if(typeof db.level !== 'number' || db.level < 1) db.level = 1;
-  // ensure each task has extraDeadlines, subtasks and a workflow status
+  // ensure each task has extraDeadlines, subtasks, workflow status and inbox flag
   db.tasks.forEach(t=>{
     if(!Array.isArray(t.extraDeadlines)) t.extraDeadlines=[];
     if(!Array.isArray(t.subtasks)) t.subtasks=[];
     if(!t.status) t.status='notstarted';
+    if(typeof t.inbox !== 'boolean') t.inbox = false;
   });
   return db;
 }
@@ -462,7 +463,7 @@ function renderProfile(){
 /* ============ PERFECT DAY ============ */
 function getTodayCriteria(){
   const d = todayISO();
-  const criticalDone = DB.tasks.some(t=> t.priority==='critical' && t.done && t.doneDate===d);
+  const criticalDone = DB.tasks.some(t=>!t.inbox && t.priority==='critical' && t.done && t.doneDate===d);
   const questsToday = (DB.stats.questsCompletedByDate && DB.stats.questsCompletedByDate[d]) || 0;
   const questsDone = questsToday >= 3;
   const habitDone = DB.habits.some(h=> h.log[d]);
@@ -529,7 +530,7 @@ function isWeeklyPerfect(){
   const sat = new Date(now); sat.setDate(now.getDate()-todayIdx);
   const fri = new Date(sat); fri.setDate(sat.getDate()+6);
   const satISO = dateToLocalISO(sat), friISO = dateToLocalISO(fri);
-  const weekTasks = DB.tasks.filter(t=> t.date && t.date>=satISO && t.date<=friISO);
+  const weekTasks = DB.tasks.filter(t=>!t.inbox && t.date && t.date>=satISO && t.date<=friISO);
   return weekTasks.length>0 && weekTasks.every(t=>t.done);
 }
 function getCityAchievements(){
@@ -1403,7 +1404,7 @@ function savePomoSettings(){
 function renderManualTaskOptions(){
   const sel=document.getElementById('pomoManualTask'); if(!sel) return;
   const cur=sel.value;
-  const tasks=(DB.tasks||[]).filter(t=>!t.done);
+  const tasks=(DB.tasks||[]).filter(t=>!t.inbox && !t.done);
   sel.innerHTML='<option value="">بدون تسک</option>'+tasks.map(t=>`<option value="${esc(t.id)}">${esc(t.title||t.text||'تسک')}</option>`).join('');
   if(tasks.some(t=>String(t.id)===String(cur))) sel.value=cur;
 }
@@ -1552,7 +1553,7 @@ function pomoHoldCancel(){
 const CRISIS_DURATION_MS = 60*60*1000; // 60 minutes
 const CRISIS_COOLDOWN_MS = 2*60*60*1000; // don't re-trigger for 2h after resolving
 function countCriticalOpen(){
-  return DB.tasks.filter(t=>!t.done && t.priority==='critical').length;
+  return DB.tasks.filter(t=>!t.inbox && !t.done && t.priority==='critical').length;
 }
 function applyCrisisTheme(on){
   document.documentElement.classList.toggle('crisis-mode', on);
@@ -1760,7 +1761,7 @@ function startEditBoss(){
   openModal('bossSetupModalBg');
 }
 function renderBossTaskPicker(){
-  const list = DB.tasks.filter(t=>!t.done || bossSetupSelected.includes(t.id));
+  const list = DB.tasks.filter(t=>(!t.inbox) && (!t.done || bossSetupSelected.includes(t.id)));
   const el = document.getElementById('bossTaskPicker');
   if(!list.length){
     el.innerHTML = `<div class="empty" style="padding:16px;">تسک انجام‌نشده‌ای نداری — اول چندتا تسک بساز</div>`;
@@ -2366,12 +2367,13 @@ function saveTask(){
     title, cat: document.getElementById('tCat').value.trim(),
     date: document.getElementById('tDate').value, priority, status,
     est: document.getElementById('tEst').value, note: document.getElementById('tNote').value.trim(),
-    extraDeadlines, subtasks
+    extraDeadlines, subtasks, inbox:false
   };
   if(editingTaskId){
     const existing = DB.tasks.find(x=>x.id===editingTaskId);
     if(!existing){ toast('⚠️ تسک یافت نشد'); closeModal('taskModalBg'); return; }
     Object.assign(existing, data);
+    existing.inbox = false;
     // keep a completed task consistent: a done task must have all subtasks done
     if(existing.done) (existing.subtasks||[]).forEach(s=>{ s.done = true; });
   } else {
@@ -2379,6 +2381,43 @@ function saveTask(){
   }
   closeModal('taskModalBg'); save(); toast('✅ تسک ذخیره شد');
   checkCriticalCrisis();
+}
+/* ============ INBOX QUICK CAPTURE (v10.1) ============ */
+function openInboxQuickAdd(){
+  const input = document.getElementById('inboxTitle');
+  if(input) input.value='';
+  openModal('inboxQuickModalBg');
+  setTimeout(()=>{ input?.focus(); }, 120);
+}
+function saveInboxTask(){
+  const input = document.getElementById('inboxTitle');
+  const title = (input?.value||'').trim();
+  if(!title){ toast('⚠️ عنوان تسک رو بنویس'); return; }
+  DB.tasks.push({
+    id:uid(),
+    title,
+    cat:'',
+    date:'',
+    priority:'medium',
+    status:'notstarted',
+    est:'',
+    note:'',
+    extraDeadlines:[],
+    subtasks:[],
+    inbox:true,
+    done:false,
+    created:todayISO()
+  });
+  closeModal('inboxQuickModalBg');
+  save();
+  toast('📥 به Inbox اضافه شد — بعداً از بخش تسک‌ها کاملش کن');
+}
+function openInboxTaskFromAction(){
+  const id = window.__taskActionId;
+  if(!id) return;
+  closeModal('taskActionModalBg');
+  window.__taskActionId = null;
+  openTaskModal(id);
 }
 function applyTaskCompletion(t){
   t.doneDate = todayISO();
@@ -2470,13 +2509,16 @@ function taskRow(t){
   const extraDlHtml = extraDls.length
     ? extraDls.map(d=>`<span style="font-size:10.5px;color:var(--warn);background:rgba(255,181,69,.1);padding:1px 6px;border-radius:6px;border:1px solid rgba(255,181,69,.3);">⚑ ${isoToJalaliText(d)}</span>`).join('')
     : '';
-  const statusPill = !t.done ? `<span class="pill st-${esc(t.status||'notstarted')}">${statusIcon(t.status)} ${statusLabel(t.status)}</span>` : '';
+  const isInbox = !!t.inbox;
+  const inboxPill = isInbox ? `<span class="pill inbox-pill">📥 Inbox</span>` : '';
+  const statusPill = !t.done && !isInbox ? `<span class="pill st-${esc(t.status||'notstarted')}">${statusIcon(t.status)} ${statusLabel(t.status)}</span>` : '';
   const subHtml = subtaskProgressHtml(t);
-  return `<div class="task-row">
+  return `<div class="task-row ${isInbox?'inbox-row':''}">
     <div class="chk ${t.done?'done':''}" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
     <div class="task-body" onclick="openTaskDetails('${t.id}')">
       <div class="task-title ${t.done?'done':''}">${esc(t.title)}</div>
       <div class="task-meta">
+        ${inboxPill}
         <span class="pill ${t.priority}">${prLabel(t.priority)}</span>
         ${statusPill}
         ${t.cat?`<span class="pill" style="background:${c}22; color:${c};">${esc(t.cat)}</span>`:''}
@@ -2495,18 +2537,30 @@ function esc(s){ return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':
 /* ============ TASK DETAILS MENU (v10) ============ */
 window.__taskActionId = null;
 function taskRewardSummary(t){
-  if(t.done) return '✅ این تسک انجام شده و پاداشش گرفته شده.';
-  const base = t.priority==='critical'?25:t.priority==='high'?18:t.priority==='medium'?12:8;
+  if(t.inbox){
+    return `<div class="reward-grid"><div class="reward-item reward-inbox"><div class="reward-ic">📥</div><div class="reward-info"><div class="reward-lbl">Inbox</div><div class="reward-val">این تسک هنوز در صندوق ورودیه — ویرایش کن تا وارد برنامه بشه</div></div></div></div>`;
+  }
+  if(t.done){
+    return `<div class="reward-grid"><div class="reward-item reward-done"><div class="reward-ic">✅</div><div class="reward-info"><div class="reward-lbl">انجام شده</div><div class="reward-val">این تسک انجام شده و پاداشش دریافت شده</div></div></div></div>`;
+  }
+  const baseMap = {critical:25, high:18, medium:12, low:8};
+  const base = baseMap[t.priority]||12;
   const critBonus = t.priority==='critical' ? 5*(DB.skillTiers.criticalBonus||0) : 0;
-  let amount = base + critBonus;
   const boosted = DB.xpBoost && Date.now() < (DB.xpBoost.activeUntil||0);
-  const shown = boosted ? amount*2 : amount;
-  const parts = [`⚡ <b class="num">+${shown} XP</b>`];
-  if(boosted) parts.push('×۲ بوست فعال');
-  parts.push('✅ +۱ تسک انجام‌شده');
+  const total = base + critBonus;
+  const shown = boosted ? total*2 : total;
+  let html = '<div class="reward-grid">';
+  html += `<div class="reward-item"><div class="reward-ic">⚡</div><div class="reward-info"><div class="reward-lbl">پاداش اصلی</div><div class="reward-val num">+${shown} XP${boosted?` <span class="reward-boost">×۲ بوست فعال (پایه ${total})</span>`:''}</div><div class="reward-sub">پایه ${base} XP${critBonus?` + ${critBonus} بونوس بحرانی`:''}</div></div></div>`;
+  if(critBonus){
+    html += `<div class="reward-item"><div class="reward-ic">🔥</div><div class="reward-info"><div class="reward-lbl">بونوس قاتل بحران</div><div class="reward-val num">+${critBonus} XP</div><div class="reward-sub">از مهارت 🌳 قاتل بحران</div></div></div>`;
+  }
+  html += `<div class="reward-item"><div class="reward-ic">✅</div><div class="reward-info"><div class="reward-lbl">پیشرفت</div><div class="reward-val">+۱ تسک انجام‌شده</div><div class="reward-sub">آمار روزانه و Perfect Day</div></div></div>`;
   const b = DB.boss.active;
-  if(b && b.taskIds.includes(t.id)) parts.push('⚔️ ضربه به باس هفتگی');
-  return parts.join(' · ');
+  if(b && b.taskIds.includes(t.id)){
+    html += `<div class="reward-item"><div class="reward-ic">⚔️</div><div class="reward-info"><div class="reward-lbl">باس هفتگی</div><div class="reward-val">ضربه به «${esc(b.name)}»</div><div class="reward-sub">HP باس کم می‌شود</div></div></div>`;
+  }
+  html += '</div>';
+  return html;
 }
 function openTaskDetails(id){
   const t = DB.tasks.find(x=>x.id===id);
@@ -2524,10 +2578,12 @@ function renderTaskActionDetails(){
   const subs = t.subtasks||[];
   const doneSubs = subs.filter(s=>s.done).length;
   const pct = subs.length ? Math.round(doneSubs/subs.length*100) : 0;
+  const isInbox = !!t.inbox;
 
   const pills = [
+    ...(isInbox?[`<span class="pill inbox-pill">📥 Inbox</span>`]:[]),
     `<span class="pill ${t.priority}">${prLabel(t.priority)}</span>`,
-    ...(t.done?[`<span class="pill done-label">✓ انجام شده</span>`]:[`<span class="pill st-${esc(t.status||'notstarted')}">${statusIcon(t.status)} ${statusLabel(t.status)}</span>`]),
+    ...(t.done?[`<span class="pill done-label">✓ انجام شده</span>`]: isInbox ? [] : [`<span class="pill st-${esc(t.status||'notstarted')}">${statusIcon(t.status)} ${statusLabel(t.status)}</span>`]),
     ...(t.cat?[`<span class="pill" style="background:${c}22; color:${c};">${esc(t.cat)}</span>`]:[])
   ].join('');
 
@@ -2535,12 +2591,16 @@ function renderTaskActionDetails(){
   if(t.date) dates.push(`📅 ${isoToJalaliText(t.date)}`);
   (t.extraDeadlines||[]).filter(Boolean).forEach(d=>dates.push(`⚑ ${isoToJalaliText(d)}`));
   const infoLines = [];
-  infoLines.push(dates.length ? dates.join(' · ') : '🗓️ بدون ددلاین');
-  infoLines.push(t.est ? `⏱ ${t.est} دقیقه` : '⏱ بدون زمان تخمینی');
+  if(isInbox){
+    infoLines.push('📥 این تسک در Inbox ذخیره شده — فقط عنوان دارد. با «ویرایش و تکمیل» آن را به برنامه اصلی اضافه کن.');
+  } else {
+    infoLines.push(dates.length ? dates.join(' · ') : '🗓️ بدون ددلاین');
+    infoLines.push(t.est ? `⏱ ${t.est} دقیقه` : '⏱ بدون زمان تخمینی');
+  }
   if(t.note) infoLines.push(`📝 ${esc(t.note)}`);
   if(t.created) infoLines.push(`🕓 ساخته‌شده: ${isoToJalaliText(t.created)}`);
 
-  const statusChanger = t.done ? '' : `
+  const statusChanger = (t.done || isInbox) ? '' : `
     <div class="task-action-status">
       <div class="task-action-lbl">🔄 وضعیت تسک</div>
       <div class="task-action-status-btns">
@@ -2553,7 +2613,7 @@ function renderTaskActionDetails(){
         <div class="task-action-lbl">🧩 زیرتسک‌ها — <span class="num">${doneSubs}/${subs.length} · ${pct}٪</span></div>
         ${subs.map(s=>`<div class="subtask-item ${s.done?'done':''}" onclick="toggleSubtask('${t.id}','${s.id}')"><div class="subtask-check">${s.done?'✓':''}</div><span class="subtask-item-title">${esc(s.title)}</span></div>`).join('')}
       </div>`
-    : `<div class="subtask-list-empty">🧩 زیرتسکی ندارد — از «ویرایش» می‌توانی چند زیرتسک بسازی.</div>`;
+    : isInbox ? `<div class="subtask-list-empty">📥 Inbox — بعداً با ویرایش، جزئیات، تاریخ و زیرتسک اضافه کن.</div>` : `<div class="subtask-list-empty">🧩 زیرتسکی ندارد — از «ویرایش» می‌توانی چند زیرتسک بسازی.</div>`;
 
   document.getElementById('taskActionDetails').innerHTML = `
     <div class="task-action-pills">${pills}</div>
@@ -2564,9 +2624,18 @@ function renderTaskActionDetails(){
 
   const toggleBtn = document.getElementById('taskActionToggleBtn');
   if(toggleBtn){
-    toggleBtn.innerHTML = t.done ? '↩️ برگردوندن به حالت انجام‌نشده' : '✅ انجام شد!';
-    toggleBtn.classList.toggle('ghost', t.done);
+    if(isInbox){
+      toggleBtn.innerHTML = '✏️ ویرایش و تکمیل تسک';
+      toggleBtn.classList.remove('ghost');
+      toggleBtn.onclick = ()=>{ openInboxTaskFromAction(); };
+    } else {
+      toggleBtn.innerHTML = t.done ? '↩️ برگردوندن به حالت انجام‌نشده' : '✅ انجام شد!';
+      toggleBtn.classList.toggle('ghost', t.done);
+      toggleBtn.onclick = ()=>{ toggleTaskFromAction(); };
+    }
   }
+  const editBtn = document.querySelector('#taskActionModalBg .btn.ghost');
+  // keep default edit handler, but for inbox we already changed main btn
 }
 function toggleTaskFromAction(){
   const id = window.__taskActionId;
@@ -2601,13 +2670,16 @@ function setTaskStatus(id, status){
 }
 function pickRandomTask(){
   const f = document.querySelector('#taskFilters .sel')?.dataset.f || 'all';
-  let pool = sortTasks(DB.tasks).filter(t=>!t.done);
-  if(f==='critical') pool = pool.filter(t=>t.priority==='critical');
+  let pool = sortTasks(DB.tasks).filter(t=>!t.done && !t.inbox);
+  if(f==='inprogress') pool = pool.filter(t=>(t.status||'notstarted')==='inprogress');
+  else if(f==='queued') pool = pool.filter(t=>(t.status||'notstarted')==='queued');
+  else if(f==='inbox') pool = [];
+  else if(f==='critical') pool = pool.filter(t=>t.priority==='critical');
   else if(f==='high') pool = pool.filter(t=>t.priority==='high');
   else if(f==='done') pool = [];
-  if(currentCatFilter) pool = pool.filter(t=>(t.cat||'').trim()===currentCatFilter);
+  if(currentCatFilter && f!=='inbox') pool = pool.filter(t=>(t.cat||'').trim()===currentCatFilter);
   if(!pool.length){
-    toast(f==='done' ? '🎲 توی «انجام‌شده» تسک بازی وجود نداره — یک فیلتر دیگه انتخاب کن' : '🎲 تسک انجام‌نشده‌ای در این فیلتر پیدا نشد');
+    toast(f==='done' || f==='inbox' ? '🎲 توی این فیلتر تسک بازی وجود نداره — یک فیلتر دیگه انتخاب کن' : '🎲 تسک انجام‌نشده‌ای در این فیلتر پیدا نشد');
     return;
   }
   const chosen = pool[Math.floor(Math.random()*pool.length)];
@@ -2619,8 +2691,8 @@ let currentStatusFilter = 'all';
 let currentCatFilter = null;
 function renderCategoryFolders(){
   const el = document.getElementById('categoryFilters');
-  // folders only reflect categories that still have active (not done) tasks
-  const cats = [...new Set(DB.tasks.filter(t=>!t.done && t.cat && t.cat.trim()).map(t=>t.cat.trim()))];
+  // folders only reflect categories that still have active (not done, not inbox) tasks
+  const cats = [...new Set(DB.tasks.filter(t=>!t.inbox && !t.done && t.cat && t.cat.trim()).map(t=>t.cat.trim()))];
   if(currentCatFilter && !cats.includes(currentCatFilter)) currentCatFilter = null;
   if(!cats.length){ el.innerHTML=''; return; }
   const allChip = `<div class="chip-opt cat-folder ${!currentCatFilter?'sel':''}" data-cat="">📁 همه پوشه‌ها</div>`;
@@ -2636,33 +2708,53 @@ document.getElementById('categoryFilters').addEventListener('click', e=>{
 });
 
 const PRIORITY_ORDER = {critical:0, high:1, medium:2, low:3};
+const STATUS_ORDER = {inprogress:0, paused:1, queued:2, notstarted:3};
 function sortTasks(list){
-  return [...list].sort((a,b)=>
-    (a.done-b.done) ||
-    (PRIORITY_ORDER[a.priority]-PRIORITY_ORDER[b.priority]) ||
-    (b.created>a.created?1:-1)
-  );
+  return [...list].sort((a,b)=>{
+    const aInbox = a.inbox ? 1 : 0;
+    const bInbox = b.inbox ? 1 : 0;
+    if(aInbox!==bInbox) return aInbox-bInbox;
+    if(a.done!==b.done) return (a.done?1:0)-(b.done?1:0);
+    const aStatus = STATUS_ORDER[a.status||'notstarted'] ?? 3;
+    const bStatus = STATUS_ORDER[b.status||'notstarted'] ?? 3;
+    if(aStatus!==bStatus) return aStatus-bStatus;
+    const aPr = PRIORITY_ORDER[a.priority] ?? 2;
+    const bPr = PRIORITY_ORDER[b.priority] ?? 2;
+    if(aPr!==bPr) return aPr-bPr;
+    return String(b.created||'').localeCompare(String(a.created||'')) || 0;
+  });
 }
 function renderTasks(filter='all'){
   currentStatusFilter = filter;
   renderCategoryFolders();
   const el = document.getElementById('allTasks');
   let list = sortTasks(DB.tasks);
-  if(filter==='active') list = list.filter(t=>!t.done);
-  if(filter==='done') list = list.filter(t=>t.done);
-  if(filter==='critical') list = list.filter(t=>t.priority==='critical');
-  if(filter==='high') list = list.filter(t=>t.priority==='high');
-  if(currentCatFilter) list = list.filter(t=>(t.cat||'').trim()===currentCatFilter);
+  if(filter==='inbox'){
+    list = list.filter(t=>t.inbox);
+  } else {
+    // default views exclude inbox tasks
+    list = list.filter(t=>!t.inbox);
+    if(filter==='inprogress') list = list.filter(t=>!t.done && (t.status||'notstarted')==='inprogress');
+    else if(filter==='queued') list = list.filter(t=>!t.done && (t.status||'notstarted')==='queued');
+    else if(filter==='paused') list = list.filter(t=>!t.done && (t.status||'notstarted')==='paused');
+    else if(filter==='notstarted') list = list.filter(t=>!t.done && (t.status||'notstarted')==='notstarted');
+    else if(filter==='active') list = list.filter(t=>!t.done);
+    else if(filter==='done') list = list.filter(t=>t.done);
+    else if(filter==='critical') list = list.filter(t=>t.priority==='critical');
+    else if(filter==='high') list = list.filter(t=>t.priority==='high');
+    // 'all' shows all non-inbox tasks
+  }
+  if(currentCatFilter && filter!=='inbox') list = list.filter(t=>(t.cat||'').trim()===currentCatFilter);
   el.innerHTML = list.length ? list.map(taskRow).join('') : `<div class="empty"><div class="ic">📭</div>تسکی پیدا نشد</div>`;
 
-  const today = sortTasks(DB.tasks.filter(t=>t.date===todayISO() || (!t.date && !t.done)));
+  const today = sortTasks(DB.tasks.filter(t=>!t.inbox && (t.date===todayISO() || (!t.date && !t.done))));
   document.getElementById('todayTasks').innerHTML = today.length ? today.slice(0,6).map(taskRow).join('') : `<div class="empty"><div class="ic">🌤️</div>امروز تسکی نداری، یکی اضافه کن!</div>`;
   document.getElementById('todayCount').textContent = today.length + ' تسک';
 }
 /* Dashboard slice of renderTasks — lets renderAll refresh the visible "today"
    widget without rebuilding the (hidden) full task list. */
 function renderTodayWidget(){
-  const today = sortTasks(DB.tasks.filter(t=>t.date===todayISO() || (!t.date && !t.done)));
+  const today = sortTasks(DB.tasks.filter(t=>!t.inbox && (t.date===todayISO() || (!t.date && !t.done))));
   const el = document.getElementById('todayTasks');
   if(el) el.innerHTML = today.length ? today.slice(0,6).map(taskRow).join('') : `<div class="empty"><div class="ic">🌤️</div>امروز تسکی نداری، یکی اضافه کن!</div>`;
   const c = document.getElementById('todayCount');
@@ -3404,11 +3496,12 @@ document.getElementById('importFile').onchange = (e)=>{
       if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
       if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
       if(!DB.newRecordFlags) DB.newRecordFlags = {};
-      // ensure tasks have extraDeadlines, subtasks and a workflow status
+      // ensure tasks have extraDeadlines, subtasks, workflow status and inbox flag
       (DB.tasks||[]).forEach(t=>{
         if(!Array.isArray(t.extraDeadlines)) t.extraDeadlines=[];
         if(!Array.isArray(t.subtasks)) t.subtasks=[];
         if(!t.status) t.status='notstarted';
+        if(typeof t.inbox !== 'boolean') t.inbox = false;
       });
       localStorage.setItem(STORE_KEY, JSON.stringify(DB));
       renderAll();
@@ -3430,7 +3523,7 @@ function renderDashboard(){
   document.getElementById('todayStr').textContent = new Date().toLocaleDateString('fa-IR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
   renderMotivation();
 
-  const doneToday = DB.tasks.filter(t=>t.doneDate===todayISO()).length;
+  const doneToday = DB.tasks.filter(t=>!t.inbox && t.doneDate===todayISO()).length;
   document.getElementById('statDone').textContent = doneToday;
   const maxStreak = DB.habits.length ? Math.max(0, ...DB.habits.map(habitStreak)) : 0;
   document.getElementById('statStreak').textContent = maxStreak;
@@ -3439,7 +3532,7 @@ function renderDashboard(){
   const score = Math.min(100, doneToday*15 + maxStreak*5 + Math.round(avgGoal*0.2));
   document.getElementById('statScore').textContent = score;
 
-  const total = DB.tasks.length, done = DB.tasks.filter(t=>t.done).length;
+  const total = DB.tasks.filter(t=>!t.inbox).length, done = DB.tasks.filter(t=>!t.inbox && t.done).length;
   const pct = total? Math.round(done/total*100):0;
   document.getElementById('totalTasksN').textContent = total;
   document.getElementById('doneTasksN').textContent = done;
@@ -3530,7 +3623,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='10.0';
+const LP_APP_VERSION='10.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
