@@ -80,7 +80,7 @@ if(!Array.isArray(DB.pomodoro.manualData)) DB.pomodoro.manualData = [];
 if(!DB.xpBoost || typeof DB.xpBoost!=='object') DB.xpBoost = { activeUntil:0 };
 if(!DB.themes || typeof DB.themes!=='object') DB.themes = { owned:['dark','light'] };
 if(!Array.isArray(DB.cityBonusItems)) DB.cityBonusItems = [];
-if(!DB.skillTiers || typeof DB.skillTiers!=='object') DB.skillTiers = {pomoXp:0,questXp:0,shopDiscount:0,luckyBox:0,criticalBonus:0,streakGuard:0};
+if(!DB.skillTiers || typeof DB.skillTiers!=='object') DB.skillTiers = {pomoXp:0,questXp:0,shopDiscount:0,luckyBox:0,criticalBonus:0,streakGuard:0,questCooldown:0};
 if(!DB.boss || typeof DB.boss!=='object') DB.boss = {active:null,nextAvailableAt:Date.now()};
 if(!DB.crisis || typeof DB.crisis!=='object') DB.crisis = {active:false,deadlineAt:0,cooldownUntil:0};
 if(!DB.newRecordFlags || typeof DB.newRecordFlags!=='object') DB.newRecordFlags = {};
@@ -112,7 +112,8 @@ if(!DB.themes) DB.themes = { owned:['dark','light'] };
 if(DB.lastBackupReminder===undefined) DB.lastBackupReminder = Date.now();
 if(DB.lastAutoBackupAt===undefined) DB.lastAutoBackupAt = Date.now();
 if(DB.skillPoints===undefined) DB.skillPoints = 0;
-if(!DB.skillTiers) DB.skillTiers = { pomoXp:0, questXp:0, shopDiscount:0, luckyBox:0, criticalBonus:0, streakGuard:0 };
+if(!DB.skillTiers) DB.skillTiers = { pomoXp:0, questXp:0, shopDiscount:0, luckyBox:0, criticalBonus:0, streakGuard:0, questCooldown:0 };
+if(DB.skillTiers.questCooldown===undefined) DB.skillTiers.questCooldown = 0;
 if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
 if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
 if(!DB.newRecordFlags) DB.newRecordFlags = {};
@@ -184,6 +185,8 @@ function toast(msg){
 /* ============ NAV ============ */
 const DEFAULT_PINNED_VIEWS = ['dashboard','tasks','habits','goals'];
 const PINNED_NAV_KEY = 'lifePlannerAI_pinnedNav_v1';
+const PINNED_NAV_EXTRA_KEY = 'lifePlannerAI_pinnedNavExtra_v1';
+const PINNED_NAV_EXTRA_MAX = 5;
 
 const PINNED_NAV_OPTIONS = [
   {id:'dashboard', label:'داشبورد', icon:'🏠'},
@@ -216,6 +219,20 @@ function getPinnedNav(){
 
 let PINNED_VIEWS=getPinnedNav();
 
+function getPinnedNavExtra(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(PINNED_NAV_EXTRA_KEY)||'null');
+    if(Array.isArray(saved)&&saved.length<=PINNED_NAV_EXTRA_MAX){
+      const valid=saved.every(id=>PINNED_NAV_OPTIONS.some(x=>x.id===id));
+      const unique=new Set(saved).size===saved.length;
+      const noClash=saved.every(id=>!PINNED_VIEWS.includes(id));
+      if(valid&&unique&&noClash)return saved;
+    }
+  }catch(_){}
+  return [];
+}
+let PINNED_VIEWS_EXTRA=getPinnedNavExtra();
+
 function getPinnedOption(id){
   return PINNED_NAV_OPTIONS.find(x=>x.id===id)||PINNED_NAV_OPTIONS[0];
 }
@@ -224,7 +241,7 @@ function renderMoreViews(){
   const box=document.getElementById('moreViewList');
   if(!box)return;
   box.innerHTML=PINNED_NAV_OPTIONS
-    .filter(item=>!PINNED_VIEWS.includes(item.id))
+    .filter(item=>!PINNED_VIEWS.includes(item.id) && !PINNED_VIEWS_EXTRA.includes(item.id))
     .map(item=>`<div class="sheet-nav-item" data-view="${item.id}" onclick="showView('${item.id}'); closeSheet();"><span class="ic">${item.icon}</span> ${item.label}</div>`)
     .join('');
 }
@@ -239,6 +256,20 @@ function renderPinnedNav(){
     el.onclick=()=>showView(viewId);
     el.setAttribute('aria-label',item.label);
   });
+  // v13: extra buttons (added in Settings) render as a centered second row
+  const extrasBox=document.getElementById('bnavExtrasRow');
+  if(extrasBox){
+    extrasBox.innerHTML=PINNED_VIEWS_EXTRA.map(viewId=>{
+      const item=getPinnedOption(viewId);
+      return `<div class="bnav-item" data-view="${viewId}" role="button" aria-label="${item.label}"><span class="bic">${item.icon}</span><span>${item.label}</span></div>`;
+    }).join('');
+    extrasBox.querySelectorAll('.bnav-item').forEach(el=>{
+      el.onclick=()=>showView(el.dataset.view);
+      el.setAttribute('aria-label',el.dataset.view);
+    });
+  }
+  const nav=document.getElementById('bottomNav');
+  if(nav) nav.classList.toggle('extended', PINNED_VIEWS_EXTRA.length>0);
   renderMoreViews();
 }
 
@@ -269,10 +300,49 @@ function showView(v){
   }
 }
 
+let __pinnedNavExtraDraft = null;
+
+function renderPinnedNavExtraList(){
+  const list=document.getElementById('pinnedNavExtraList');
+  if(!list) return;
+  const options=PINNED_NAV_OPTIONS.filter(o=>!PINNED_VIEWS.includes(o.id));
+  list.innerHTML = (__pinnedNavExtraDraft && __pinnedNavExtraDraft.length)
+    ? __pinnedNavExtraDraft.map((id,i)=>{
+        const current=getPinnedOption(id);
+        return `<div class="pinned-nav-row">
+          <div class="pinned-nav-slot">${current.icon}</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <select class="pinned-nav-select" data-pinned-extra="${i}">
+              ${options.map(o=>`<option value="${o.id}" ${o.id===id?'selected':''}>${o.icon}  ${o.label}</option>`).join('')}
+            </select>
+            <button type="button" class="pinned-nav-remove" data-remove-extra="${i}" title="حذف دکمه">🗑️</button>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="pinned-nav-hint" style="padding:6px 2px;">هنوز دکمه‌ای اضافه نکرده‌ای — نوار پایین یک ردیفه می‌ماند.</div>';
+  list.querySelectorAll('.pinned-nav-select').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      const i=+sel.dataset.pinnedExtra;
+      if(Number.isFinite(i) && __pinnedNavExtraDraft) __pinnedNavExtraDraft[i]=sel.value;
+      const row=sel.closest('.pinned-nav-row');
+      const slot=row?.querySelector('.pinned-nav-slot');
+      if(slot) slot.textContent=getPinnedOption(sel.value).icon;
+    });
+  });
+  list.querySelectorAll('[data-remove-extra]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=+btn.dataset.removeExtra;
+      if(Number.isFinite(i) && __pinnedNavExtraDraft) __pinnedNavExtraDraft.splice(i,1);
+      renderPinnedNavExtraList();
+    });
+  });
+}
+
 function openPinnedNavSettings(){
   const box=document.getElementById('pinnedNavEditor');
   if(!box)return;
   const options=PINNED_NAV_OPTIONS;
+  __pinnedNavExtraDraft=[...PINNED_VIEWS_EXTRA];
   box.innerHTML=PINNED_VIEWS.map((selected,i)=>{
     const current=getPinnedOption(selected);
     return `<div class="pinned-nav-row">
@@ -283,35 +353,61 @@ function openPinnedNavSettings(){
         </select>
       </div>
     </div>`;
-  }).join('');
+  }).join('') +
+    `<div class="pinned-nav-extra-head">➕ دکمه‌های اضافی (تا ${PINNED_NAV_EXTRA_MAX} عدد)</div>
+     <div id="pinnedNavExtraList" class="pinned-nav-extra-list"></div>
+     <button type="button" class="btn ghost sm" id="pinnedNavAddExtraBtn" style="width:100%;justify-content:center;margin-top:4px;">➕ افزودن دکمه اضافی</button>
+     <div class="pinned-nav-hint">با دکمه‌های اضافه، نوار پایین به دو ردیف تبدیل می‌شود و دکمه‌های اضافه وسط‌چین می‌مانند.</div>`;
 
-  box.querySelectorAll('.pinned-nav-select').forEach(sel=>{
+  box.querySelectorAll('.pinned-nav-select:not([data-pinned-extra])').forEach(sel=>{
     sel.addEventListener('change',()=>{
       const item=getPinnedOption(sel.value);
       const slot=sel.closest('.pinned-nav-row')?.querySelector('.pinned-nav-slot');
       if(slot)slot.textContent=item.icon;
     });
   });
+  renderPinnedNavExtraList();
+  document.getElementById('pinnedNavAddExtraBtn')?.addEventListener('click',()=>{
+    if(!__pinnedNavExtraDraft) return;
+    if(__pinnedNavExtraDraft.length>=PINNED_NAV_EXTRA_MAX){
+      toast(`⚠️ حداکثر ${PINNED_NAV_EXTRA_MAX} دکمه اضافی مجاز است`);
+      return;
+    }
+    const used=new Set([...PINNED_VIEWS, ...__pinnedNavExtraDraft]);
+    const free=PINNED_NAV_OPTIONS.find(o=>!used.has(o.id));
+    if(!free){ toast('⚠️ همه بخش‌ها همین پایین هستند'); return; }
+    __pinnedNavExtraDraft.push(free.id);
+    renderPinnedNavExtraList();
+  });
   openModal('pinnedNavModalBg');
 }
 
 function savePinnedNav(){
-  const selects=[...document.querySelectorAll('#pinnedNavEditor .pinned-nav-select')];
+  const selects=[...document.querySelectorAll('#pinnedNavEditor .pinned-nav-select:not([data-pinned-extra])')];
   const chosen=selects.map(x=>x.value);
   if(chosen.length!==4||new Set(chosen).size!==4){
     toast('⚠️ هر چهار دکمه باید بخش متفاوتی داشته باشن');
     return;
   }
+  const extras=(__pinnedNavExtraDraft||[]).filter(id=>PINNED_NAV_OPTIONS.some(x=>x.id===id));
+  if(extras.length>PINNED_NAV_EXTRA_MAX || new Set(extras).size!==extras.length || extras.some(id=>chosen.includes(id))){
+    toast(`⚠️ دکمه‌های اضافی باید متفاوت باشن و با چهار دکمهٔ اصلی تکرار نشون (حداکثر ${PINNED_NAV_EXTRA_MAX} عدد)`);
+    return;
+  }
   PINNED_VIEWS=chosen;
+  PINNED_VIEWS_EXTRA=extras;
   localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(PINNED_VIEWS));
+  localStorage.setItem(PINNED_NAV_EXTRA_KEY,JSON.stringify(PINNED_VIEWS_EXTRA));
   renderPinnedNav();
   closeModal('pinnedNavModalBg');
-  toast('✅ نوار دسترسی سریع ذخیره شد');
+  toast(PINNED_VIEWS_EXTRA.length ? `✅ نوار پایین با ${PINNED_VIEWS_EXTRA.length} دکمه اضافه ذخیره شد` : '✅ نوار دسترسی سریع ذخیره شد');
 }
 
 function resetPinnedNav(){
   PINNED_VIEWS=[...DEFAULT_PINNED_VIEWS];
+  PINNED_VIEWS_EXTRA=[];
   localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(PINNED_VIEWS));
+  localStorage.setItem(PINNED_NAV_EXTRA_KEY,JSON.stringify(PINNED_VIEWS_EXTRA));
   renderPinnedNav();
   openPinnedNavSettings();
   toast('↩️ نوار پایین به حالت پیش‌فرض برگشت');
@@ -1070,12 +1166,20 @@ function generateQuest(){
   const def = QUEST_POOL[tier].find(q=>q.id===id);
   DB.quest.current = { tier, id, text:def.text, icon:def.icon, xp:QUEST_TIERS[tier].xp };
 }
+/* v13: quest cooldown is 20 minutes; each level of the "Faster Quests"
+   skill reduces it by 1 minute (min 5 minutes). */
+const QUEST_COOLDOWN_MIN = 20;
+const QUEST_COOLDOWN_STEP_MIN = 1;
+function questCooldownMs(){
+  const tier = DB.skillTiers?.questCooldown || 0;
+  return Math.max(5, QUEST_COOLDOWN_MIN - tier*QUEST_COOLDOWN_STEP_MIN) * 60*1000;
+}
 function completeQuest(){
   if(!DB.quest.current) return;
   const q = DB.quest.current;
   DB.quest.current = null;
   DB.quest.waitStart = Date.now();
-  DB.quest.nextAt = Date.now() + 10*60*1000;
+  DB.quest.nextAt = Date.now() + questCooldownMs();
   DB.stats.questsCompleted = (DB.stats.questsCompleted||0) + 1;
   const d = todayISO();
   DB.stats.questsCompletedByDate[d] = (DB.stats.questsCompletedByDate[d]||0) + 1;
@@ -1093,7 +1197,7 @@ function skipQuest(){
   const penalty = Math.ceil(q.xp/2);
   DB.quest.current = null;
   DB.quest.waitStart = Date.now();
-  DB.quest.nextAt = Date.now() + 10*60*1000;
+  DB.quest.nextAt = Date.now() + questCooldownMs();
   addXP(-penalty);
   toast(`⏭️ رد شد — ${penalty} XP کم شد`);
   save();
@@ -1913,6 +2017,7 @@ const SKILL_TREE = [
   { key:'luckyBox',      icon:'🍀', name:'شانس بلند',      desc:'هر تیر شانس جعبه‌ی رایگان توی Mystery Box بیشتر می‌شه', maxTier:3 },
   { key:'criticalBonus', icon:'🔥', name:'قاتل بحران',     desc:'هر تیر +۵ XP برای هر تسک بحرانی که تموم می‌کنی',    maxTier:3 },
   { key:'streakGuard',   icon:'🛡️', name:'محافظ استریک',  desc:'هر تیر همون لحظه ۱ Streak Shield رایگان می‌گیری',  maxTier:5 },
+  { key:'questCooldown', icon:'⏱️', name:'کوئست سریع',     desc:'هر تیر ۱ دقیقه از زمان انتظار کوئست بعدی کم می‌کنه (از ۲۰ به ۱۷ دقیقه)', maxTier:3 },
 ];
 function skillTierCost(){ return 1; } // flat: 1 skill point per tier
 function buySkillTier(key){
@@ -3922,7 +4027,8 @@ function buildBackupPayload(){
     fontSize:localStorage.getItem('lifePlannerFontSize_v2')||localStorage.getItem('lifePlannerFontSize_v1')||'medium',
     activeTheme:localStorage.getItem(THEME_KEY)||'dark',
     uiScale:localStorage.getItem('lifePlannerUIScale_v1')||'medium',
-    pinnedNav:(()=>{try{return JSON.parse(localStorage.getItem(PINNED_NAV_KEY)||'null')}catch(_){return null}})()
+    pinnedNav:(()=>{try{return JSON.parse(localStorage.getItem(PINNED_NAV_KEY)||'null')}catch(_){return null}})(),
+    pinnedNavExtra:(()=>{try{return JSON.parse(localStorage.getItem(PINNED_NAV_EXTRA_KEY)||'null')}catch(_){return null}})()
   };
   return payload;
 }
@@ -3969,6 +4075,9 @@ document.getElementById('importFile').onchange = (e)=>{
         if(restoredUI.uiScale) localStorage.setItem('lifePlannerUIScale_v1',restoredUI.uiScale);
         if(restoredUI.activeTheme && THEME_META[restoredUI.activeTheme]) useTheme(restoredUI.activeTheme);
         if(Array.isArray(restoredUI.pinnedNav) && restoredUI.pinnedNav.length===4) localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(restoredUI.pinnedNav));
+        if(Array.isArray(restoredUI.pinnedNavExtra) && restoredUI.pinnedNavExtra.length<=PINNED_NAV_EXTRA_MAX) localStorage.setItem(PINNED_NAV_EXTRA_KEY,JSON.stringify(restoredUI.pinnedNavExtra));
+        PINNED_VIEWS=getPinnedNav();
+        PINNED_VIEWS_EXTRA=getPinnedNavExtra();
       }
       DB.notes = Array.isArray(DB.notes)?DB.notes:[];
       DB.events = Array.isArray(DB.events)?DB.events:[];
@@ -3995,7 +4104,8 @@ document.getElementById('importFile').onchange = (e)=>{
       if(DB.lastBackupReminder===undefined) DB.lastBackupReminder = Date.now();
       if(DB.lastAutoBackupAt===undefined) DB.lastAutoBackupAt = Date.now();
       if(DB.skillPoints===undefined) DB.skillPoints = 0;
-      if(!DB.skillTiers) DB.skillTiers = { pomoXp:0, questXp:0, shopDiscount:0, luckyBox:0, criticalBonus:0, streakGuard:0 };
+      if(!DB.skillTiers) DB.skillTiers = { pomoXp:0, questXp:0, shopDiscount:0, luckyBox:0, criticalBonus:0, streakGuard:0, questCooldown:0 };
+      if(DB.skillTiers.questCooldown===undefined) DB.skillTiers.questCooldown = 0;
       if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
       if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
       if(!DB.newRecordFlags) DB.newRecordFlags = {};
@@ -4007,6 +4117,7 @@ document.getElementById('importFile').onchange = (e)=>{
         if(typeof t.inbox !== 'boolean') t.inbox = false;
       });
       localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+      renderPinnedNav();
       renderAll();
       toast('✅ بازیابی کامل شد — ' + (DB.tasks||[]).length + ' تسک بازگردانده شد');
     }
@@ -4126,7 +4237,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='12.1';
+const LP_APP_VERSION='13.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

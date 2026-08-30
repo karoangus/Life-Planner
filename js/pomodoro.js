@@ -11,8 +11,9 @@
   const PRESETS = [
     { id:'classic', label:'کلاسیک', focus:25, break:5, icon:'🍅' },
     { id:'short',   label:'کوتاه',   focus:15, break:3, icon:'⚡' },
-    { id:'deep',    label:'دیپ فوکوس', focus:50, break:10, icon:'🧠' },
-    { id:'study',   label:'مطالعه', focus:45, break:10, icon:'📚' }
+    { id:'deep',    label:'دیپ فوکوس', focus:60, break:15, icon:'🧠' },
+    { id:'study',   label:'مطالعه', focus:45, break:10, icon:'📚' },
+    { id:'custom',  label:'سفارشی', focus:25, break:5, icon:'⚙️' }
   ];
 
   const SOUNDS = [
@@ -46,6 +47,7 @@
     if(!Array.isArray(DB.pomodoro.sessionHistory)) DB.pomodoro.sessionHistory = [];
     if(!DB.pomodoro.presets) DB.pomodoro.presets = PRESETS.map(x=>({...x}));
     if(!DB.pomodoro.presetId) DB.pomodoro.presetId = 'classic';
+    if(!DB.pomodoro.customPreset) DB.pomodoro.customPreset = { focus:25, break:5 };
     if(!DB.pomodoro.sound) DB.pomodoro.sound = 'off';
     if(DB.pomodoro.soundVolume === undefined) DB.pomodoro.soundVolume = 0.6;
     if(DB.pomodoro.notifications === undefined) DB.pomodoro.notifications = true;
@@ -58,6 +60,15 @@
 
   function getSound(){ return DB.pomodoro?.sound || 'off'; }
   function getSoundVolume(){ return typeof DB.pomodoro?.soundVolume === 'number' ? DB.pomodoro.soundVolume : 0.6; }
+
+  /* v13: user-created custom preset, always available in the preset list */
+  function getCustomPreset(){
+    const c = (DB.pomodoro && DB.pomodoro.customPreset) || {};
+    return {
+      focus: Math.min(180, Math.max(1, parseInt(c.focus,10) || 25)),
+      break: Math.min(60,  Math.max(1, parseInt(c.break,10) || 5))
+    };
+  }
 
   /* -------------------------------------------------------------
      PERSISTENT DURATION FORMATTERS (Hours + Minutes in Persian)
@@ -602,8 +613,12 @@
           <div class="pomo-v66-title">⚡ حالت‌های آماده فوکوس</div>
           <div class="pomo-v66-help">یک مدل انتخاب کن تا زمان فوکوس و استراحت طبق ریتم تنظیم بشه.</div>
           <div class="pomo-preset-grid">
-            ${PRESETS.map(x=>`<button type="button" class="pomo-preset ${x.id===activePreset?'active':''}" data-pomo-preset="${x.id}">${x.icon} ${x.label}<small>${x.focus}/${x.break} دقیقه</small></button>`).join('')}
+            ${PRESETS.map(x=>{
+              const p = x.id==='custom' ? getCustomPreset() : x;
+              return `<button type="button" class="pomo-preset ${x.id===activePreset?'active':''}" data-pomo-preset="${x.id}">${x.icon} ${x.label}<small>${p.focus}/${p.break} دقیقه</small></button>`;
+            }).join('')}
           </div>
+          <button type="button" class="btn ghost btn-sm" id="pomoEditCustomBtn" style="font-size:11px;padding:5px 10px;margin-top:8px;">✏️ ویرایش پریست سفارشی</button>
           <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
             <button type="button" class="btn ghost btn-sm" id="pomoResetCycleBtn" style="font-size:11px;padding:5px 10px;">🔄 شروع مجدد دور</button>
             <button type="button" class="btn ghost btn-sm" id="pomoNextSessionBtn" style="font-size:11px;padding:5px 10px;">⏭️ جلسه بعدی</button>
@@ -631,7 +646,15 @@
         </div>
       </div>`;
 
-    root.querySelectorAll('[data-pomo-preset]').forEach(b => b.onclick = () => applyPreset(b.dataset.pomoPreset));
+    root.querySelectorAll('[data-pomo-preset]').forEach(b => b.onclick = () => {
+      if(b.dataset.pomoPreset === 'custom'){
+        if(DB.pomodoro.customPreset && DB.pomodoro.customPreset.saved) applyPreset('custom');
+        else openCustomPresetEditor();
+        return;
+      }
+      applyPreset(b.dataset.pomoPreset);
+    });
+    document.getElementById('pomoEditCustomBtn')?.addEventListener('click', openCustomPresetEditor);
     const taskEl = document.getElementById('pomo66Task');
     if(taskEl) taskEl.value = DB.pomodoro.session?.taskId || DB.pomodoro.lastTaskId || '';
     taskEl?.addEventListener('change', () => {
@@ -662,17 +685,36 @@
     });
 
     document.getElementById('pomoNextSessionBtn')?.addEventListener('click', () => {
-      const cycleCount = DB.pomodoro.settings.cycleCount || 4;
-      DB.pomodoro.currentSession = (DB.pomodoro.currentSession % cycleCount) + 1;
-      if(DB.pomodoro.currentSession === 1) DB.pomodoro.currentRound = (DB.pomodoro.currentRound || 1) + 1;
-      save();
-      toast(`⏭️ رفتیم به جلسه ${DB.pomodoro.currentSession} از ${cycleCount}`);
+      if(DB.pomodoro.session){
+        toast('⏱️ یک جلسه در حال اجراست؛ اول تمومش کن یا متوقفش کن');
+        return;
+      }
+      // v13: step through the cycle phase by phase — Focus → Break → next Focus → Break …
+      const p = DB.pomodoro.pendingNext;
+      const { currentSession, currentRound, cycleCount } = getCycleState();
+      if(p === 'break' || p === 'longBreak'){
+        advanceSessionAfterBreak(p === 'longBreak');
+        DB.pomodoro.pendingNext = 'focus';
+        save();
+        const st = getCycleState();
+        toast(`⏭️ مرحله بعد: جلسه ${st.currentSession} از ${st.cycleCount} (فوکوس)`);
+      } else {
+        const isCycleEnd = currentSession >= cycleCount;
+        DB.pomodoro.pendingNext = isCycleEnd ? 'longBreak' : 'break';
+        save();
+        toast(isCycleEnd
+          ? `⏭️ مرحله بعد: استراحت طولانی (${DB.pomodoro.settings.longBreakMin || 15} دقیقه)`
+          : `⏭️ مرحله بعد: استراحت (${DB.pomodoro.settings.breakMin || 5} دقیقه)`);
+      }
+      renderPomoUI();
       renderPomoV66();
     });
   }
 
   function applyPreset(id){
-    const p = PRESETS.find(x => x.id === id);
+    const p = id === 'custom'
+      ? { id:'custom', label:'سفارشی', focus:getCustomPreset().focus, break:getCustomPreset().break, icon:'⚙️' }
+      : PRESETS.find(x => x.id === id);
     if(!p) return;
     if(DB.pomodoro.session){
       toast('⏱️ در حال اجرای تایمر امکان تغییر حالت نیست');
@@ -686,6 +728,59 @@
     renderPomoUI();
     renderPomoV66();
     toast(`✅ ${p.label}: ${p.focus} دقیقه فوکوس / ${p.break} دقیقه استراحت`);
+  }
+
+  /* v13: custom preset editor — user creates & reuses their own focus/break times */
+  function openCustomPresetEditor(){
+    if(DB.pomodoro.session){
+      toast('⏱️ در حال اجرای تایمر امکان تغییر حالت نیست');
+      return;
+    }
+    const c = getCustomPreset();
+    let el = document.getElementById('pomo66CustomPreset');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'pomo66CustomPreset';
+      el.className = 'pomo-custom-modal';
+      el.innerHTML = `
+        <div class="pomo-custom-box" dir="rtl">
+          <div class="pomo-v66-title">⚙️ پریست سفارشی</div>
+          <div class="pomo-v66-help">مدت فوکوس و استراحت دلخواهت را وارد کن؛ از این به بعد این پریست همیشه بین پریست‌ها در دسترس است.</div>
+          <div class="pomo-custom-fields">
+            <div><label>فوکوس (دقیقه)</label><input type="number" id="pomoCustomFocus" min="1" max="180" step="1" value="25"></div>
+            <div><label>استراحت (دقیقه)</label><input type="number" id="pomoCustomBreak" min="1" max="60" step="1" value="5"></div>
+          </div>
+          <div class="settings-actions">
+            <button class="btn" id="pomoCustomSave" style="flex:1;justify-content:center;">💾 ذخیره و فعال کن</button>
+            <button class="btn ghost" id="pomoCustomCancel" style="flex:1;justify-content:center;">انصراف</button>
+          </div>
+        </div>`;
+      document.body.appendChild(el);
+    }
+    document.getElementById('pomoCustomFocus').value = c.focus;
+    document.getElementById('pomoCustomBreak').value = c.break;
+    el.classList.add('open');
+    document.getElementById('pomoCustomSave').onclick = () => {
+      const f = Math.min(180, Math.max(1, parseInt(document.getElementById('pomoCustomFocus').value,10) || 25));
+      const b = Math.min(60,  Math.max(1, parseInt(document.getElementById('pomoCustomBreak').value,10) || 5));
+      DB.pomodoro.customPreset = { focus:f, break:b, saved:true };
+      if(Array.isArray(DB.pomodoro.presets)){
+        const idx = DB.pomodoro.presets.findIndex(x => x.id === 'custom');
+        const entry = { id:'custom', label:'سفارشی', focus:f, break:b, icon:'⚙️' };
+        if(idx >= 0) DB.pomodoro.presets[idx] = entry;
+        else DB.pomodoro.presets.push(entry);
+      }
+      DB.pomodoro.presetId = 'custom';
+      DB.pomodoro.settings.focusMin = f;
+      DB.pomodoro.settings.breakMin = b;
+      save();
+      fillPomoSettingsForm();
+      renderPomoUI();
+      renderPomoV66();
+      el.classList.remove('open');
+      toast(`✅ پریست سفارشی: ${f} دقیقه فوکوس / ${b} دقیقه استراحت`);
+    };
+    document.getElementById('pomoCustomCancel').onclick = () => el.classList.remove('open');
   }
 
   function scoreForSession(minutes, planned, pauseCount, completed){
@@ -1090,6 +1185,12 @@
     const hist = (DB.pomodoro.sessionHistory || []).filter(x => x.mode === 'focus' && x.minutes > 0);
     const totalMins = hist.reduce((a,x) => a + x.minutes, 0);
     const avg = hist.length ? Math.round(hist.reduce((a,x) => a + x.score, 0) / hist.length) : 0;
+    // v13: average daily focus time across recorded days
+    const dayRecords = Object.entries(DB.pomodoro.history || {});
+    const focusDays = dayRecords.filter(([,v]) => v && (v.focus || 0) > 0);
+    const avgDailyMins = focusDays.length
+      ? Math.round(focusDays.reduce((s,[,v]) => s + (v.focus || 0), 0) / focusDays.length)
+      : 0;
     const { currentSession, currentRound, cycleCount } = getCycleState();
 
     root.innerHTML = `
@@ -1112,6 +1213,10 @@
           <div class="pomo-stat-mini">
             <div class="n">🔥 ${DB.pomodoro.focusStreak || 0}</div>
             <div class="l">استریک روزانه</div>
+          </div>
+          <div class="pomo-stat-mini avg-daily">
+            <div class="n">${formatPomoHours(avgDailyMins)}</div>
+            <div class="l">میانگین فوکوس روزانه</div>
           </div>
         </div>
       </div>
@@ -1154,6 +1259,50 @@
   const oldEnd = window.endSession;
   const oldComplete = window.completePomoSession;
 
+  /* v13: live countdown inside the Pomodoro notification.
+     Re-uses one notification (same tag) and refreshes its body while the
+     timer runs, so the number in the notification counts down in real time. */
+  let liveNotifyTimer = null;
+  const LIVE_NOTIFY_TAG = 'lp-pomo-live';
+  let lastLiveNotifyBody = '';
+  function livePomoNotifyBody(){
+    const s = DB.pomodoro.session;
+    if(!s) return '';
+    if(s.mode === 'infinite'){
+      const elapsed = (s.baseElapsedMs || 0) + (s.status === 'running' ? Date.now() - s.startAt : 0);
+      return `♾️ ${fmtMMSS(elapsed)} فوکوس بی‌نهایت`;
+    }
+    const remain = s.status === 'running' ? Math.max(0, s.endAt - Date.now()) : (s.remainingMs || 0);
+    const phase = s.mode === 'focus' ? '🎯 فوکوس' : (s.isLongBreak ? '🏖️ استراحت طولانی' : '☕ استراحت');
+    return `⏳ ${fmtMMSS(remain)} — ${phase}${s.status === 'paused' ? ' (مکث)' : ''}`;
+  }
+  async function pushLivePomoNotification(){
+    if(!DB.pomodoro.notifications) return;
+    const body = livePomoNotifyBody();
+    if(!body || body === lastLiveNotifyBody) return;
+    lastLiveNotifyBody = body;
+    await sendNotification('🍅 تایمر پومودورو', body, { tag:LIVE_NOTIFY_TAG, renotify:false });
+  }
+  function startLivePomoNotification(){
+    stopLivePomoNotification(false);
+    lastLiveNotifyBody = '';
+    pushLivePomoNotification();
+    liveNotifyTimer = setInterval(pushLivePomoNotification, 5000);
+  }
+  function stopLivePomoNotification(close = true){
+    if(liveNotifyTimer){ clearInterval(liveNotifyTimer); liveNotifyTimer = null; }
+    lastLiveNotifyBody = '';
+    if(close && 'serviceWorker' in navigator){
+      try{
+        navigator.serviceWorker.ready.then(reg => {
+          if(reg && reg.getNotifications){
+            reg.getNotifications({ tag:LIVE_NOTIFY_TAG }).then(ns => ns.forEach(n => n.close())).catch(()=>{});
+          }
+        }).catch(()=>{});
+      }catch(_){}
+    }
+  }
+
   window.startFocus = function(){
     ensure();
     const task = selectedTask();
@@ -1180,6 +1329,7 @@
     }
     renderPomoUI();
     renderPomoV66();
+    startLivePomoNotification();
   };
 
   window.startBreak = function(isLong = false){
@@ -1206,6 +1356,7 @@
     }
     renderPomoUI();
     renderPomoV66();
+    startLivePomoNotification();
   };
 
   window.pomoQuickStart = function(){
@@ -1231,6 +1382,7 @@
     stopSound();
     renderPomoUI();
     renderFocusOverlay();
+    pushLivePomoNotification();
   };
 
   window.resumeSession = function(){
@@ -1247,11 +1399,13 @@
     restartSoundFromGesture(getSound());
     renderPomoUI();
     renderFocusOverlay();
+    pushLivePomoNotification();
   };
 
   window.endSession = function(){
     const s = DB.pomodoro.session;
     if(!s) return;
+    stopLivePomoNotification();
     let mins = 0;
     if(s.mode === 'infinite'){
       const elapsed = (s.baseElapsedMs || 0) + (s.status === 'running' ? Date.now() - s.startAt : 0);
@@ -1295,6 +1449,7 @@
   window.completePomoSession = function(){
     const s = DB.pomodoro.session;
     if(!s) return;
+    stopLivePomoNotification();
     const mode = s.mode;
     const { currentSession, currentRound, cycleCount } = getCycleState();
     const mins = mode === 'focus'

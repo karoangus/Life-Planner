@@ -195,10 +195,22 @@ body{ font-size: 1rem; }
   position:fixed; bottom:0; left:0; right:0; z-index:100;
   background:var(--bg2); border-top:1px solid var(--line2);
   display:flex; align-items:center; justify-content:space-around;
+  flex-wrap:wrap;
   padding:6px 4px calc(6px + env(safe-area-inset-bottom));
   height:60px; box-sizing:content-box;
   box-shadow:0 -4px 24px rgba(0,0,0,.25);
 }
+/* v13: with extra quick-access buttons the bar grows into two centered rows */
+.bottom-nav.extended{height:auto; min-height:60px;}
+.bottom-nav.extended ~ .main{padding-bottom:132px;}
+.bnav-extras-row{
+  display:none; width:100%; flex:0 0 100%;
+  justify-content:center; align-items:center;
+  gap:4px; padding:4px 4px 0;
+}
+.bottom-nav.extended .bnav-extras-row{display:flex;}
+.bnav-extras-row .bnav-item{flex:0 0 auto; min-width:58px; max-width:80px; padding:4px 6px;}
+.bnav-extras-row .bnav-item span{max-width:64px;}
 .bnav-item{
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   gap:2px; padding:4px 6px; border-radius:10px; cursor:pointer;
@@ -573,7 +585,7 @@ html[data-theme="light"] .pomo-minute-badge{background:rgba(8,145,178,.1); borde
 .pomo-v66-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;}
 .pomo-v66-title{font-size:13.5px;font-weight:900;margin-bottom:5px;display:flex;align-items:center;gap:7px;}
 .pomo-v66-help{font-size:11.5px;line-height:1.8;color:var(--txt-dim2);margin-bottom:10px;}
-.pomo-preset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.pomo-preset-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
 .pomo-preset{border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:12px;padding:10px 8px;cursor:pointer;text-align:center;font:inherit;font-size:11.5px;font-weight:800;transition:border-color .15s, transform .1s;}
 .pomo-preset:active{transform:scale(0.97);}
 .pomo-preset.active{border-color:var(--neon);box-shadow:0 0 0 1px color-mix(in srgb,var(--neon) 30%,transparent);}
@@ -584,7 +596,7 @@ html[data-theme="light"] .pomo-minute-badge{background:rgba(8,145,178,.1); borde
 .pomo-vol-slider{width:80px;height:6px;border-radius:3px;accent-color:var(--neon);cursor:pointer;}
 .pomo-v66-mini{font-size:11px;color:var(--txt-dim2);}
 .pomo-score{font-size:20px;font-weight:950;color:var(--neon);font-family:'Consolas','JetBrains Mono',monospace;}
-.pomo-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
+.pomo-stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;}
 .pomo-stat-mini{padding:12px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);text-align:center;}
 .pomo-stat-mini .n{font-size:19px;font-weight:950;font-family:'Consolas','JetBrains Mono',monospace;color:var(--txt);}
 .pomo-stat-mini .l{font-size:10.5px;color:var(--txt-dim2);margin-top:4px;font-weight:700;line-height:1.4;}
@@ -630,13 +642,24 @@ html.pomo-focus-open,body.pomo-focus-open{overflow:hidden!important;}
 .pomo-result-modal,.pomo-break-modal{position:fixed;inset:0;z-index:10000050;background:rgba(4,6,14,.76);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px;}
 .pomo-result-modal.open,.pomo-break-modal.open{display:flex;}
 .pomo-result-box,.pomo-break-box{width:min(470px,94vw);background:var(--panel);border:1px solid var(--line2);border-radius:22px;box-shadow:var(--shadow);padding:22px;}
+
+/* Custom preset editor (v13) */
+.pomo-custom-modal{position:fixed;inset:0;z-index:10000060;background:rgba(4,6,14,.76);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px;}
+.pomo-custom-modal.open{display:flex;}
+.pomo-custom-box{width:min(440px,94vw);background:var(--panel);border:1px solid var(--line2);border-radius:22px;box-shadow:var(--shadow);padding:20px;display:grid;gap:10px;}
+.pomo-custom-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;}
+.pomo-custom-fields label{font-size:11.5px;font-weight:800;color:var(--txt-dim);display:block;margin-bottom:4px;}
+.pomo-custom-fields input{width:100%;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:10px;padding:9px 10px;font:inherit;outline:none;}
+.pomo-custom-fields input:focus{border-color:var(--neon);}
 .pomo-result-score{text-align:center;font-size:48px;font-weight:950;color:var(--neon);font-family:'Consolas','JetBrains Mono',monospace;margin:4px 0;}
 .pomo-break-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 16px;}
 .pomo-break-tip{padding:10px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);font-size:11.5px;font-weight:750;text-align:center;}
 
 @media(max-width:700px){
   .pomo-preset-grid{grid-template-columns:1fr 1fr;}
+  .pomo-preset[data-pomo-preset="custom"]{grid-column:1/-1;}
   .pomo-stat-grid{grid-template-columns:1fr 1fr;}
+  .pomo-stat-mini.avg-daily{grid-column:1/-1;}
   .pomo-v66-row{grid-template-columns:1fr;}
   .pomo-break-list{grid-template-columns:1fr 1fr;}
   .pomo-focus-inner{padding:18px 14px;border-radius:20px;}
@@ -958,6 +981,11 @@ textarea{resize:vertical; min-height:70px;}
 .pinned-nav-select{width:100%;min-width:0;background:var(--panel2);color:var(--txt);border:1px solid var(--line2);border-radius:9px;padding:9px 10px;font-family:inherit;font-size:12px;font-weight:700;outline:none;}
 .pinned-nav-select:focus{border-color:var(--neon);box-shadow:0 0 0 2px rgba(0,229,255,.1);}
 .pinned-nav-hint{font-size:10px;color:var(--txt-dim2);margin-top:2px;}
+/* v13 — extra quick-access buttons editor */
+.pinned-nav-extra-head{font-size:11px;font-weight:900;color:var(--txt-dim2);border-top:1px dashed var(--line);padding-top:10px;margin-top:8px;}
+.pinned-nav-extra-list{display:flex;flex-direction:column;gap:9px;}
+.pinned-nav-remove{width:34px;height:34px;min-width:34px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);cursor:pointer;font-size:13px;flex-shrink:0;transition:border-color .15s;}
+.pinned-nav-remove:hover{border-color:var(--neon);}
 
 /* v5.1 notes + current calendar hour */
 .notes-tools{margin-bottom:12px;}
