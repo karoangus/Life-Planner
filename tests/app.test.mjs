@@ -180,7 +180,7 @@ if (!useFallback) {
   const hasInboxModal = indexHtml.includes('inboxQuickModalBg');
   const hasStatusOrder = coreJs.includes('STATUS_ORDER') && coreJs.includes('inprogress:0');
   const hasRewardGrid = coreJs.includes('reward-grid') && appCss.includes('reward-grid');
-  const hasVersionBump = (versionJson.version === '11.0' || versionJson.version === '10.2') && (pkgJson.version === '11.0.0' || pkgJson.version === '10.2.0') && (coreJs.includes("LP_APP_VERSION='11.0'") || coreJs.includes("LP_APP_VERSION='10.2'"));
+  const hasVersionBump = (versionJson.version === '11.2' || versionJson.version === '11.0' || versionJson.version === '10.2') && (pkgJson.version === '11.2.0' || pkgJson.version === '11.0.0' || pkgJson.version === '10.2.0') && (coreJs.includes("LP_APP_VERSION='11.2'") || coreJs.includes("LP_APP_VERSION='11.0'") || coreJs.includes("LP_APP_VERSION='10.2'"));
   console.log(`ℹ️ v11.0 extra: inboxFilter=${hasInboxFilter} inprogress=${hasInprogressFilter} queued=${hasQueuedFilter} pausedFilter=${hasPausedFilter} notstartedFilter=${hasNotstartedFilter} inboxModal=${hasInboxModal} statusOrder=${hasStatusOrder} rewardGrid=${hasRewardGrid} versionBump=${hasVersionBump}`);
   check('v10.2 status filters present (paused & notstarted)', hasPausedFilter && hasNotstartedFilter && hasInprogressFilter && hasQueuedFilter && hasInboxFilter);
   check('v10.2 inbox modal present', hasInboxModal);

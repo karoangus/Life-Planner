@@ -2768,14 +2768,25 @@ function renderTasks(filter='all'){
   if(currentCatFilter && filter!=='inbox') list = list.filter(t=>(t.cat||'').trim()===currentCatFilter);
   el.innerHTML = list.length ? list.map(taskRow).join('') : `<div class="empty"><div class="ic">📭</div>تسکی پیدا نشد</div>`;
 
-  const today = sortTasks(DB.tasks.filter(t=>!t.inbox && (t.date===todayISO() || (!t.date && !t.done))));
+function isTaskForToday(t){
+  if(t.inbox) return false;
+  const d = todayISO();
+  const hasMainToday = (t.date === d);
+  const hasExtraToday = Array.isArray(t.extraDeadlines) && t.extraDeadlines.includes(d);
+  if(hasMainToday || hasExtraToday) return true;
+  const hasAnyDeadline = Boolean(t.date) || (Array.isArray(t.extraDeadlines) && t.extraDeadlines.length > 0);
+  if(!hasAnyDeadline && !t.done) return true;
+  return false;
+}
+
+  const today = sortTasks(DB.tasks.filter(isTaskForToday));
   document.getElementById('todayTasks').innerHTML = today.length ? today.slice(0,6).map(taskRow).join('') : `<div class="empty"><div class="ic">🌤️</div>امروز تسکی نداری، یکی اضافه کن!</div>`;
   document.getElementById('todayCount').textContent = today.length + ' تسک';
 }
 /* Dashboard slice of renderTasks — lets renderAll refresh the visible "today"
    widget without rebuilding the (hidden) full task list. */
 function renderTodayWidget(){
-  const today = sortTasks(DB.tasks.filter(t=>!t.inbox && (t.date===todayISO() || (!t.date && !t.done))));
+  const today = sortTasks(DB.tasks.filter(isTaskForToday));
   const el = document.getElementById('todayTasks');
   if(el) el.innerHTML = today.length ? today.slice(0,6).map(taskRow).join('') : `<div class="empty"><div class="ic">🌤️</div>امروز تسکی نداری، یکی اضافه کن!</div>`;
   const c = document.getElementById('todayCount');
@@ -3644,7 +3655,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='11.1';
+const LP_APP_VERSION='11.2';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
