@@ -183,10 +183,10 @@
     <div class="view" id="view-calendar">
       <div class="topbar calendar-topbar">
         <div><h1>تقویم هفتگی</h1><div class="sub">بلوک‌بندی زمانی برای رویدادها و کارها</div></div>
-        <div class="top-actions"><button class="btn" onclick="openEventModal()">➕ رویداد جدید</button></div>
+        <div class="top-actions"><button class="btn ghost" onclick="openCatManager()">🏷️ دسته‌ها</button><button class="btn" onclick="openEventModal()">➕ رویداد جدید</button></div>
       </div>
       <div class="calendar-intro" aria-label="راهنمای تقویم">
-        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><strong>هفته‌ات را یک‌جا ببین</strong><span>رویدادها را کنار کارهای روزانه‌ات بچین و با خیال راحت پیش برو.</span></div></div>
+        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><strong>هفته‌ات را یک‌جا ببین</strong><span>رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود؛ رنگ و دسته‌بندی هم دست خودت است.</span></div></div>
         <div class="calendar-legend"><span><i class="legend-dot legend-dot-event"></i>رویداد</span><span><i class="legend-dot legend-dot-now"></i>امروز</span></div>
       </div>
       <div class="card calendar-card">
@@ -878,6 +878,9 @@
       <input type="hidden" id="tDate" value="">
     </div>
   </div>
+  <div class="field"><label>رنگ تسک (اختیاری) — اگر انتخاب نکنی، رنگ دسته‌بندی استفاده می‌شود</label>
+    <div class="chip-group lp-color-row" id="tColorRow"></div>
+  </div>
   <div class="field"><label>اولویت</label>
     <div class="chip-group" id="tPriority">
       <div class="chip-opt" data-v="low">پایین</div>
@@ -962,7 +965,14 @@
 
 <div class="modal-bg" id="eventModalBg"><div class="modal">
   <h2 id="eventModalTitle">📅 رویداد جدید</h2>
+  <div class="lp-scope-hint" id="eEditScopeHint" style="display:none;"></div>
   <div class="field"><label>عنوان</label><input type="text" id="eTitle" placeholder="مثلاً: کلاس زبان"></div>
+  <div class="field"><label>دسته‌بندی (اختیاری) — با انتخاب دسته، رنگ پیش‌فرض همان دسته می‌شود</label>
+    <div class="chip-group" id="eCats"></div>
+  </div>
+  <div class="field"><label>رنگ رویداد (اختیاری)</label>
+    <div class="chip-group lp-color-row" id="eColorRow"></div>
+  </div>
   <div class="field"><label>روزهای هفته (می‌تونی چندتا انتخاب کنی)</label>
     <div class="chip-group" id="eDays">
       <div class="chip-opt" data-v="0">شنبه</div>
@@ -986,11 +996,25 @@
   <h2 id="eventActionTitle">📅 رویداد</h2>
   <div id="eventActionDetails" style="font-size:12px;color:var(--txt-dim);line-height:1.8;margin:4px 0 2px;text-align:center;"></div>
   <div class="modal-actions" style="flex-direction:column;">
-    <button class="btn" style="width:100%; justify-content:center;" onclick="startEditEvent()">✏️ ویرایش</button>
+    <div class="lp-act-group-lbl">✏️ ویرایش</div>
+    <button class="btn" id="editThisDayBtn" style="width:100%; justify-content:center; display:none;" onclick="startEditEventThisDay()">✏️ ویرایش فقط این روز</button>
+    <button class="btn ghost" id="editWholeEventBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="startEditEvent()">✏️ ویرایش کل رویداد (همه‌ی روزها)</button>
+    <div class="lp-action-sep"></div>
+    <div class="lp-act-group-lbl">🗑️ حذف</div>
     <button class="btn danger" id="deleteThisDayBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteEventDay()">🗑️ حذف فقط این روز</button>
     <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteWholeEvent()">🗑️ حذف کل رویداد (همه‌ی روزها)</button>
     <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="closeModal('eventActionModalBg')">انصراف</button>
   </div>
+</div></div>
+
+<div class="modal-bg" id="catManagerModalBg"><div class="modal">
+  <h2>🏷️ دسته‌بندی‌ها و رنگ‌ها</h2>
+  <div id="catManagerList"></div>
+  <div class="field"><label id="catFormLabel">دسته‌ی جدید</label><input type="text" id="catNameInput" placeholder="مثلاً: درس، کار، ورزش..."></div>
+  <div class="field"><label>رنگ پیش‌فرض دسته</label>
+    <div class="chip-group lp-color-row" id="catColorRow"></div>
+  </div>
+  <div class="modal-actions"><button class="btn ghost" onclick="closeCatManager()">بستن</button><button class="btn" id="catSaveBtn" onclick="saveCategoryFromManager()">➕ افزودن دسته</button></div>
 </div></div>
 
 <div class="modal-bg" id="taskActionModalBg"><div class="modal">

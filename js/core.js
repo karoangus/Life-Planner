@@ -68,6 +68,9 @@ function loadStore(){
 let DB = loadStore();
 DB.notes.forEach(n=>{ if(typeof n.pinned!=='boolean') n.pinned=false; if(!n.updatedAt) n.updatedAt=n.date||todayISO(); });
 DB.events.forEach(e=>{ if(typeof e.reminder!=='boolean') e.reminder=false; });
+// v12.1 — user-defined categories with a default color (used by events & tasks)
+if(!Array.isArray(DB.categories)) DB.categories=[];
+DB.categories.forEach(c=>{ if(!c.id) c.id=uid(); if(!c.color) c.color='#00e5ff'; if(typeof c.name!=='string') c.name=''; });
 // Defensive migration for data created by older/broken builds.
 if(!DB.motivation || typeof DB.motivation!=='object') DB.motivation = { mood:'energize' }; if(typeof DB.motivation.custom!=='string') DB.motivation.custom = '';
 if(!DB.stats || typeof DB.stats!=='object') DB.stats = { tasksCompleted:0, questsCompleted:0, bestStreak:0 };
@@ -2286,6 +2289,8 @@ function clearJalaliDate(){
 let editingTaskId = null;
 function openTaskModal(id){
   editingTaskId = id || null;
+  window.__taskColorPicked = null; // v12.1 — task color resets to "auto" (category color)
+  renderTaskColorRow();
   document.querySelectorAll('#tPriority .chip-opt').forEach(o=>o.classList.remove('sel'));
   document.querySelectorAll('#tStatus .chip-opt').forEach(o=>o.classList.remove('sel'));
   if(id){
@@ -2296,6 +2301,8 @@ function openTaskModal(id){
     document.getElementById('tDateDisplay').value = isoToJalaliText(t.date||'');
     document.getElementById('tEst').value = t.est||'';
     document.getElementById('tNote').value = t.note||'';
+    window.__taskColorPicked = t.color||null;
+    renderTaskColorRow();
     document.querySelector('#tPriority [data-v="'+t.priority+'"]').classList.add('sel');
     const statusOpt = document.querySelector('#tStatus [data-v="'+(t.status||'notstarted')+'"]');
     if(statusOpt) statusOpt.classList.add('sel'); else document.querySelector('#tStatus [data-v="notstarted"]')?.classList.add('sel');
@@ -2392,7 +2399,8 @@ function saveTask(){
     title, cat: document.getElementById('tCat').value.trim(),
     date: document.getElementById('tDate').value, priority, status,
     est: document.getElementById('tEst').value, note: document.getElementById('tNote').value.trim(),
-    extraDeadlines, subtasks, inbox:false
+    extraDeadlines, subtasks, inbox:false,
+    color: window.__taskColorPicked||null // v12.1 — optional custom color
   };
   if(editingTaskId){
     const existing = DB.tasks.find(x=>x.id===editingTaskId);
@@ -2503,9 +2511,35 @@ function logHistory(key,inc){
   DB.history[d][key] = (DB.history[d][key]||0) + inc;
 }
 const CAT_PALETTE = ['#00e5ff','#8b6bff','#ff5470','#ffb545','#2ee6a6','#ff8fa3','#5eead4','#c084fc','#fbbf24','#60a5fa','#f472b6','#34d399'];
+/* v12.1 — shared color helpers for custom event/task colors and categories */
+const LP_COLOR_PALETTE = ['#00e5ff','#8b6bff','#ff5470','#ffb545','#2ee6a6','#60a5fa','#f472b6','#fbbf24','#34d399','#fb7185','#a78bfa','#f97316'];
+function lpHexToRgba(hex,a){
+  let h=String(hex||'').replace('#','').trim();
+  if(h.length===3) h=h.split('').map(ch=>ch+ch).join('');
+  if(!/^[0-9a-fA-F]{6}$/.test(h)) return `rgba(0,229,255,${a})`;
+  const n=parseInt(h,16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function categoryById(id){ return (DB.categories||[]).find(c=>c.id===id)||null; }
+function categoryByName(name){
+  const k=String(name||'').trim(); if(!k) return null;
+  return (DB.categories||[]).find(c=>String(c.name||'').trim()===k)||null;
+}
+function eventColor(ev){
+  if(ev&&ev.color) return ev.color;                          // color chosen for this event
+  if(ev&&ev.cat){ const c=categoryById(ev.cat); if(c&&c.color) return c.color; } // category default
+  return null;                                               // theme default
+}
+function taskColor(t){
+  if(t&&t.color) return t.color;
+  if(t&&t.cat){ const c=categoryByName(t.cat); if(c&&c.color) return c.color; }
+  return (t&&t.cat) ? colorForCategory(t.cat) : null;
+}
 function colorForCategory(name){
   const key = (name||'').trim();
   if(!key) return '#7fa6ff';
+  const managed = categoryByName(key);
+  if(managed && managed.color) return managed.color; // v12.1 — user-picked category color wins
   let hash = 0;
   for(let i=0;i<key.length;i++){ hash = key.charCodeAt(i) + ((hash<<5)-hash); }
   return CAT_PALETTE[Math.abs(hash) % CAT_PALETTE.length];
@@ -2529,7 +2563,7 @@ function subtaskProgressHtml(t){
   </div>`;
 }
 function taskRow(t){
-  const c = t.cat ? colorForCategory(t.cat) : null;
+  const c = taskColor(t);
   const isInbox = !!t.inbox;
   const inboxPill = isInbox ? `<span class="pill inbox-pill">📥 Inbox</span>` : '';
   const statusPill = !t.done && !isInbox ? `<span class="pill st-${esc(t.status||'notstarted')}">${statusIcon(t.status)} ${statusLabel(t.status)}</span>` : '';
@@ -2537,7 +2571,7 @@ function taskRow(t){
   return `<div class="task-row ${isInbox?'inbox-row':''}">
     <div class="chk ${t.done?'done':''}" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
     <div class="task-body" onclick="openTaskDetails('${t.id}')">
-      <div class="task-title ${t.done?'done':''}">${esc(t.title)}</div>
+      <div class="task-title ${t.done?'done':''}">${t.color?`<span class="lp-tdot" style="background:${esc(t.color)}" aria-label="رنگ تسک"></span>`:''}${esc(t.title)}</div>
       <div class="task-meta">
         ${inboxPill}
         <span class="pill ${t.priority}">${prLabel(t.priority)}</span>
@@ -2593,7 +2627,7 @@ function renderTaskActionDetails(){
   const id = window.__taskActionId;
   const t = id ? DB.tasks.find(x=>x.id===id) : null;
   if(!t) return;
-  const c = t.cat ? colorForCategory(t.cat) : null;
+  const c = taskColor(t);
   const subs = t.subtasks||[];
   const doneSubs = subs.filter(s=>s.done).length;
   const pct = subs.length ? Math.round(doneSubs/subs.length*100) : 0;
@@ -3033,12 +3067,19 @@ window.__editingEventId = null;
 window.__eventActionCtx = null; // {eventId, dayIdx}
 function openEventModal(){
   window.__editingEventId=null;
+  window.__editingEventDay=null;
+  window.__eventCategoryId=null;
+  window.__eventColorPicked=null;
   document.getElementById('eventModalTitle').textContent='📅 رویداد جدید';
+  const scopeHint=document.getElementById('eEditScopeHint');
+  if(scopeHint){ scopeHint.style.display='none'; scopeHint.innerHTML=''; }
   document.getElementById('eTitle').value='';
   document.getElementById('eHourStart').value='09:00';
   document.getElementById('eHourEnd').value='12:00';
   document.getElementById('eReminder').checked=false;
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.remove('sel'));
+  refreshEventCatChips();
+  renderEventColorRow();
   openModal('eventModalBg');
 }
 function timeToMinutes(value){
@@ -3097,6 +3138,39 @@ async function saveEvent(){
     await ensureNotificationRegistration();
   }
 
+  const cat=window.__eventCategoryId||null;
+  const color=window.__eventColorPicked||null;
+
+  // v12.1 — "edit only this day" mode: detach this occurrence from the series
+  // and save it as its own standalone event. The rest of the series is untouched.
+  if(window.__editingEventId && window.__editingEventDay!=null){
+    const ev=DB.events.find(x=>x.id===window.__editingEventId);
+    if(!ev){ window.__editingEventId=null; window.__editingEventDay=null; closeModal('eventModalBg'); return; }
+    const editedDay=window.__editingEventDay;
+    const remainderDays=eventDays(ev).filter(d=>d!==editedDay);
+    const others=DB.events.filter(x=>x.id!==ev.id);
+    if(remainderDays.length) others.push({title:ev.title,days:remainderDays,startMin:eventStartMinutes(ev),endMin:eventEndMinutes(ev)});
+    const occConflict=lpCandidateConflicts({title,days,startMin,endMin},others);
+    if(occConflict){
+      toast(`⚠️ «${occConflict.title}» مانع ثبت این رویداد است؛ ساعت‌ها تداخل دارند`);
+      return;
+    }
+    if(remainderDays.length){ ev.days=remainderDays; delete ev.day; }
+    else { DB.events=DB.events.filter(x=>x.id!==ev.id); }
+    DB.events.push({
+      id:uid(),title,days,startMin,endMin,reminder,cat,color,
+      startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
+    });
+    window.__editingEventId=null;
+    window.__editingEventDay=null;
+    closeModal('eventModalBg');
+    save();
+    renderCalendar();
+    rescheduleAllEventReminders();
+    toast('✏️ فقط این روز ذخیره شد؛ بقیه‌ی روزها دست‌نخورده ماندند');
+    return;
+  }
+
   const candidate={title,days,startMin,endMin};
   const conflict=findEventConflict(candidate,window.__editingEventId);
   if(conflict){
@@ -3109,17 +3183,19 @@ async function saveEvent(){
     if(ev){
       ev.title=title;ev.days=days;ev.startMin=startMin;ev.endMin=endMin;ev.reminder=reminder;
       ev.startHour=Math.floor(startMin/60);ev.endHour=Math.min(24,Math.floor(endMin/60));
+      ev.cat=cat;ev.color=color;
       delete ev.day;
     }
     toast('✏️ رویداد ویرایش شد');
   }else{
     DB.events.push({
-      id:uid(),title,days,startMin,endMin,reminder,
+      id:uid(),title,days,startMin,endMin,reminder,cat,color,
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
     toast(reminder?'📅 رویداد اضافه شد؛ یادآورش فعاله':'📅 رویداد اضافه شد');
   }
   window.__editingEventId=null;
+  window.__editingEventDay=null;
   closeModal('eventModalBg');
   save();
   renderCalendar();
@@ -3209,11 +3285,16 @@ function onEventBlockClick(eventId, dayIdx){
   document.getElementById('eventActionTitle').textContent = `📅 ${ev.title}`;
   const multiDay = eventDays(ev).length > 1;
   document.getElementById('deleteThisDayBtn').style.display = multiDay ? 'flex' : 'none';
+  const editDayBtn=document.getElementById('editThisDayBtn');
+  if(editDayBtn) editDayBtn.style.display = multiDay ? 'flex' : 'none';
+  const editWholeBtn=document.getElementById('editWholeEventBtn');
+  if(editWholeBtn) editWholeBtn.textContent = multiDay ? '✏️ ویرایش کل رویداد (همه‌ی روزها)' : '✏️ ویرایش';
   const meta=document.getElementById('eventActionDetails');
   if(meta){
     const s=eventStartMinutes(ev), e=eventEndMinutes(ev), d=Math.max(0,e-s);
     const dur=d>=60?`${Math.floor(d/60)} ساعت${d%60?` و ${d%60} دقیقه`:''}`:`${d} دقیقه`;
-    meta.innerHTML=`🕒 <b style="color:var(--neon);direction:ltr;display:inline-block">${formatTimeMinutes(s%1440)} → ${formatTimeMinutes(e%1440)}</b> · ⏱️ ${dur}`;
+    const cat=ev.cat?categoryById(ev.cat):null;
+    meta.innerHTML=`🕒 <b style="color:var(--neon);direction:ltr;display:inline-block">${formatTimeMinutes(s%1440)} → ${formatTimeMinutes(e%1440)}</b> · ⏱️ ${dur}${cat?` · 🏷️ ${esc(cat.name)}`:''}`;
   }
   openModal('eventActionModalBg');
 }
@@ -3222,13 +3303,44 @@ function startEditEvent(){
   const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
   closeModal('eventActionModalBg');
   window.__editingEventId=ev.id;
-  document.getElementById('eventModalTitle').textContent='✏️ ویرایش رویداد';
+  window.__editingEventDay=null; // whole-series edit
+  document.getElementById('eventModalTitle').textContent='✏️ ویرایش کل رویداد';
+  const scopeHint=document.getElementById('eEditScopeHint');
+  if(scopeHint){ scopeHint.style.display='none'; scopeHint.innerHTML=''; }
   document.getElementById('eTitle').value=ev.title;
   document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
   document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
   document.getElementById('eReminder').checked=!!ev.reminder;
   const days=eventDays(ev);
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',days.includes(+o.dataset.v)));
+  window.__eventCategoryId=ev.cat||null;
+  window.__eventColorPicked=ev.color||null;
+  refreshEventCatChips();
+  renderEventColorRow();
+  openModal('eventModalBg');
+}
+/* v12.1 — edit ONLY the tapped occurrence of a multi-day event. */
+function startEditEventThisDay(){
+  const ctx=window.__eventActionCtx;if(!ctx)return;
+  const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
+  closeModal('eventActionModalBg');
+  window.__editingEventId=ev.id;
+  window.__editingEventDay=ctx.dayIdx;
+  document.getElementById('eventModalTitle').textContent='✏️ ویرایش فقط این روز';
+  const scopeHint=document.getElementById('eEditScopeHint');
+  if(scopeHint){
+    scopeHint.style.display='block';
+    scopeHint.innerHTML=`📌 این تغییرات <b>فقط ${dayNames[ctx.dayIdx]}</b> را عوض می‌کند؛ بقیه‌ی روزهای این رویداد سر جایشان می‌مانند.`;
+  }
+  document.getElementById('eTitle').value=ev.title;
+  document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
+  document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
+  document.getElementById('eReminder').checked=!!ev.reminder;
+  document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',+o.dataset.v===ctx.dayIdx));
+  window.__eventCategoryId=ev.cat||null;
+  window.__eventColorPicked=ev.color||null;
+  refreshEventCatChips();
+  renderEventColorRow();
   openModal('eventModalBg');
 }
 function deleteEventDay(){
@@ -3251,8 +3363,360 @@ function deleteWholeEvent(){
   rescheduleAllEventReminders();
   toast('🗑️ کل رویداد حذف شد');
 }
+
+/* ============ v12.1 — EVENT/TASK COLORS, CATEGORIES & DRAG-AND-DROP ============ */
+window.__eventCategoryId = null;  // category selected in the event modal
+window.__eventColorPicked = null; // explicit event color (null = follow category/theme)
+window.__editingEventDay = null;  // dayIdx when editing only one occurrence of a series
+window.__taskColorPicked = null;  // explicit task color (null = follow category/auto)
+window.__editingCatId = null;     // category being edited in the manager
+window.__catColorPick = LP_COLOR_PALETTE[0];
+
+/* --- shared color-swatch row (default option + palette + custom input) --- */
+function lpColorRowHtml(selected, autoLabel){
+  const autoSel = !selected;
+  let html = autoLabel ? `<div class="lp-swatch lp-swatch-auto${autoSel?' sel':''}" data-c="" title="${esc(autoLabel)}">🎨</div>` : '';
+  LP_COLOR_PALETTE.forEach(c=>{
+    html += `<div class="lp-swatch${selected===c?' sel':''}" data-c="${c}" style="background:${c}" title="${c}"></div>`;
+  });
+  const customSel = selected && !LP_COLOR_PALETTE.includes(selected);
+  const customVal = /^#[0-9a-fA-F]{6}$/.test(selected||'') ? selected : '#00e5ff';
+  html += `<label class="lp-swatch lp-swatch-custom${customSel?' sel':''}" title="رنگ دلخواه"><span class="lp-swatch-custom-ic">🖌️</span><input type="color" value="${customVal}" aria-label="انتخاب رنگ دلخواه"></label>`;
+  return html;
+}
+function wireColorRow(boxId, onPick){
+  const box=document.getElementById(boxId); if(!box) return;
+  box.querySelectorAll('.lp-swatch[data-c]').forEach(sw=>{
+    sw.addEventListener('click', ()=>onPick(sw.dataset.c||null));
+  });
+  const inp=box.querySelector('.lp-swatch-custom input');
+  if(inp) inp.addEventListener('input', ()=>onPick(inp.value));
+}
+function renderEventColorRow(){
+  const box=document.getElementById('eColorRow'); if(!box) return;
+  box.innerHTML=lpColorRowHtml(window.__eventColorPicked,'پیش‌فرض (رنگ دسته)');
+  wireColorRow('eColorRow', hex=>{ window.__eventColorPicked=hex; renderEventColorRow(); });
+}
+function renderTaskColorRow(){
+  const box=document.getElementById('tColorRow'); if(!box) return;
+  box.innerHTML=lpColorRowHtml(window.__taskColorPicked,'خودکار (رنگ دسته)');
+  wireColorRow('tColorRow', hex=>{ window.__taskColorPicked=hex; renderTaskColorRow(); });
+}
+function renderCatColorRow(){
+  const box=document.getElementById('catColorRow'); if(!box) return;
+  box.innerHTML=lpColorRowHtml(window.__catColorPick,null);
+  wireColorRow('catColorRow', hex=>{ window.__catColorPick=hex||LP_COLOR_PALETTE[0]; renderCatColorRow(); });
+}
+
+/* --- category chips inside the event modal --- */
+function refreshEventCatChips(){
+  const box=document.getElementById('eCats'); if(!box) return;
+  const cats=DB.categories||[];
+  let html=cats.map(c=>`<div class="chip-opt lp-cat-chip${window.__eventCategoryId===c.id?' sel':''}" data-cid="${esc(c.id)}"><span class="lp-cat-dot" style="background:${esc(c.color)}"></span>${esc(c.name)}</div>`).join('');
+  html+=`<div class="chip-opt" data-cid="__add__">➕ دسته جدید</div>`;
+  box.innerHTML=html;
+  box.querySelectorAll('.lp-cat-chip').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      const id=ch.dataset.cid;
+      window.__eventCategoryId = (window.__eventCategoryId===id) ? null : id;
+      if(window.__eventCategoryId){
+        // selecting a category makes the event follow that category's default color
+        window.__eventColorPicked=null;
+        const cat=categoryById(window.__eventCategoryId);
+        if(cat) toast(`🎨 رنگ دسته «${cat.name}» برای این رویداد استفاده می‌شود`);
+      }
+      refreshEventCatChips();
+      renderEventColorRow();
+    });
+  });
+  const add=box.querySelector('[data-cid="__add__"]');
+  if(add) add.addEventListener('click', ()=>openCatManager(true));
+}
+
+/* --- category manager modal --- */
+function openCatManager(fromEventModal){
+  window.__catManagerFromEvent=!!fromEventModal;
+  window.__editingCatId=null;
+  window.__catColorPick=LP_COLOR_PALETTE[0];
+  const inp=document.getElementById('catNameInput'); if(inp) inp.value='';
+  renderCatColorRow();
+  renderCatManagerList();
+  updateCatFormLabels();
+  openModal('catManagerModalBg');
+}
+function closeCatManager(){
+  closeModal('catManagerModalBg');
+  refreshEventCatChips(); // keep event-modal chips fresh when it is open underneath
+  renderCalendar();       // event colors may have changed
+}
+function lpCatEventCount(id){ return DB.events.filter(e=>e.cat===id).length; }
+function renderCatManagerList(){
+  const list=document.getElementById('catManagerList'); if(!list) return;
+  const cats=DB.categories||[];
+  if(!cats.length){
+    list.innerHTML='<div class="lp-cat-empty">هنوز دسته‌ای نساخته‌ای. با فرم پایین، اولین دسته را با رنگ دلخواهش بساز — مثلاً «درس» با رنگ سبز.</div>';
+    return;
+  }
+  list.innerHTML=cats.map(c=>`
+    <div class="lp-cat-row">
+      <span class="lp-cat-dot" style="background:${esc(c.color)}"></span>
+      <span class="lp-cat-name">${esc(c.name)}</span>
+      <span class="lp-cat-count">${lpCatEventCount(c.id)} رویداد</span>
+      <button class="btn ghost sm" type="button" onclick="editCatFromManager('${esc(c.id)}')">✏️ ویرایش</button>
+      <button class="btn ghost sm" type="button" onclick="deleteCatFromManager('${esc(c.id)}')">🗑️</button>
+    </div>`).join('');
+}
+function updateCatFormLabels(){
+  const editing=!!window.__editingCatId;
+  const lbl=document.getElementById('catFormLabel'); if(lbl) lbl.textContent=editing?'ویرایش دسته':'دسته‌ی جدید';
+  const btn=document.getElementById('catSaveBtn'); if(btn) btn.textContent=editing?'💾 ذخیره تغییرات':'➕ افزودن دسته';
+}
+function editCatFromManager(id){
+  const c=categoryById(id); if(!c) return;
+  window.__editingCatId=id;
+  window.__catColorPick=c.color||LP_COLOR_PALETTE[0];
+  const inp=document.getElementById('catNameInput'); if(inp) inp.value=c.name;
+  renderCatColorRow();
+  updateCatFormLabels();
+}
+function deleteCatFromManager(id){
+  DB.categories=(DB.categories||[]).filter(c=>c.id!==id);
+  if(window.__eventCategoryId===id) window.__eventCategoryId=null;
+  if(window.__editingCatId===id){
+    window.__editingCatId=null;
+    updateCatFormLabels();
+    const inp=document.getElementById('catNameInput'); if(inp) inp.value='';
+  }
+  save();
+  renderCatManagerList();
+  refreshEventCatChips();
+  toast('🗑️ دسته حذف شد؛ رویدادها با رنگ خودشان می‌مانند');
+}
+function saveCategoryFromManager(){
+  const name=document.getElementById('catNameInput').value.trim();
+  if(!name){ toast('⚠️ اسم دسته رو بنویس'); return; }
+  const color=/^#[0-9a-fA-F]{6}$/.test(window.__catColorPick||'')?window.__catColorPick:LP_COLOR_PALETTE[0];
+  if(window.__editingCatId){
+    const c=categoryById(window.__editingCatId);
+    if(c){ c.name=name; c.color=color; }
+    toast('✏️ دسته به‌روز شد');
+  }else{
+    if(categoryByName(name)){ toast('⚠️ دسته‌ای با این اسم از قبل هست'); return; }
+    DB.categories.push({id:uid(),name,color});
+    toast('🏷️ دسته جدید ساخته شد');
+  }
+  window.__editingCatId=null;
+  const inp=document.getElementById('catNameInput'); if(inp) inp.value='';
+  save();
+  renderCatManagerList();
+  refreshEventCatChips();
+  updateCatFormLabels();
+}
+
+/* --- drag & drop: move an event to another day / time (touch + mouse) --- */
+const CAL_START_HOUR=7, CAL_END_HOUR=24, CAL_PX_HOUR=52, CAL_SNAP_MIN=15;
+const lpDragState={ drag:null, holdTimer:null, suppressClickUntil:0 };
+function lpCandidateConflicts(candidate,events){
+  const cSeg=eventSegments(candidate);
+  for(const other of events){
+    for(const b of eventSegments(other)){
+      for(const a of cSeg){
+        if(a.day===b.day && a.start<b.end && b.start<a.end) return other;
+      }
+    }
+  }
+  return null;
+}
+function lpCalColumns(){ return [...document.querySelectorAll('#weekGrid .lp-cal-day')]; }
+function lpCancelHold(){ if(lpDragState.holdTimer){ clearTimeout(lpDragState.holdTimer); lpDragState.holdTimer=null; } }
+function lpBlockScroll(e){ if(lpDragState.drag) e.preventDefault(); }
+function attachEventDrag(el, ev, dayIdx){
+  el.addEventListener('pointerdown', (e)=>{
+    if(lpDragState.drag) return;
+    if(e.button!==undefined && e.button!==0) return;
+    const isMouse=(e.pointerType==='mouse');
+    const sx=e.clientX, sy=e.clientY;
+    lpDragState.holdTimer=setTimeout(()=>{ // long-press lifts the event (touch)
+      lpDragState.holdTimer=null;
+      if(!lpDragState.drag) lpBeginDrag(e, el, ev, dayIdx);
+    }, 340);
+    const move=(m)=>{
+      if(lpDragState.drag){ lpDragMove(m); return; }
+      const dx=m.clientX-sx, dy=m.clientY-sy;
+      if(Math.abs(dx)>8||Math.abs(dy)>8){
+        // horizontal grab or any mouse movement picks the event up;
+        // a plain vertical touch keeps scrolling the page instead
+        if((isMouse && (Math.abs(dx)>8||Math.abs(dy)>8)) || (Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy))) lpBeginDrag(m, el, ev, dayIdx);
+        else lpCancelHold();
+      }
+    };
+    const up=(u)=>{ cleanup(); if(lpDragState.drag) lpDragEnd(); };
+    const cancel=()=>{ cleanup(); if(lpDragState.drag) lpDragCancel(); };
+    const cleanup=()=>{
+      lpCancelHold();
+      document.removeEventListener('pointermove',move);
+      document.removeEventListener('pointerup',up);
+      document.removeEventListener('pointercancel',cancel);
+    };
+    document.addEventListener('pointermove',move,{passive:true});
+    document.addEventListener('pointerup',up);
+    document.addEventListener('pointercancel',cancel);
+  });
+}
+function lpBeginDrag(e, el, ev, dayIdx){
+  lpCancelHold();
+  try{ if(navigator.vibrate) navigator.vibrate(12); }catch(_){}
+  const rect=el.getBoundingClientRect();
+  const grabY=Math.max(14, Math.min(rect.height-6, e.clientY-rect.top));
+  const clone=el.cloneNode(true);
+  clone.classList.add('lp-drag-clone');
+  clone.classList.remove('lp-dragging-src');
+  clone.style.width=rect.width+'px';
+  clone.style.height=rect.height+'px';
+  document.body.appendChild(clone);
+  el.classList.add('lp-dragging-src');
+  const ghost=document.createElement('div');
+  ghost.className='ev-ghost';
+  lpDragState.drag={ evRef:ev, el, clone, ghost, grabY, dayIdx, curDay:dayIdx, curStart:eventStartMinutes(ev), moved:false, lastX:e.clientX, lastY:e.clientY };
+  document.addEventListener('touchmove', lpBlockScroll, {passive:false});
+  lpDragMove(e);
+  lpAutoscrollStep();
+}
+function lpDragMove(e){
+  const d=lpDragState.drag; if(!d) return;
+  const daysWrap=document.querySelector('#weekGrid .lp-cal-days');
+  if(!daysWrap){ lpDragCancel(); return; }
+  if(typeof e.clientX==='number'){ d.lastX=e.clientX; d.lastY=e.clientY; }
+  d.clone.style.left=(d.lastX - d.clone.offsetWidth/2)+'px';
+  d.clone.style.top=(d.lastY - d.grabY)+'px';
+  const cols=lpCalColumns();
+  const daysRect=daysWrap.getBoundingClientRect();
+  let target=null;
+  if(d.lastX>=daysRect.left-16 && d.lastX<=daysRect.right+16){
+    cols.forEach((col,i)=>{
+      const r=col.getBoundingClientRect();
+      if(d.lastX>=r.left && d.lastX<r.right) target=i;
+    });
+    if(target===null){ // on a border between columns → snap to nearest
+      let bd=1e9;
+      cols.forEach((col,i)=>{
+        const r=col.getBoundingClientRect();
+        const dd=d.lastX<r.left ? r.left-d.lastX : d.lastX-r.right;
+        if(dd<bd){ bd=dd; target=i; }
+      });
+    }
+  }
+  const dur=Math.max(15, eventEndMinutes(d.evRef)-eventStartMinutes(d.evRef));
+  const maxStart=CAL_END_HOUR*60 - Math.min(dur,(CAL_END_HOUR-CAL_START_HOUR)*60);
+  let min=Math.round(((d.lastY-daysRect.top-d.grabY)/CAL_PX_HOUR*60 + CAL_START_HOUR*60)/CAL_SNAP_MIN)*CAL_SNAP_MIN;
+  min=Math.max(CAL_START_HOUR*60, Math.min(maxStart, min));
+  d.curDay=target;
+  d.curStart=min;
+  d.moved=true;
+  if(target==null){
+    d.ghost.remove();
+    cols.forEach(c=>c.classList.remove('lp-drop-target'));
+  }else{
+    const ghostMin=d.ghost.dataset.min, ghostDay=d.ghost.dataset.day;
+    if(cols[target]!==d.ghost.parentElement || String(min)!==ghostMin || String(target)!==ghostDay){
+      cols[target].appendChild(d.ghost);
+      d.ghost.dataset.day=String(target);
+      d.ghost.dataset.min=String(min);
+      d.ghost.style.top=((min-CAL_START_HOUR*60)/60*CAL_PX_HOUR)+'px';
+      d.ghost.style.height=Math.max(12, Math.min(dur,(CAL_END_HOUR-CAL_START_HOUR)*60)/60*CAL_PX_HOUR-2)+'px';
+      d.ghost.innerHTML=`<span class="ev-ghost-time">${dayNames[target]} · ${formatTimeMinutes(min)}</span>`;
+    }
+    cols.forEach((c,i)=>c.classList.toggle('lp-drop-target', i===target));
+  }
+}
+function lpAutoscrollStep(){
+  const d=lpDragState.drag;
+  if(!d) return;
+  let scrolled=false;
+  if(d.lastY<100){ window.scrollBy(0,-16); scrolled=true; }
+  else if(d.lastY>window.innerHeight-100){ window.scrollBy(0,16); scrolled=true; }
+  if(scrolled) lpDragMove({});
+  requestAnimationFrame(lpAutoscrollStep);
+}
+function lpDragCleanup(){
+  const d=lpDragState.drag;
+  document.removeEventListener('touchmove', lpBlockScroll);
+  if(d){
+    d.clone.remove();
+    d.ghost.remove();
+    d.el.classList.remove('lp-dragging-src');
+    document.querySelectorAll('#weekGrid .lp-cal-day.lp-drop-target').forEach(c=>c.classList.remove('lp-drop-target'));
+  }
+  lpDragState.drag=null;
+}
+function lpDragCancel(){
+  lpDragCleanup();
+  renderCalendar();
+}
+function lpDragEnd(){
+  const d=lpDragState.drag;
+  lpDragCleanup();
+  if(!d) return;
+  if(d.moved) lpDragState.suppressClickUntil=Date.now()+600; // swallow the trailing click
+  if(!d.moved || d.curDay==null) return;
+  lpApplyEventDrag(d.evRef, d.dayIdx, d.curDay, d.curStart);
+}
+function lpApplyEventDrag(evRef, fromDay, toDay, newStart){
+  const ev=DB.events.find(x=>x.id===evRef.id)||evRef;
+  const dur=Math.max(15, eventEndMinutes(ev)-eventStartMinutes(ev));
+  const ns=Math.max(CAL_START_HOUR*60, Math.min(CAL_END_HOUR*60-Math.min(dur,(CAL_END_HOUR-CAL_START_HOUR)*60), newStart));
+  const ne=ns+dur;
+  const days=eventDays(ev);
+  const sameDay=(toDay===fromDay);
+  const multiDay=days.length>1;
+  if(sameDay && ns===eventStartMinutes(ev)){ return; } // dropped back on its own slot
+
+  const candidate = (!sameDay && multiDay)
+    ? {title:ev.title, days:[toDay], startMin:ns, endMin:ne}
+    : {title:ev.title, days:(!sameDay?[toDay]:days), startMin:ns, endMin:ne};
+  const others=DB.events.filter(x=>x.id!==ev.id);
+  if(!sameDay && multiDay){
+    const rem=days.filter(dd=>dd!==fromDay);
+    if(rem.length) others.push({title:ev.title, days:rem, startMin:eventStartMinutes(ev), endMin:eventEndMinutes(ev)});
+  }
+  const conflict=lpCandidateConflicts(candidate,others);
+  if(conflict){
+    toast(`⚠️ «${esc(conflict.title)}» مانع این جابه‌جایی است؛ ساعت‌ها تداخل دارند`);
+    renderCalendar();
+    return;
+  }
+
+  if(!sameDay && multiDay){
+    // one occurrence of a series is moved → it becomes its own standalone event
+    ev.days=days.filter(dd=>dd!==fromDay);
+    delete ev.day;
+    DB.events.push({
+      id:uid(), title:ev.title, days:[toDay], startMin:ns, endMin:ne,
+      reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null,
+      startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
+    });
+    toast(`📌 این روز از «${esc(ev.title)}» جدا شد و به ${dayNames[toDay]} ${formatTimeMinutes(ns)} رفت`);
+  }else{
+    if(!sameDay){ ev.days=[toDay]; delete ev.day; }
+    ev.startMin=ns; ev.endMin=ne;
+    ev.startHour=Math.floor(ns/60); ev.endHour=Math.min(24,Math.floor(ne/60));
+    toast(!sameDay
+      ? `📅 «${esc(ev.title)}» به ${dayNames[toDay]} منتقل شد — ${formatTimeMinutes(ns)} تا ${formatTimeMinutes(Math.min(ne,1439))}`
+      : `🕒 «${esc(ev.title)}» به ${formatTimeMinutes(ns)} تا ${formatTimeMinutes(Math.min(ne,1439))} منتقل شد`);
+  }
+  save();
+  rescheduleAllEventReminders();
+}
+// swallow the click that follows a finished drag, without touching the block's own handler
+(function(){
+  const grid=document.getElementById('weekGrid');
+  if(grid) grid.addEventListener('click', e=>{
+    if(Date.now()<lpDragState.suppressClickUntil){ e.stopPropagation(); e.preventDefault(); }
+  }, true);
+})();
+
 function renderCalendar(){
-  const START=7,END=24,PX_HOUR=52;
+  const START=CAL_START_HOUR,END=CAL_END_HOUR,PX_HOUR=CAL_PX_HOUR;
   const now=new Date();
   const today=(now.getDay()+1)%7;
   const currentHour=now.getHours();
@@ -3298,6 +3762,13 @@ function renderCalendar(){
         dot.setAttribute('aria-label','یادآور فعال است');
         el.appendChild(dot);
       }
+      const ecol=eventColor(e);
+      if(ecol){
+        el.style.background=`linear-gradient(160deg,${lpHexToRgba(ecol,.5)},${lpHexToRgba(ecol,.26)})`;
+        el.style.borderColor=lpHexToRgba(ecol,.7);
+        el.style.boxShadow=`inset 0 0 0 1px ${lpHexToRgba(ecol,.28)}, 0 2px 10px ${lpHexToRgba(ecol,.22)}`;
+      }
+      attachEventDrag(el,e,d);
       el.onclick=()=>onEventBlockClick(e.id,d);
       col.appendChild(el);
     });
@@ -3655,7 +4126,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='12.0';
+const LP_APP_VERSION='12.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
