@@ -181,11 +181,15 @@
 
     <!-- CALENDAR -->
     <div class="view" id="view-calendar">
-      <div class="topbar">
+      <div class="topbar calendar-topbar">
         <div><h1>تقویم هفتگی</h1><div class="sub">بلوک‌بندی زمانی برای رویدادها و کارها</div></div>
         <div class="top-actions"><button class="btn" onclick="openEventModal()">➕ رویداد جدید</button></div>
       </div>
-      <div class="card" style="padding:0; overflow:hidden;">
+      <div class="calendar-intro" aria-label="راهنمای تقویم">
+        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><strong>هفته‌ات را یک‌جا ببین</strong><span>رویدادها را کنار کارهای روزانه‌ات بچین و با خیال راحت پیش برو.</span></div></div>
+        <div class="calendar-legend"><span><i class="legend-dot legend-dot-event"></i>رویداد</span><span><i class="legend-dot legend-dot-now"></i>امروز</span></div>
+      </div>
+      <div class="card calendar-card">
         <div id="weekGrid"></div>
       </div>
     </div>
