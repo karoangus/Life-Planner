@@ -1297,29 +1297,59 @@ function fmtMMSS(ms){
   return String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
 }
 
+/* v13.1: session end now plays a LOUD, repeating two-tone alarm (classic
+   digital-clock style) instead of a soft short ding, so the user clearly
+   notices the session finished. The function name and every call site stay
+   the same. Also fires a distinct vibration pattern on phones. */
 function playPomoChime(){
   try{
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return;
+    const ctx = new Ctx();
+    if(ctx.state === 'suspended'){ ctx.resume().catch(()=>{}); }
     const now = ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6 — bell-like ascending chime
-    notes.forEach((freq,i)=>{
-      const t = now + i*0.14;
-      const osc = ctx.createOscillator(); const gain = ctx.createGain();
-      const shimmer = ctx.createOscillator(); const shimmerGain = ctx.createGain();
-      osc.type = 'sine'; osc.frequency.value = freq;
-      shimmer.type = 'sine'; shimmer.frequency.value = freq*2.01;
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.24, t+0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t+0.9);
-      shimmerGain.gain.setValueAtTime(0.0001, t);
-      shimmerGain.gain.exponentialRampToValueAtTime(0.05, t+0.02);
-      shimmerGain.gain.exponentialRampToValueAtTime(0.0001, t+0.6);
-      osc.connect(gain); gain.connect(ctx.destination);
-      shimmer.connect(shimmerGain); shimmerGain.connect(ctx.destination);
-      osc.start(t); osc.stop(t+0.95);
-      shimmer.start(t); shimmer.stop(t+0.65);
-    });
-    setTimeout(()=>{ try{ ctx.close(); }catch(e){} }, 1700);
+    // Alarm timbre: two alternating bright notes (B5 ~988Hz / F6 ~1397Hz),
+    // each tone is a square-ish wave doubled with a detuned sine partial.
+    const f1 = 987.77, f2 = 1396.91;
+    const groups = 6;          // 3 on-off cycles of the two-note pattern
+    const noteLen = 0.22;      // each beep length
+    const gap = 0.04;
+    const peak = 0.42;         // loud alarm level
+    for(let i=0; i<groups; i++){
+      const t = now + i * (noteLen + gap);
+      const freq = (i % 2 === 0) ? f1 : f2;
+      const dur = noteLen + 0.02;
+
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.012);
+      g.gain.setValueAtTime(peak, t + noteLen - 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + noteLen);
+      g.connect(ctx.destination);
+
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, t);
+      osc.connect(g);
+      osc.start(t); osc.stop(t + dur);
+
+      // bright harmonic partial so the alarm cuts through ambient noise
+      const part = ctx.createOscillator();
+      const pg = ctx.createGain();
+      part.type = 'sine';
+      part.frequency.setValueAtTime(freq * 2, t);
+      pg.gain.setValueAtTime(0.0001, t);
+      pg.gain.exponentialRampToValueAtTime(peak * 0.35, t + 0.012);
+      pg.gain.exponentialRampToValueAtTime(0.0001, t + noteLen);
+      part.connect(pg); pg.connect(ctx.destination);
+      part.start(t); part.stop(t + dur);
+    }
+    // Phone vibration in the same rhythm (ignored where unsupported).
+    try{
+      if(navigator.vibrate) navigator.vibrate([180,80,180,80,180,80,180,80,180,80,180]);
+    }catch(_){}
+    const endAt = now + groups * (noteLen + gap) + 0.25;
+    setTimeout(()=>{ try{ ctx.close(); }catch(e){} }, Math.max(2500, (endAt - now) * 1000));
   }catch(e){ /* audio unavailable, ignore silently */ }
 }
 
@@ -2907,6 +2937,15 @@ function renderTasks(filter='all'){
   if(currentCatFilter && filter!=='inbox') list = list.filter(t=>(t.cat||'').trim()===currentCatFilter);
   el.innerHTML = list.length ? list.map(taskRow).join('') : `<div class="empty"><div class="ic">📭</div>تسکی پیدا نشد</div>`;
 
+  const today = sortTasks(DB.tasks.filter(isTaskForToday));
+  document.getElementById('todayTasks').innerHTML = today.length ? today.slice(0,6).map(taskRow).join('') : `<div class="empty"><div class="ic">🌤️</div>امروز تسکی نداری، یکی اضافه کن!</div>`;
+  document.getElementById('todayCount').textContent = today.length + ' تسک';
+}
+/* v13.1: isTaskForToday must be a top-level function. It used to be nested
+   inside renderTasks(), so renderTodayWidget() (which runs on every save()
+   while the Dashboard is open) threw a ReferenceError, was swallowed by the
+   per-widget try/catch, and "برنامه‌ی امروز" stayed stale until the Tasks
+   view was opened (whose render repainted the same widget as a side effect). */
 function isTaskForToday(t){
   if(t.inbox) return false;
   const d = todayISO();
@@ -2916,11 +2955,6 @@ function isTaskForToday(t){
   const hasAnyDeadline = Boolean(t.date) || (Array.isArray(t.extraDeadlines) && t.extraDeadlines.length > 0);
   if(!hasAnyDeadline && !t.done) return true;
   return false;
-}
-
-  const today = sortTasks(DB.tasks.filter(isTaskForToday));
-  document.getElementById('todayTasks').innerHTML = today.length ? today.slice(0,6).map(taskRow).join('') : `<div class="empty"><div class="ic">🌤️</div>امروز تسکی نداری، یکی اضافه کن!</div>`;
-  document.getElementById('todayCount').textContent = today.length + ' تسک';
 }
 /* Dashboard slice of renderTasks — lets renderAll refresh the visible "today"
    widget without rebuilding the (hidden) full task list. */
@@ -4237,7 +4271,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='13.0';
+const LP_APP_VERSION='13.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
