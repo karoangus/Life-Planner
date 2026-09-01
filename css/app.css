@@ -171,10 +171,33 @@ html[data-theme="legendaryGold"]{
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html,body{height:100%;}
+/* v13.1 scroll perf: momentum scrolling + no rubber-band chaining */
+html{
+  -webkit-text-size-adjust:100%;
+  scroll-behavior:auto;
+}
 body{
   font-family:'Segoe UI','Vazirmatn','Tahoma',sans-serif; background:var(--bg); color:var(--txt);
-  background-image: var(--body-glow);
   min-height:100vh; overflow-x:hidden; transition:background-color .2s, color .2s;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:none;
+  /* keep background paint on its own GPU layer so scrolling doesn't repaint it */
+  transform:translateZ(0);
+}
+/* v13.1 scroll perf: the colored glow lives on a fixed, non-scrolling layer
+   instead of the scrolling body. Before, the three big radial gradients were
+   attached to <body>, so every scroll frame forced a full-screen gradient
+   repaint — the main source of stutter. Now the glow stays put while the
+   content scrolls over it. z-index:-1 keeps it behind everything. */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background-image:var(--body-glow);
+  background-attachment:fixed;
+  will-change:transform;
 }
 ::-webkit-scrollbar{width:8px; height:8px;}
 ::-webkit-scrollbar-thumb{background:var(--line2); border-radius:10px;}

@@ -546,6 +546,36 @@
   /* -------------------------------------------------------------
      MAIN POMODORO VIEW RENDERERS
   ------------------------------------------------------------- */
+  /* v13.1: single source of truth for the "Minute X of Y" line under the
+     timer, shared by the full badge render and the cheap live tick. */
+  function minuteBadgeText(s, currentSession, cycleCount){
+    if(!s) return `🍅 جلسه ${currentSession} از ${cycleCount} آماده شروع`;
+    const info = getPomoMinuteInfo(s);
+    if(info.isInfinite) return `♾️ دقیقه ${info.currentMin} فوکوس آزاد`;
+    if(s.mode === 'break') return `☕ دقیقه ${info.currentMin} از ${info.totalMin} استراحت`;
+    return `⏱️ دقیقه ${info.currentMin} از ${info.totalMin} (${info.remMin} دقیقه باقی‌مانده)`;
+  }
+
+  /* v13.1: live-update the minute badge ONCE PER SECOND while a session is
+     running. core.js's setInterval holds the *original* tickPomo reference,
+     so the window.tickPomo override below never ran and the "Minute X of Y"
+     number only moved on start/pause/resume — it looked stuck. This interval
+     touches the single text node in place (no DOM rebuild) and stays idle
+     unless the pomodoro view is on screen. */
+  setInterval(()=>{
+    try{
+      const pv = document.getElementById('view-pomodoro');
+      if(!pv || !pv.classList.contains('active')) return;
+      const s = DB.pomodoro && DB.pomodoro.session;
+      if(!s) return;
+      const badge = document.getElementById('pomoMinuteBadge');
+      if(!badge){ renderMainSessionBadge(); return; }
+      const { currentSession, cycleCount } = getCycleState();
+      const txt = minuteBadgeText(s, currentSession, cycleCount);
+      if(badge.textContent !== txt) badge.textContent = txt;
+    }catch(_){}
+  }, 1000);
+
   function renderMainSessionBadge(){
     ensure();
     const { currentSession, currentRound, cycleCount } = getCycleState();
@@ -585,18 +615,7 @@
       }
     }
     if(minBadge){
-      if(!s){
-        minBadge.textContent = `🍅 جلسه ${currentSession} از ${cycleCount} آماده شروع`;
-      } else {
-        const info = getPomoMinuteInfo(s);
-        if(info.isInfinite){
-          minBadge.textContent = `♾️ دقیقه ${info.currentMin} فوکوس آزاد`;
-        } else if(s.mode === 'break'){
-          minBadge.textContent = `☕ دقیقه ${info.currentMin} از ${info.totalMin} استراحت`;
-        } else {
-          minBadge.textContent = `⏱️ دقیقه ${info.currentMin} از ${info.totalMin} (${info.remMin} دقیقه باقی‌مانده)`;
-        }
-      }
+      minBadge.textContent = minuteBadgeText(s, currentSession, cycleCount);
     }
   }
 
@@ -1501,12 +1520,28 @@
     }
   };
 
-  // Live timer tick hook
+  // Live timer tick hook. (v13.1 note: core.js's setInterval captured the
+  // original tickPomo at definition time, so this override is invoked mainly
+  // from places that call tickPomo() by name; the cheap 1s interval below
+  // covers the main-view minute badge, and the overlay interval above covers
+  // fullscreen focus mode.)
   const oldTick = window.tickPomo;
   window.tickPomo = function(){
     if(typeof oldTick === 'function') oldTick();
-    renderMainSessionBadge();
-    renderFocusOverlay();
+    try{
+      const pv = document.getElementById('view-pomodoro');
+      if(pv && pv.classList.contains('active')){
+        const badge = document.getElementById('pomoMinuteBadge');
+        if(badge){
+          const { currentSession, cycleCount } = getCycleState();
+          badge.textContent = minuteBadgeText(DB.pomodoro && DB.pomodoro.session, currentSession, cycleCount);
+        } else {
+          renderMainSessionBadge();
+        }
+      }
+      const ov = document.getElementById('pomo66FocusOverlay');
+      if(ov && ov.classList.contains('open')) renderFocusOverlay();
+    }catch(_){}
   };
 
   /* v11.1: keep the fullscreen Focus Mode timer ticking once per second.
@@ -1514,11 +1549,14 @@
      time, so simply overriding window.tickPomo there does not propagate.
      We add a self-contained tick here that runs only while the Focus Mode
      overlay is open, so the visible countdown stays in sync. */
+  /* v13.1: 1000ms instead of 500 — the overlay's countdown only shows whole
+     seconds via the shared core tick; this halves the (already hidden-view
+     guarded) DOM work while scrolling around with focus mode open. */
   setInterval(()=>{
     const el = document.getElementById('pomo66FocusOverlay');
     if(!el || !el.classList.contains('open')) return;
     renderFocusOverlay();
-  }, 500);
+  }, 1000);
 
   try {
     if(typeof migrateLegacyManualPomoData === 'function') migrateLegacyManualPomoData();
