@@ -181,14 +181,21 @@ body{
   min-height:100vh; overflow-x:hidden; transition:background-color .2s, color .2s;
   -webkit-overflow-scrolling:touch;
   overscroll-behavior-y:none;
-  /* keep background paint on its own GPU layer so scrolling doesn't repaint it */
-  transform:translateZ(0);
+  /* v13.2: no transform/filter on <body> on purpose. A transform here makes
+     <body> the anchor for every position:fixed element (bottom nav with the
+     «بیشتر» button, the More sheet, modals, toasts) and turns the page body
+     into its own scroll container — that's exactly what broke scrolling and
+     made the «بیشتر» bar drift into the page content in v13.1. */
 }
 /* v13.1 scroll perf: the colored glow lives on a fixed, non-scrolling layer
    instead of the scrolling body. Before, the three big radial gradients were
    attached to <body>, so every scroll frame forced a full-screen gradient
    repaint — the main source of stutter. Now the glow stays put while the
-   content scrolls over it. z-index:-1 keeps it behind everything. */
+   content scrolls over it. z-index:-1 keeps it behind everything.
+   v13.2: the GPU-layer hint (will-change) lives on THIS layer, not on <body>,
+   so fixed elements stay pinned to the screen. background-attachment:fixed
+   was dropped too — it is redundant here (the element itself is a fixed
+   full-screen layer) and forces a full-screen repaint on every scroll frame. */
 body::before{
   content:'';
   position:fixed;
@@ -196,7 +203,6 @@ body::before{
   z-index:-1;
   pointer-events:none;
   background-image:var(--body-glow);
-  background-attachment:fixed;
   will-change:transform;
 }
 ::-webkit-scrollbar{width:8px; height:8px;}
