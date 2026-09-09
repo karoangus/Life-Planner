@@ -87,6 +87,9 @@ if(!DB.newRecordFlags || typeof DB.newRecordFlags!=='object') DB.newRecordFlags 
 if(!DB.perfectDayHistory || typeof DB.perfectDayHistory!=='object') DB.perfectDayHistory = {};
 if(!DB.dailyGoalProgress || typeof DB.dailyGoalProgress!=='object') DB.dailyGoalProgress = {};
 if(!DB.streakShields || typeof DB.streakShields!=='number') DB.streakShields = 0;
+if(!DB.streakShieldWeekly || typeof DB.streakShieldWeekly!=='object') DB.streakShieldWeekly = { weekStart: weekStartMs(), count: 0 };
+if(typeof DB.streakShieldWeekly.weekStart!=='number') DB.streakShieldWeekly.weekStart = weekStartMs();
+if(typeof DB.streakShieldWeekly.count!=='number') DB.streakShieldWeekly.count = 0;
 if(typeof DB.skillPoints!=='number') DB.skillPoints = 0;
 if(typeof DB.xpWallet!=='number') DB.xpWallet = DB.stats.totalXPEarned || 0;
 if(!DB.quest){ DB.quest = { current:null, nextAt: Date.now()+2*60*1000, waitStart: Date.now(), bags:{} }; }
@@ -1890,7 +1893,20 @@ function renderYVY(){
 
 /* ============ WEEKLY BOSS FIGHT ============ */
 const BOSS_WEEK_MS = 7*24*60*60*1000;
+const BOSS_DEADLINE_MS = 14*24*60*60*1000;
+function checkBossDeadline(){
+  const b = DB.boss.active;
+  if(!b) return;
+  if(!b.deadlineAt){ b.deadlineAt = Date.now() + BOSS_DEADLINE_MS; return; }
+  if(Date.now() > b.deadlineAt){
+    DB.boss.active = null;
+    DB.boss.nextAvailableAt = Date.now() + BOSS_WEEK_MS;
+    save();
+    toast('⏰ مهلت ۱۴ روزه باس تموم شد — باس از دست رفت! یک هفته صبر کن تا باس جدید بیاد');
+  }
+}
 function checkBossTrigger(){
+  checkBossDeadline();
   if(DB.boss.active) return;
   if(Date.now() >= DB.boss.nextAvailableAt){
     openModal('bossTriggerModalBg');
@@ -1954,9 +1970,10 @@ function confirmBossSetup(){
     b.taskIds = [...bossSetupSelected];
     b.hitTaskIds = b.hitTaskIds.filter(id=>b.taskIds.includes(id));
     b.hp = Math.max(0, Math.round(b.maxHp * (1 - b.hitTaskIds.length/b.taskIds.length)));
+    if(!b.deadlineAt) b.deadlineAt = Date.now() + BOSS_DEADLINE_MS;
     toast('✏️ باس ویرایش شد');
   } else {
-    DB.boss.active = { name, hp:100, maxHp:100, taskIds:[...bossSetupSelected], hitTaskIds:[] };
+    DB.boss.active = { name, hp:100, maxHp:100, taskIds:[...bossSetupSelected], hitTaskIds:[], deadlineAt: Date.now() + BOSS_DEADLINE_MS };
     toast(`⚔️ نبرد با «${name}» شروع شد!`);
   }
   bossEditMode = false;
@@ -2006,15 +2023,21 @@ function fmtBossCountdown(ms){
 function renderBossContent(){
   const el = document.getElementById('bossContent');
   if(!el) return;
+  checkBossDeadline();
   const b = DB.boss.active;
   if(b){
     const pct = Math.round((b.hp/b.maxHp)*100);
+    const deadlineLeft = b.deadlineAt ? Math.max(0, b.deadlineAt - Date.now()) : 0;
+    const deadlineHtml = b.deadlineAt
+      ? `<div class="boss-deadline">⏰ مهلت ۱۴ روزه: <b class="num">${fmtBossCountdown(deadlineLeft)}</b></div>`
+      : '';
     el.innerHTML = `<div class="boss-card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
         <div class="boss-name">☠️ ${esc(b.name)}</div>
         <button class="btn ghost sm" onclick="startEditBoss()">✏️ ویرایش</button>
       </div>
       <div class="boss-hp-track"><div class="boss-hp-fill" style="width:${pct}%"></div><div class="boss-hp-text">${b.hp} / ${b.maxHp} HP</div></div>
+      ${deadlineHtml}
       <div style="margin-top:16px;">
         ${b.taskIds.map(id=>{
           const t = DB.tasks.find(x=>x.id===id);
@@ -2093,6 +2116,14 @@ function applyShopDiscount(baseCost){
 }
 
 /* ============ XP SHOP ============ */
+const STREAK_SHIELD_WEEKLY_LIMIT = 3;
+function weekStartMs(){
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  const day = (d.getDay() + 6) % 7; // Monday = 0
+  d.setDate(d.getDate() - day);
+  return d.getTime();
+}
 function spendXP(cost){
   if((DB.xpWallet||0) < cost) return false;
   DB.xpWallet -= cost;
@@ -2108,9 +2139,16 @@ function buyXPBoost(){
   toast('⚡ XP Boost ×۲ فعال شد! تا ۳۰ دقیقه همه‌ی XP هات دوبرابر می‌شه');
 }
 function buyStreakShield(){
-  const cost = applyShopDiscount(200);
+  if((DB.streakShields||0) >= 1){ toast('🛡️ الان یه Streak Shield داری — اول مصرفش کن بعد دوباره بخر'); return; }
+  const now = weekStartMs();
+  const w = DB.streakShieldWeekly || { weekStart: now, count: 0 };
+  if(w.weekStart !== now){ w.weekStart = now; w.count = 0; }
+  if((w.count||0) >= STREAK_SHIELD_WEEKLY_LIMIT){ toast('⚠️ سقف خرید هفتگی Streak Shield (۳ عدد) پر شده — هفته‌ی بعد دوباره امتحان کن'); return; }
+  const cost = applyShopDiscount(500);
   if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
   DB.streakShields = (DB.streakShields||0)+1;
+  w.count = (w.count||0)+1;
+  DB.streakShieldWeekly = w;
   persist();
   renderXP();
   renderXPShop();
@@ -2227,6 +2265,8 @@ function shopDataSig(){
     boostLeft>0 ? 1 : 0,
     DB.skillTiers?.shopDiscount||0,
     DB.streakShields||0,
+    (DB.streakShieldWeekly||{}).weekStart||0,
+    (DB.streakShieldWeekly||{}).count||0,
     (DB.cityBonusItems||[]).length
   ].join('|');
 }
@@ -2254,7 +2294,19 @@ function renderXPShop(){
 
   document.getElementById('costBoost').textContent = applyShopDiscount(100)+' XP';
   document.getElementById('costMystery').textContent = applyShopDiscount(200)+' XP';
-  document.getElementById('costShield').textContent = applyShopDiscount(200)+' XP';
+  document.getElementById('costShield').textContent = applyShopDiscount(500)+' XP';
+
+  const shieldLimitEl = document.getElementById('streakShieldWeeklyLimit');
+  if(shieldLimitEl){
+    const now = weekStartMs();
+    const w = DB.streakShieldWeekly || { weekStart: now, count: 0 };
+    const count = (w.weekStart===now) ? (w.count||0) : 0;
+    const remaining = Math.max(0, STREAK_SHIELD_WEEKLY_LIMIT - count);
+    const owned = (DB.streakShields||0) >= 1;
+    let txt = `سقف خرید هفتگی: <b class="num">${count}/${STREAK_SHIELD_WEEKLY_LIMIT}</b> — ${remaining} خرید باقی‌مانده`;
+    if(owned) txt += '<br>🛡️ الان یک Shield داری — اول مصرفش کن';
+    shieldLimitEl.innerHTML = txt;
+  }
 
   const statusEl = document.getElementById('xpShopStatus');
   const boostLeft = DB.xpBoost ? DB.xpBoost.activeUntil - Date.now() : 0;
@@ -2702,8 +2754,9 @@ function taskRow(t){
   const isInbox = !!t.inbox;
   const inboxPill = isInbox ? `<span class="pill inbox-pill">📥 Inbox</span>` : '';
   const statusPill = !t.done && !isInbox ? `<span class="pill st-${esc(t.status||'notstarted')}">${statusIcon(t.status)} ${statusLabel(t.status)}</span>` : '';
+  const statusRowClass = (!t.done && !isInbox) ? `st-row-${esc(t.status||'notstarted')}` : '';
   const subHtml = subtaskProgressHtml(t);
-  return `<div class="task-row ${isInbox?'inbox-row':''}">
+  return `<div class="task-row ${isInbox?'inbox-row':''} ${statusRowClass}">
     <div class="chk ${t.done?'done':''}" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
     <div class="task-body" onclick="openTaskDetails('${t.id}')">
       <div class="task-title ${t.done?'done':''}">${t.color?`<span class="lp-tdot" style="background:${esc(t.color)}" aria-label="رنگ تسک"></span>`:''}${esc(t.title)}</div>
@@ -2917,13 +2970,25 @@ function sortTasks(list){
 function renderTasks(filter='all'){
   currentStatusFilter = filter;
   renderCategoryFolders();
+
+  // v14: dedicated "Completed" section at the top of the Tasks view.
+  const doneList = sortTasks(DB.tasks.filter(t=>!t.inbox && t.done));
+  const completedEl = document.getElementById('completedTasks');
+  if(completedEl){
+    completedEl.innerHTML = doneList.length
+      ? doneList.map(taskRow).join('')
+      : `<div class="empty"><div class="ic">✅</div>هنوز تسکی کامل نکردی</div>`;
+  }
+  const completedCountEl = document.getElementById('completedCount');
+  if(completedCountEl) completedCountEl.textContent = doneList.length + ' تسک';
+
   const el = document.getElementById('allTasks');
-  let list = sortTasks(DB.tasks);
+  let list = sortTasks(DB.tasks).filter(t=>!t.inbox && !t.done);
   if(filter==='inbox'){
-    list = list.filter(t=>t.inbox);
+    list = sortTasks(DB.tasks).filter(t=>t.inbox);
   } else {
-    // default views exclude inbox tasks
-    list = list.filter(t=>!t.inbox);
+    // default views exclude inbox tasks and show only active (not done) tasks;
+    // completed tasks now live in the "Completed" section above.
     if(filter==='inprogress') list = list.filter(t=>!t.done && (t.status||'notstarted')==='inprogress');
     else if(filter==='queued') list = list.filter(t=>!t.done && (t.status||'notstarted')==='queued');
     else if(filter==='paused') list = list.filter(t=>!t.done && (t.status||'notstarted')==='paused');
@@ -2932,7 +2997,7 @@ function renderTasks(filter='all'){
     else if(filter==='done') list = list.filter(t=>t.done);
     else if(filter==='critical') list = list.filter(t=>t.priority==='critical');
     else if(filter==='high') list = list.filter(t=>t.priority==='high');
-    // 'all' shows all non-inbox tasks
+    // 'all' shows all active non-inbox tasks
   }
   if(currentCatFilter && filter!=='inbox') list = list.filter(t=>(t.cat||'').trim()===currentCatFilter);
   el.innerHTML = list.length ? list.map(taskRow).join('') : `<div class="empty"><div class="ic">📭</div>تسکی پیدا نشد</div>`;
@@ -4271,7 +4336,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='13.2';
+const LP_APP_VERSION='14.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
