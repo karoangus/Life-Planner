@@ -820,6 +820,15 @@
       </div>
 
       <div class="card settings-card">
+        <div class="card-head"><h3>🌐 زبان برنامه</h3></div>
+        <p class="muted settings-help">زبان پیش‌فرض برنامه فارسی است؛ اگر بخواهی می‌توانی کل برنامه را انگلیسی کنی. داده‌های خودت (تسک‌ها، یادداشت‌ها و...) دست‌نخورده می‌مانند.</p>
+        <select id="settingsLanguage" class="settings-select" onchange="setSettingsLanguage(this.value)">
+          <option value="fa">فارسی (پیش‌فرض)</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+
+      <div class="card settings-card">
         <div class="card-head"><h3>🔤 اندازه فونت</h3></div>
         <p class="muted settings-help">اندازه نوشته‌ها و متن‌های رابط را از داخل خود برنامه تغییر بده؛ مستقل از فونت گوشی.</p>
         <select id="settingsFontSize" class="settings-select" onchange="setSettingsFontSize(this.value)">
@@ -1158,6 +1167,7 @@
 <script src="js/sw-register.js"></script>
 
 <script src="js/pomodoro.js"></script>
+<script src="js/lang.js"></script>
 
 </body>
 </html>

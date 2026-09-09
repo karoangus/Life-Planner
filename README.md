@@ -12,11 +12,11 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-14.1-00e5ff?style=for-the-badge&logoColor=white" alt="Version 14.1" />
+  <img src="https://img.shields.io/badge/نسخه-15.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 15.0" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
-  <img src="https://img.shields.io/badge/زبان-فارسی_(RTL)-ffb545?style=for-the-badge" alt="Persian RTL" />
+  <img src="https://img.shields.io/badge/زبان-فارسی_(RTL)_+_English-ffb545?style=for-the-badge" alt="Persian RTL + English" />
 </p>
 
 ---
@@ -175,6 +175,7 @@
   - 💜 بنفش نئون (Neon Purple)
   - 🌇 غروب آتشین (Fire Sunset)
   - 👑 طلایی افسانه‌ای (Legendary Gold)
+- **🌐 انتخاب زبان برنامه (جدید در v15):** زبان پیش‌فرض **فارسی (RTL)** است و از مسیر **تنظیمات ← «🌐 زبان برنامه»** می‌توان کل رابط را به **English (LTR)** تغییر داد. داده‌های نوشته‌شده توسط کاربر هرگز ترجمه نمی‌شوند.
 - **تنظیم مقیاس رابط کاربری و فونت:** امکان کوچک یا بزرگ کردن سایز متون و عناصر به تناسب ابعاد صفحه گوشی یا مانیتور.
 - **سفارشی‌سازی نوار پایین:** افزودن و چیدمان دلخواه دکمه‌های پرکاربرد به نوار دسترسی سریع.
 - **پشتیبان‌گیری خودکار و دستی:** تولید فایل خروجی JSON از تمامی داده‌ها، بازیابی آسان و سیستم یادآوری و بکاپ‌گیری خودکار روزانه.
@@ -201,6 +202,7 @@ Life-Planner/
 │   ├── core.js                 # هسته مرکزی: DB لوکال، رندرینگ، گیمیفیکیشن و تسک‌ها
 │   ├── pomodoro.js             # ماژول مستقل پومودورو، صداهای امبینت و حالت ذن
 │   ├── enhancements.js         # ماژول تنظیمات، مدیریت تم‌ها، مقیاس UI و بکاپ
+│   ├── lang.js                 # لایه زبان: فارسی پیش‌فرض + ترجمه رابط به انگلیسی
 │   └── sw-register.js          # رجیستر هوشمند Service Worker و مدیریت آپدیت‌ها
 │
 ├── audio/                      # فایل‌های صوتی باکیفیت آفلاین (باران، کافه، جنگل، شهر)
@@ -212,7 +214,11 @@ Life-Planner/
 ```
 
 > ⚠️ **نکته برای توسعه‌دهندگان:** ترتیب بارگذاری اسکریپت‌ها در `index.html` حیاتی است:  
-> `core.js` ➔ `enhancements.js` ➔ `sw-register.js` ➔ `pomodoro.js`
+> `core.js` ➔ `enhancements.js` ➔ `sw-register.js` ➔ `pomodoro.js` ➔ `lang.js`
+>
+> `lang.js` عمداً **آخرین** فایل است: این ماژول هیچ منطقی را تغییر نمی‌دهد و فقط متن‌های
+> رابط کاربری را که روی صفحه آمده‌اند ترجمه می‌کند (با `MutationObserver`). به همین دلیل
+> شناسه‌ها (ID)، کلاس‌ها و هندلرهای دکمه‌ها کاملاً دست‌نخورده باقی می‌مانند.
 
 ---
 
@@ -266,18 +272,29 @@ npm test
 
 ## 🔢 راهنمای به‌روزرسانی و توسعه نسخه جدید
 
-هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، این سه مرحله را به ترتیب انجام دهید تا کاربرها به‌طور خودکار پیام به‌روزرسانی دریافت کنند:
+هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **هر پنج جا با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` را باز کنید و شماره `"version"` را یک پله ارتقا دهید (مثلاً `"14.2"`).
-2. در فایل `js/core.js`، متغیر `const LP_APP_VERSION = '14.2'` را نیز دقیقاً با همان شماره هماهنگ کنید.
-3. در صورت تغییر در استایل‌ها، اسکریپت‌ها یا ساختار، در فایل `sw.js` نام کش را ارتقا دهید:
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"15.0"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '15.0';`
+3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"15.0.0"`).
+4. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
+5. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v14.2';
+   const CACHE_NAME = 'life-planner-cache-v62';
    ```
+
+> ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ هر ۱۲ تست باید سبز باشند.
 
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### 🌐 نسخه 15.0
+- 🌐 **پشتیبانی از زبان انگلیسی:** زبان پیش‌فرض برنامه همچنان **فارسی (RTL)** است، اما حالا از مسیر **تنظیمات ← «🌐 زبان برنامه»** می‌توانی کل رابط کاربری را به **English (LTR)** تغییر بدهی.
+- 🔒 **داده‌های تو دست‌نخورده می‌ماند:** فقط متن‌های خودِ برنامه ترجمه می‌شوند؛ عنوان تسک‌ها، یادداشت‌ها، عادت‌ها، اهداف، رویدادها و دسته‌بندی‌هایی که خودت نوشته‌ای هرگز ترجمه نمی‌شوند.
+- ↔️ **چیدمان خودکار RTL/LTR:** با انتخاب انگلیسی، جهت صفحه به LTR تغییر می‌کند و فاصله‌ها و حاشیه‌های جهت‌دار متناسب می‌شوند؛ هر ۵ تم دقیقاً مثل قبل کار می‌کنند.
+- 📅 **تاریخ شمسی به انگلیسی:** تاریخ همچنان شمسی می‌ماند و فقط نام ماه و روز هفته انگلیسی نوشته می‌شود (مثلاً `Wednesday, 18 Shahrivar 1405`).
+- 💾 **ماندگاری انتخاب زبان:** زبان انتخابی در همان دستگاه ذخیره می‌شود و بعد از بستن برنامه هم حفظ می‌شود.
 
 ### 🌟 نسخه 14.1
 - 🎨 **رنگ‌بندی تسک‌ها در «برنامه امروز» داشبورد:** تسک‌های برنامه امروز در داشبورد اکنون مطابق با وضعیت خود (در حال انجام: سبز، در صف: آبی، متوقف: نارنجی، شروع‌نشده: خاکستری) رنگ‌آمیزی می‌شوند.
@@ -313,6 +330,7 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
+- **🌐 Persian by default, English on demand (new in v15):** The interface ships in **Persian (RTL)** as the default language. Open **Settings → «🌐 زبان برنامه» (App language)** and pick **English** to switch the entire UI to English (LTR). Your own content — task titles, notes, habits, goals, events and categories — is never translated, and the choice is remembered on the device.
 - **100% Offline PWA:** Instant loading, offline asset caching via Service Worker, installable on Android, iOS, Windows, macOS, and Linux.
 - **Privacy First (Local-First):** All user data lives exclusively in the device's `localStorage`. No external databases, no telemetry, no tracking.
 - **Zero Build / Zero Dependencies:** Pure static files with no build process, bundler, or heavy framework overhead.
