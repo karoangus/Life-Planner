@@ -1222,8 +1222,14 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 
 /* today's tasks inside the dashboard */
 #view-dashboard #todayTasks .task-row{
-  padding:8px 9px; gap:10px; margin-bottom:6px;
-  background:var(--panel2); border:1px solid var(--line); border-radius:13px;
+  padding:8px 9px; gap:10px; margin-bottom:6px; border-radius:13px;
+}
+/* v14.1: keep the plain surface only for rows without a status tint (e.g.
+   done tasks). Open tasks must keep the v14 tint from .task-row.st-row-*
+   below; because this id-heavy rule would otherwise paint over it, it now
+   excludes every tinted row so the status color shows here too. */
+#view-dashboard #todayTasks .task-row:not(.st-row-inprogress):not(.st-row-queued):not(.st-row-paused):not(.st-row-notstarted){
+  background:var(--panel2); border:1px solid var(--line);
 }
 #view-dashboard #todayTasks .task-row:last-child{margin-bottom:0;}
 #view-dashboard #todayTasks .task-title{font-size:12.5px;}
