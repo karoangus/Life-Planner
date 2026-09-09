@@ -167,6 +167,10 @@
           <button class="btn" onclick="openTaskModal()">➕ تسک جدید</button>
         </div>
       </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-head"><h3>✅ تکمیل‌شده</h3><span class="muted" id="completedCount">۰ تسک</span></div>
+        <div id="completedTasks"></div>
+      </div>
       <div class="card">
         <div class="chip-group" style="margin-bottom:12px;" id="taskFilters">
           <div class="chip-opt sel" data-f="all">📁 همه</div>
@@ -745,7 +749,8 @@
           <div class="shop-item-ic">🛡️</div>
           <h3>Streak Shield</h3>
           <div class="muted" style="font-size:12.5px; margin:8px 0; line-height:1.8;">یه روز عادتی رو یادت رفت؟ این جلوی از دست رفتن استریکت رو می‌گیره</div>
-          <div class="shop-item-cost num" id="costShield">200 XP</div>
+          <div class="shop-item-cost num" id="costShield">500 XP</div>
+          <div class="muted" id="streakShieldWeeklyLimit" style="font-size:11.5px; margin:8px 0; line-height:1.8;"></div>
           <button class="btn" style="width:100%; justify-content:center; margin-top:12px;" onclick="buyStreakShield()">خرید</button>
         </div>
       </div>
@@ -1089,6 +1094,7 @@
     <label>چندتا تسک انتخاب کن که هرکدوم بهش ضربه بزنه <span id="bossTaskCount" class="num">(۰ تسک)</span></label>
     <div id="bossTaskPicker" style="max-height:260px; overflow-y:auto;"></div>
   </div>
+  <div class="muted" style="font-size:12px; margin-top:8px; line-height:1.8;">⏰ ۱۴ روز فرصت داری تا باس رو شکست بدی؛ وگرنه باس از دست می‌ره و باید یک هفته صبر کنی تا باس جدید بیاد.</div>
   <div class="modal-actions">
     <button class="btn ghost" onclick="closeModal('bossSetupModalBg')">انصراف</button>
     <button class="btn" onclick="confirmBossSetup()">شروع نبرد!</button>
