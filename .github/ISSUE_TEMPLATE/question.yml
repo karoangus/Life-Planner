@@ -1,0 +1,80 @@
+name: "❓ Question / Help"
+description: "Not sure something is broken, or how to do something? Ask here"
+title: "[Question] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        No question is too small — if something is confusing, other people are usually confused by it too, and questions like yours are what the documentation gets improved from.
+
+        **Ask in Persian or English**, whichever you are more comfortable with.
+
+        Two quick things that answer most questions:
+
+        - The [README](https://github.com/karoangus/Life-Planner#readme) covers installation, PWA install on Android / iOS / desktop, themes, language switching, and how to run the tests.
+        - **If your data seems gone** (empty task list, level reset, streak lost): **do not clear site data and do not reinstall.** Your data is stored in your browser only. Take a backup first if the app still opens (⚙️ Settings → ☁️ پشتیبان و بازیابی → Export Backup). This repository also ships a `life-planner-recovery.html` page that can inspect, back up, and restore the stored data without deleting anything.
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: "What are you trying to do?"
+      description: "Describe the goal in everyday words, even if it feels obvious. What are you hoping the app will let you do?"
+      placeholder: |
+        For example: "I want my study sessions to count toward my weekly boss, and I want the calendar to show my tasks next to my events."
+    validations:
+      required: true
+
+  - type: textarea
+    id: stuck
+    attributes:
+      label: "Where are you stuck?"
+      description: "What did you try, what did you expect, and what did you see instead? Roughly where in the app you looked is enough — no need for perfect wording."
+      placeholder: |
+        For example: "I looked in Settings and in the XP Shop but did not find any option to link tasks to the boss. Is this possible at all, or does it only work one way?"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Which part is it about? (optional)"
+      options:
+        - "✅ Tasks & subtasks (تسک‌ها)"
+        - "🍅 Pomodoro & focus mode (پومودورو)"
+        - "📅 Calendar & events (تقویم)"
+        - "🔥 Habits & streaks (عادت‌ها)"
+        - "🎯 Goals (اهداف)"
+        - "📝 Notes (یادداشت‌ها)"
+        - "🏙️ Life City, boss battles, skill tree"
+        - "🛍️ XP Shop, XP, levels & Perfect Day"
+        - "⚙️ Settings, themes, language & font size"
+        - "☁️ Backup, export & restore"
+        - "📱 Installing the app / using it offline"
+        - "🧑‍💻 Running or developing the project locally"
+        - "Not sure"
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: "Your device and app version (optional, but often the whole answer)"
+      description: "Some behaviour differs between phone and desktop, between the installed app and a browser tab, and between the live demo and local files. Version number: bottom of ⚙️ Settings (🏷️ نسخه برنامه)."
+      value: |
+        - **Device / OS:** (e.g. iPhone 13, iOS 17)
+        - **Browser:** (e.g. Safari, Chrome)
+        - **Using it as:** installed PWA / browser tab / local files
+        - **Life Planner version:** (e.g. 15.0)
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: "Screenshot (optional)"
+      description: "A picture of the screen you are looking at tells more than a paragraph of text. Drag it straight into this box, and crop out your personal task or note content first — this issue is public."
+      placeholder: |
+        Drag an image into this box.
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **A word on expectations:** Life Planner is a free, personal project maintained by one person, so answers come when there is time rather than on a schedule. Persian questions are just as welcome as English ones. If your question turns out to be a bug, the maintainer will simply ask you to move it to the 🐛 Bug Report form — nothing is lost by starting here.

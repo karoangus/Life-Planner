@@ -1,0 +1,150 @@
+name: "🐛 Bug Report"
+description: "Something in Life Planner is broken, looks wrong, or behaves strangely"
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this! Bug reports are how Life Planner gets better for everyone.
+
+        **You can write in Persian or English** — whichever is easier for you.
+
+        Before you start:
+
+        - Quick search of [open and closed issues](https://github.com/karoangus/Life-Planner/issues?q=is%3Aissue) can save you the typing if someone already reported it.
+        - **If your tasks, XP, levels or streaks look missing or wrong: export a backup first** (⚙️ Settings → ☁️ پشتیبان و بازیابی → **Export Backup**) **before** clearing browser data, uninstalling, or trying any fix. Your data lives only on your device, so a "fix" can accidentally destroy it.
+        - ⚠️ **This issue is public.** Screenshots often show your personal task titles and notes — please crop or blur anything you want to keep private. **Do not attach your backup JSON file**; it contains all of your data.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: "What is going wrong?"
+      description: "Describe the problem in a few sentences, in your own words. No technical language needed."
+      placeholder: |
+        For example: "After I finish a pomodoro session the timer restarts from 25:00 instead of switching to the break, and I get no sound."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to reproduce"
+      description: "List what you did, one step per line — for example 'Open the app → Tasks page → tap a task → mark it completed'. If you have no idea how it happened, just say so: 'I opened the app and it was already like this' is genuinely useful."
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: "Expected vs. actual result"
+      description: "What should have happened, and what happened instead — e.g. 'Expected: the task moves to the completed section and I get the XP reward. Actual: it stays in the list and no XP appears.'"
+      value: |
+        **Expected:**
+        **Actual:**
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Which part of the app?"
+      description: "Pick the closest one — a guess is fine."
+      options:
+        - "🏠 Dashboard (داشبورد)"
+        - "✅ Tasks & subtasks (تسک‌ها)"
+        - "🍅 Pomodoro & focus mode (پومودورو)"
+        - "📅 Calendar & events (تقویم)"
+        - "🔥 Habits & streaks (عادت‌ها)"
+        - "🎯 Goals (اهداف)"
+        - "📝 Notes (یادداشت‌ها)"
+        - "🏙️ Life City"
+        - "⚔️ Weekly boss battle"
+        - "🌳 Skill tree"
+        - "🛍️ XP Shop, boosts & Mystery Box"
+        - "🪞 You VS You"
+        - "⭐ Levels, XP & Perfect Day"
+        - "⚙️ Settings, themes, language & font size"
+        - "☁️ Backup, export & restore"
+        - "📱 PWA install, offline mode or update message"
+        - "🔔 Notifications & reminders"
+        - "Something else / not sure"
+
+  - type: checkboxes
+    id: where
+    attributes:
+      label: "Where did you see it?"
+      description: "Tick everything that applies. This matters: the offline cache and some permissions behave differently depending on how the app is opened."
+      options:
+        - label: "The live demo — karoangus.github.io/Life-Planner"
+        - label: "My own copy on GitHub Pages"
+        - label: "Local files (index.html opened directly, or npx serve / python3 -m http.server)"
+          note: Offline mode and notifications do not work when the file is opened directly from disk.
+        - label: "Installed as an app (PWA) on my phone or computer"
+        - label: "Both, in a browser tab and in the installed app"
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: "Your device, browser and version"
+      description: "Fill in the list below — you can delete the example in brackets. Not sure about a line? Write 'unknown'. Your version number is at the bottom of the ⚙️ Settings page (🏷️ نسخه برنامه)."
+      value: |
+        - **Device:** (e.g. Samsung Galaxy A54, iPhone 13, MacBook Air)
+        - **Operating system:** (e.g. Android 14, iOS 17, Windows 11, macOS 14)
+        - **Browser and version:** (e.g. Chrome 131, Safari, Samsung Internet)
+        - **Life Planner version:** (e.g. 15.0)
+        - **Interface language:** Persian / English
+        - **Theme:** (Dark, Light, Neon Purple, Fire Sunset, Legendary Gold)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: "How often does it happen?"
+      options:
+        - "Every time I follow those steps"
+        - "Most of the time"
+        - "Once in a while, no clear pattern"
+        - "It happened once so far"
+        - "Only the first time, after opening or updating the app"
+
+  - type: checkboxes
+    id: extra-signals
+    attributes:
+      label: "Any of these true?"
+      description: "These details often point straight at the cause. Tick only what actually applies."
+      options:
+        - label: "It still happens when my device is offline"
+        - label: "It started after an app update"
+        - label: "It only happens in English mode (not Persian)"
+        - label: "It only happens in one theme"
+        - label: "Some of my saved data looks wrong or is missing"
+        - label: "I can reproduce it on another device or browser"
+
+  - type: textarea
+    id: console-errors
+    attributes:
+      label: "Error messages (optional, only if easy for you)"
+      description: "On a computer: right-click the page → Inspect → Console tab, and copy any red text. On a phone, feel free to skip this entirely."
+      render: shell
+      placeholder: |
+        Paste red error text here. It will be formatted as a code block automatically.
+
+  - type: textarea
+    id: media
+    attributes:
+      label: "Screenshots or screen recording (optional)"
+      description: "Drag and drop images or a short video into this box. A 10-second screen recording often replaces a whole page of description — just remember to hide personal content."
+      placeholder: |
+        Drag an image or video into this box.
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **What happens next:** Life Planner is a free, personal project maintained by one person, so there is no guaranteed reply time. The most useful thing you can do is make the steps above specific enough that someone else can repeat them — that alone usually halves the back-and-forth. If you enjoy poking at code, a pull request is very welcome: the app is plain HTML, CSS and JavaScript with no build step, and `npm test` runs the smoke tests.

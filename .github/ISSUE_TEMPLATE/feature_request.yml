@@ -1,0 +1,107 @@
+name: "💡 Feature Request"
+description: "Suggest something new to add, or something existing to improve"
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome — this form is the right place for them.
+
+        **Persian or English, whichever is easier for you.** A rough idea is completely fine: no design mock-ups and no formal wording needed.
+
+        First, a 30-second check: search [open and closed issues](https://github.com/karoangus/Life-Planner/issues?q=is%3Aissue) to see whether this was already suggested or discussed. If it was, add a comment there instead — knowing more people want it helps.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: "What would you like to see?"
+      description: "One or two sentences is enough. Plain words, no formal spec."
+      placeholder: |
+        For example: "I would like the weekly boss to remind me on Wednesday if I have not hit any task, instead of only at the end of the week."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Which part of the app is this about?"
+      description: "Optional — and a guess is fine."
+      options:
+        - "🏠 Dashboard (داشبورد)"
+        - "✅ Tasks & subtasks (تسک‌ها)"
+        - "🍅 Pomodoro & focus mode (پومودورو)"
+        - "📅 Calendar & events (تقویم)"
+        - "🔥 Habits & streaks (عادت‌ها)"
+        - "🎯 Goals (اهداف)"
+        - "📝 Notes (یادداشت‌ها)"
+        - "🏙️ Life City"
+        - "⚔️ Weekly boss battle"
+        - "🌳 Skill tree"
+        - "🛍️ XP Shop, boosts & Mystery Box"
+        - "🪞 You VS You"
+        - "⭐ Levels, XP & Perfect Day"
+        - "⚙️ Settings, themes, language & font size"
+        - "☁️ Backup, export & restore"
+        - "📱 PWA install & offline mode"
+        - "🔔 Notifications & reminders"
+        - "Something new that does not fit the list above"
+
+  - type: textarea
+    id: why
+    attributes:
+      label: "Why do you want it?"
+      description: "What does this make easier, more fun, or possible that is not today? A real example from your own day is the most convincing thing you can write."
+      placeholder: |
+        For example: "I plan my whole week on Sunday, but I have to add events one by one and it takes 10 minutes, so I mostly skip the calendar."
+    validations:
+      required: true
+
+  - type: textarea
+    id: how
+    attributes:
+      label: "How do you imagine it working?"
+      description: "Walk through how you would use it: where you tap, what you type, what should happen. Small details about buttons and gestures are welcome but optional."
+      placeholder: |
+        1. In the calendar, I would select several days...
+        2. A button appears that says...
+        3. The app should then...
+    validations:
+      required: true
+
+  - type: textarea
+    id: workarounds
+    attributes:
+      label: "How do you handle this today? (optional)"
+      description: "Knowing what you do instead — or what you tried and gave up on — tells a lot about the real need."
+      placeholder: |
+        For example: "I keep a separate list on paper and copy things over every few days."
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Anything else that helps? (optional)"
+      description: "Screenshots, a sketch, or a feature in another app you like the feel of. Drag images straight into the box."
+      placeholder: |
+        Links, mock-ups, examples from other apps, or a note about who in your life would also use this.
+
+  - type: markdown
+    attributes:
+      value: |
+        _A note on scope, so no one's time is wasted: Life Planner is a **local-first, offline, zero-dependency** PWA — no accounts, no server, no analytics, and your data never leaves your device. Anything that would need a backend (cloud sync between devices, sharing with other people, push messages from a server) is not something the current design supports, so those ideas are more likely to be closed than built. Everything that can live inside the browser and `localStorage` is fair game._
+
+  - type: checkboxes
+    id: help
+    attributes:
+      label: "Want to help make it happen?"
+      description: "Optional — tick the one that fits you."
+      options:
+        - label: "I would like to build this myself and open a pull request — the app is plain HTML, CSS and JavaScript with no build step (leave a comment after submitting so nobody duplicates the work)"
+        - label: "I am happy to test it and give feedback once it exists"
+        - label: "I am only suggesting it — no time to help build it"
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **What happens next:** this is a one-person project, so suggestions are read and answered when time allows rather than on a schedule — no reply in a few days does not mean it was ignored. A request with a clear real-life use case behind it is much easier to act on than a vague one, and if it does not fit the direction of the app you will get a reason instead of silence.
