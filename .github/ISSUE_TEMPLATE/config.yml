@@ -1,0 +1,15 @@
+# Chooser settings for the issue templates in this folder.
+# Docs: https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+
+# The three templates (bug / feature / question) cover every reason to open an
+# issue here, so the blank form is turned off to keep reports consistent.
+blank_issues_enabled: false
+
+contact_links:
+  - name: "📖 Documentation (README)"
+    url: "https://github.com/karoangus/Life-Planner#readme"
+    about: "Features, installation, PWA setup on Android / iOS / desktop, and how to run the tests — worth a look before asking."
+
+  - name: "🌐 Try the live app"
+    url: "https://karoangus.github.io/Life-Planner/"
+    about: "Check whether you can reproduce what you are seeing on the live demo, in a fresh browser profile with no personal data."
