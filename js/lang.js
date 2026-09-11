@@ -914,7 +914,17 @@
       'Persian is the default language. If you want, you can switch the whole app to English. Your own data (tasks, notes and so on) stays untouched.',
     'فارسی (پیش‌فرض)': 'Persian (default)'
   };
+  /* Strings introduced by v16 (tasks tabs, habit/goal editing). */
+  var EXTRA_V16 = {
+    '✏️ ویرایش عادت': '✏️ Edit habit',
+    '✏️ ویرایش هدف': '✏️ Edit goal',
+    'ویرایش عادت': 'Edit habit',
+    'ویرایش هدف': 'Edit goal',
+    '✏️ عادت ویرایش شد': '✏️ Habit updated',
+    '✏️ هدف ویرایش شد': '✏️ Goal updated'
+  };
   for(var _k in EXTRA){ if(Object.prototype.hasOwnProperty.call(EXTRA, _k)) EXACT[_k] = EXTRA[_k]; }
+  for(var _k16 in EXTRA_V16){ if(Object.prototype.hasOwnProperty.call(EXTRA_V16, _k16)) EXACT[_k16] = EXTRA_V16[_k16]; }
 
   /* ---------- digits ---------- */
   var FA_D = '۰۱۲۳۴۵۶۷۸۹';
