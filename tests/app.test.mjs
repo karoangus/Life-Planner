@@ -171,26 +171,77 @@ if (!useFallback) {
     check(`view renders: ${view}`, hasView);
   }
 
-  // Extra v10.2 checks
-  const hasInboxFilter = indexHtml.includes('data-f="inbox"');
-  const hasInprogressFilter = indexHtml.includes('data-f="inprogress"');
-  const hasQueuedFilter = indexHtml.includes('data-f="queued"');
-  const hasPausedFilter = indexHtml.includes('data-f="paused"');
-  const hasNotstartedFilter = indexHtml.includes('data-f="notstarted"');
-  const hasInboxModal = indexHtml.includes('inboxQuickModalBg');
-  const hasStatusOrder = coreJs.includes('STATUS_ORDER') && coreJs.includes('inprogress:0');
-  const hasRewardGrid = coreJs.includes('reward-grid') && appCss.includes('reward-grid');
-  const hasVersionBump = (versionJson.version === '13.1' || versionJson.version === '13.0' || versionJson.version === '11.2' || versionJson.version === '11.0' || versionJson.version === '10.2') && (pkgJson.version === '13.1.0' || pkgJson.version === '13.0.0' || pkgJson.version === '11.2.0' || pkgJson.version === '11.0.0' || pkgJson.version === '10.2.0') && (coreJs.includes("LP_APP_VERSION='13.1'") || coreJs.includes("LP_APP_VERSION='13.0'") || coreJs.includes("LP_APP_VERSION='11.2'") || coreJs.includes("LP_APP_VERSION='11.0'") || coreJs.includes("LP_APP_VERSION='10.2'"));
-  console.log(`ℹ️ v11.0 extra: inboxFilter=${hasInboxFilter} inprogress=${hasInprogressFilter} queued=${hasQueuedFilter} pausedFilter=${hasPausedFilter} notstartedFilter=${hasNotstartedFilter} inboxModal=${hasInboxModal} statusOrder=${hasStatusOrder} rewardGrid=${hasRewardGrid} versionBump=${hasVersionBump}`);
-  check('v10.2 status filters present (paused & notstarted)', hasPausedFilter && hasNotstartedFilter && hasInprogressFilter && hasQueuedFilter && hasInboxFilter);
-  check('v10.2 inbox modal present', hasInboxModal);
-  check('v10.2 status sorting present', hasStatusOrder);
-  check('v10.2 reward display fixed', hasRewardGrid);
-  // Note: these 4 extra checks will be beyond the 12 required, but we keep failures counting - we need to adjust?
-  // We have now 12+4=16 checks. For backward compat, we consider success if first 12 pass.
-  // So we will not fail if extra checks fail? But we already checked them as part of failures.
-  // Let's ensure first 12 are the required ones - extra checks are bonus but we already counted them.
-  // To keep 12 tests requirement, we will reset failures for extra checks if they fail? Actually we want them to pass too.
+  // ---------- extra guards (beyond the 12 required checks) ----------
+  const swJs = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf-8');
+  const langJs = fs.readFileSync(path.join(ROOT, 'js/lang.js'), 'utf-8');
+  const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf-8');
+  const v16Path = path.join(ROOT, 'js/v16.js');
+  const v16Js = fs.existsSync(v16Path) ? fs.readFileSync(v16Path, 'utf-8') : '';
+
+  // v16 (1) — the in-progress / queued / paused tabs are gone, the rest stayed.
+  const removedTabs = ['inprogress', 'queued', 'paused'].every(f => !indexHtml.includes(`data-f="${f}"`));
+  const keptTabs = ['all', 'notstarted', 'inbox', 'done'].every(f => indexHtml.includes(`data-f="${f}"`));
+  check('v16 task tabs trimmed to all / notstarted / inbox / done', removedTabs && keptTabs,
+    `removed=${removedTabs} kept=${keptTabs}`);
+
+  // v16 (2) — "Completed" is a tab now, not a permanently open block.
+  const doneChip = /data-f="done"[^>]*>\s*✅ تکمیل‌شده/.test(indexHtml);
+  const oldCompletedBlockGone = !indexHtml.includes('id="completedTasks"');
+  const counterKept = indexHtml.includes('id="completedCount"');
+  check('v16 completed moved into a tab (counter kept)', doneChip && oldCompletedBlockGone && counterKept,
+    `chip=${doneChip} oldBlockGone=${oldCompletedBlockGone} counter=${counterKept}`);
+
+  // v16 (3) — skeleton loading + scroll reveal.
+  check('v16 skeleton loading + scroll reveal present',
+    indexHtml.includes('lp-sk') && appCss.includes('.lp-pending') && v16Js.includes('showSkeletons') && v16Js.includes('IntersectionObserver'));
+
+  // v16 (4) — low-end phone helpers exist and are opt-in by device capability.
+  check('v16 low-end phone mode present',
+    appCss.includes('html.lp-lite') && v16Js.includes('hardwareConcurrency') && appCss.includes('content-visibility:auto'));
+
+  // v16 (5) — goals got ±2% next to ±10%.
+  check('v16 goal ±2% buttons present',
+    coreJs.includes('${g.progress-2}') && coreJs.includes('${g.progress+2}') &&
+    coreJs.includes('${g.progress-10}') && coreJs.includes('${g.progress+10}'));
+
+  // v16 (6) — habits and goals can be edited.
+  check('v16 habit & goal editing present',
+    coreJs.includes('editingHabitId') && coreJs.includes('editingGoalId') &&
+    coreJs.includes('function openHabitModal(id=null)') && coreJs.includes('function openGoalModal(id=null)') &&
+    indexHtml.includes('id="habitModalTitle"') && indexHtml.includes('id="goalModalTitle"'));
+
+  // the new file must be precached, otherwise the offline PWA loses it
+  check('v16 script is precached by the service worker',
+    swJs.includes("'./js/v16.js'") && indexHtml.includes('js/v16.js'));
+
+  // every new user-facing Persian string needs an English translation
+  check('v16 strings translated for English mode',
+    ['✏️ ویرایش عادت', '✏️ ویرایش هدف', '✏️ عادت ویرایش شد', '✏️ هدف ویرایش شد']
+      .every(k => langJs.includes(k)));
+
+  // all five themes must still be defined in both JS and CSS.
+  // "dark" is the default theme: its variables live in the plain :root block.
+  const themeIds = ['dark', 'light', 'neonPurple', 'fireSunset', 'legendaryGold'];
+  check('all 5 themes still defined',
+    themeIds.every(t => coreJs.includes(`${t}:`) &&
+      (t === 'dark' ? /:root\{/.test(appCss) : appCss.includes(`html[data-theme="${t}"]`))));
+
+  // kept from earlier versions — these must not regress
+  check('inbox quick-add modal present', indexHtml.includes('inboxQuickModalBg'));
+  check('status sorting present', coreJs.includes('STATUS_ORDER') && coreJs.includes('inprogress:0'));
+  check('reward display fixed', coreJs.includes('reward-grid') && appCss.includes('reward-grid'));
+
+  // the version has to move in all five places together
+  const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];
+  const cacheVer = (swJs.match(/life-planner-cache-v(\d+)/) || [])[1];
+  const versionAligned =
+    coreVer === versionJson.version &&
+    pkgJson.version === coreVer + '.0' &&
+    readme.includes(`badge/نسخه-${coreVer}-`) &&
+    readme.includes(`نسخه ${coreVer}`) &&
+    readme.includes(`const CACHE_NAME = 'life-planner-cache-v${cacheVer}';`);
+  check('version bumped consistently in all 5 places', versionAligned,
+    `core=${coreVer} json=${versionJson.version} pkg=${pkgJson.version} cache=v${cacheVer}`);
 }
 
 server.close();

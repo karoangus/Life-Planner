@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-15.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 15.0" />
+  <img src="https://img.shields.io/badge/نسخه-16.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 16.0" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -89,8 +89,9 @@ https://karoangus.github.io/Life-Planner/
 ## ⚡ خلاصه جامع امکانات و قابلیت‌ها
 
 ### 1. 📋 مدیریت پیشرفته تسک‌ها و وظایف
-- **چهار وضعیت کاری (Workflow States):** امکان دسته‌بندی تسک‌ها به وضعیت‌های *شروع‌نشده*، *در حال انجام*، *در صف* و *متوقف*.
-- **بخش اختصاصی تکمیل‌شده‌ها:** انتقال خودکار و منظم تمام تسک‌های انجام‌شده به بخش بالا برای تمرکز بهتر روی کارهای باز.
+- **تب‌های خلوت و کاربردی (جدید در v16):** نوار تب‌های بخش تسک‌ها به چهار تب *همه*، *شروع نشده*، *Inbox* و *تکمیل‌شده* کاهش پیدا کرده است؛ تب‌های *در حال انجام*، *در صف* و *متوقف* حذف شدند (وضعیت هر تسک همچنان از منوی جزئیات همان تسک قابل تغییر است).
+- **تکمیل‌شده‌ها به شکل تب (جدید در v16):** تسک‌های انجام‌شده به‌جای یک بلوک همیشه‌باز در بالای صفحه، داخل تب «✅ تکمیل‌شده» با شمارنده‌ی زنده قرار گرفته‌اند تا فضای کارهای باز بیشتر شود.
+- **چهار وضعیت کاری (Workflow States):** امکان دسته‌بندی تسک‌ها به وضعیت‌های *شروع‌نشده*، *در حال انجام*، *در صف* و *متوقف* از منوی جزئیات هر تسک.
 - **رنگ‌بندی داینامیک وضعیت:** کارت‌های تسک در صفحه تسک‌ها و بخش «برنامه امروز» در داشبورد بر اساس وضعیت خود رنگ‌آمیزی می‌شوند (سبز برای در حال انجام، آبی برای در صف، نارنجی برای متوقف).
 - **سیستم زیرتسک‌های سلسله‌مراتبی (Subtasks):** تعریف چندین ریزتسک برای هر تسک اصلی همراه با نمایش پیشرفت درصدی؛ تیک خوردن تمام زیرتسک‌ها به صورت خودکار تسک مادر را تکمیل می‌کند.
 - **ددلاین‌های ترکیبی و چندگانه (Additional Deadlines):** پشتیبانی از چند ددلاین برای پروژه‌های چندمرحله‌ای و حضور خودکار در برنامه امروز داشبورد.
@@ -157,12 +158,15 @@ https://karoangus.github.io/Life-Planner/
 - دسته‌بندی‌های رنگی رویدادها و وظایف با پالت رنگ‌های جذاب.
 
 ### 5. 🔥 ردیاب عادت‌ها و زنجیره پایبندی (Streaks)
+- **ویرایش عادت (جدید در v16):** با دکمه‌ی «✏️» روی هر کارت عادت می‌توانی نام و ایموجی آن را تغییر بدهی؛ زنجیره و تاریخچه‌ی تیک‌ها دست‌نخورده می‌ماند.
 - ثبت و دنبال کردن زنجیره روزانه (Current Streak & Best Streak).
 - ماتریس هفتگی بصری وضعیت تکمیل عادات.
 - محافظت خودکار از زنجیره‌ها به کمک Streak Shield در صورت فعال بودن.
 
 ### 6. 🎯 مدیریت اهداف چندسطحی (Multi-Tier Goals)
 - تعریف هدف در ۵ افق زمانی: *روزانه*، *هفتگی*، *ماهانه*، *سالانه* و *مادام‌العمر*.
+- **گام‌های دقیق پیشرفت (جدید در v16):** در کنار دکمه‌های «-۱۰٪» و «+۱۰٪» حالا دکمه‌های «-۲٪» و «+۲٪» هم وجود دارند تا پیشرفت اهداف را دقیق‌تر ثبت کنی.
+- **ویرایش هدف (جدید در v16):** با دکمه‌ی «✏️» روی هر کارت هدف می‌توانی عنوان، سطح و درصد پیشرفت آن را ویرایش کنی.
 - سیستم ثبت نقاط عطف (Milestones) و محاسبه خودکار درصد پیشرفت کلی اهداف.
 
 ### 7. 📝 دفترچه یادداشت سازمان‌یافته
@@ -181,6 +185,8 @@ https://karoangus.github.io/Life-Planner/
 - **تنظیم مقیاس رابط کاربری و فونت:** امکان کوچک یا بزرگ کردن سایز متون و عناصر به تناسب ابعاد صفحه گوشی یا مانیتور.
 - **سفارشی‌سازی نوار پایین:** افزودن و چیدمان دلخواه دکمه‌های پرکاربرد به نوار دسترسی سریع.
 - **پشتیبان‌گیری خودکار و دستی:** تولید فایل خروجی JSON از تمامی داده‌ها، بازیابی آسان و سیستم یادآوری و بکاپ‌گیری خودکار روزانه.
+- **لودینگ اسکلتی و انیمیشن اسکرول (جدید در v16):** به‌جای اسپینر تمام‌صفحه، تا آماده شدن داده‌ها «اسکلت» خاکستری همان آیتم‌ها نمایش داده می‌شود و آیتم‌هایی که به سمتشان اسکرول می‌کنی با انیمیشن ملایم از پایین بالا می‌آیند.
+- **حالت سبک برای گوشی‌های ضعیف (جدید در v16):** روی دستگاه‌های کم‌قدرت، سایه و گرادیان تزئینی ردیف‌های تکراری و رندر ردیف‌های بیرون از صفحه بهینه می‌شود؛ چیدمان، رنگ‌ها و همه‌ی دکمه‌ها دقیقاً مثل قبل می‌مانند.
 
 ---
 
@@ -276,13 +282,13 @@ npm test
 
 هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **هر پنج جا با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"15.0"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '15.0';`
-3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"15.0.0"`).
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"16.0"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '16.0';`
+3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"16.0.0"`).
 4. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 5. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v62';
+   const CACHE_NAME = 'life-planner-cache-v63';
    ```
 
 > ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ هر ۱۲ تست باید سبز باشند.
@@ -290,6 +296,16 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 16.0
+- 🗂️ **تب‌های ساده‌تر بخش تسک‌ها:** تب‌های «▶️ در حال انجام»، «📥 در صف» و «⏸️ متوقف» حذف شدند. نوار تب‌ها حالا فقط «📁 همه»، «⬜ شروع نشده»، «📥 Inbox» و «✅ تکمیل‌شده» است. وضعیت یک تسک همچنان از منوی جزئیات خودش قابل تغییر است.
+- ✅ **تکمیل‌شده‌ها به شکل تب:** بلوک همیشه‌باز «تکمیل‌شده» از بالای صفحه برداشته شد و به تب «✅ تکمیل‌شده» با شمارنده‌ی زنده تبدیل شد.
+- 🦴 **لودینگ اسکلتی (Skeleton):** به‌جای اسپینر روی کل صفحه، تا آماده شدن لیست‌ها اسکلت خاکستری و چشمک‌زنِ همان آیتم‌ها نمایش داده می‌شود — هم در لحظه‌ی باز شدن برنامه و هم هنگام جابه‌جایی بین بخش‌ها.
+- 🪄 **انیمیشن اسکرول:** آیتم‌هایی که به سمتشان اسکرول می‌کنی با انیمیشن ملایم از پایین بالا می‌آیند. آیتم‌هایی که از قبل داخل صفحه هستند نه — یعنی با هر تیک زدن، لیست جلوی چشمت دوباره انیمیشن نمی‌گیرد.
+- ⚡ **کاهش لگ روی گوشی‌های ضعیف:** رندرهای تکراریِ پشت‌سرهم در یک فریم ادغام شدند، ردیف‌های بیرون از صفحه دیگر رندر نمی‌شوند (`content-visibility`) و روی دستگاه‌های کم‌قدرت گرادیان و سایه‌ی تزئینی ردیف‌ها حذف می‌شود. ظاهر برنامه و همه‌ی دکمه‌ها بدون تغییر مانده‌اند.
+- 🎯 **گام‌های ±۲٪ در اهداف:** در کنار «-۱۰٪» و «+۱۰٪» حالا دکمه‌های «-۲٪» و «+۲٪» هم اضافه شده‌اند.
+- ✏️ **ویرایش عادت و هدف:** روی هر کارت عادت و هر کارت هدف یک دکمه‌ی «✏️» اضافه شد؛ عنوان، ایموجی، سطح و درصد پیشرفت قابل ویرایش هستند و سابقه‌ی روزهای تیک‌خورده حفظ می‌شود.
+- 🌐 **ترجمه‌ی انگلیسی کامل:** همه‌ی متن‌های جدید (تب تکمیل‌شده، ویرایش عادت/هدف، پیام‌های ذخیره) در حالت English هم انگلیسی نمایش داده می‌شوند.
 
 ### 🌐 نسخه 15.0
 - 🌐 **پشتیبانی از زبان انگلیسی:** زبان پیش‌فرض برنامه همچنان **فارسی (RTL)** است، اما حالا از مسیر **تنظیمات ← «🌐 زبان برنامه»** می‌توانی کل رابط کاربری را به **English (LTR)** تغییر بدهی.
@@ -332,6 +348,9 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
+- **🦴 Skeleton loading + scroll reveal (new in v16):** Lists show shimmering skeleton rows while they are being built instead of a full-screen spinner, and rows you scroll down to slide up into place. Rows already on screen never re-animate, so ticking a task cannot flicker.
+- **⚡ Low-end phone mode (new in v16):** Consecutive renders are coalesced into a single frame, off-screen rows are skipped with `content-visibility`, and on small devices the decorative gradients/shadows on repeated rows are flattened — same layout, same colors, same buttons.
+- **✏️ Editable habits & goals (new in v16):** Every habit card and goal card has an ✏️ button. Goal progress also got fine-grained **-2% / +2%** buttons next to the existing -10% / +10%.
 - **🌐 Persian by default, English on demand (new in v15):** The interface ships in **Persian (RTL)** as the default language. Open **Settings → «🌐 زبان برنامه» (App language)** and pick **English** to switch the entire UI to English (LTR). Your own content — task titles, notes, habits, goals, events and categories — is never translated, and the choice is remembered on the device.
 - **100% Offline PWA:** Instant loading, offline asset caching via Service Worker, installable on Android, iOS, Windows, macOS, and Linux.
 - **Privacy First (Local-First):** All user data lives exclusively in the device's `localStorage`. No external databases, no telemetry, no tracking.
@@ -342,7 +361,7 @@ npm test
   - 🌳 **Skill Tree:** Unlock permanent passive perks (XP boost, cooldown reduction, store discounts, streak shields).
   - 🪞 **You VS You:** Compare today against your historical all-time record and this week against last week.
   - 🛍️ **XP Shop & Mystery Boxes:** Buy XP boosts, mystery loot boxes, and streak protection shields.
-- **Advanced Task Management:** 4 workflow states (Not Started, In Progress, Queued, Paused, Completed), nested subtasks with auto-completion, multi-deadlines, and random task picker.
+- **Advanced Task Management:** a clean four-tab bar (All, Not Started, Inbox, Completed), nested subtasks with auto-completion, multi-deadlines, and a random task picker. A task's workflow state (Not Started, In Progress, Queued, Paused) is still editable from its own details menu.
 - **Focus To-Do & Deep Focus Pomodoro:** Multi-cycle sessions, custom presets, full-screen Zen focus mode, procedural and offline ambient soundscapes (rain, forest, cafe, ocean, fireplace), and detailed statistics.
 - **Interactive Jalali & Gregorian Calendar:** Drag-and-drop scheduling with 15-minute snapping, multi-day recurring event management, and color categorization.
 

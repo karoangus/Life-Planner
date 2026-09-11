@@ -1376,3 +1376,111 @@ html[data-lang="en"] .lp-cal-day{border-left:0;border-right:1px solid var(--line
 html[data-lang="en"] .ev-reminder-dot{right:auto;left:2px;}
 /* Latin text needs a slightly different stack than the Persian one. */
 html[data-lang="en"] body{font-family:'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif;}
+
+/* ============================================================
+   v16 — SKELETON LOADING, SCROLL REVEAL, TASK TABS, GOAL STEPS,
+   EDIT BUTTONS and low-end-phone paint savings.
+   Everything here is additive: no existing ID, class or handler
+   is redefined, and all 5 themes keep working because only theme
+   variables are used.
+   ============================================================ */
+
+/* ---------- skeleton placeholders ---------- */
+:root{ --lp-sk-bg:rgba(255,255,255,.075); --lp-sk-shine:rgba(255,255,255,.14); }
+html[data-theme="light"]{ --lp-sk-bg:rgba(15,23,42,.075); --lp-sk-shine:rgba(15,23,42,.055); }
+
+.lp-sk{display:flex; align-items:center; gap:12px; padding:11px 10px; margin-bottom:6px; border-radius:12px;}
+.lp-sk:last-child{margin-bottom:0;}
+.lp-sk i{display:block; position:relative; overflow:hidden; border-radius:8px; background:var(--lp-sk-bg); flex:0 0 auto;}
+.lp-sk i::after{
+  content:""; position:absolute; inset:0; transform:translateX(-110%);
+  background:linear-gradient(90deg,transparent,var(--lp-sk-shine),transparent);
+  animation:lpShimmer 1.15s ease-in-out infinite;
+}
+@keyframes lpShimmer{ to{ transform:translateX(110%); } }
+
+.lp-sk-dot{width:22px; height:22px; border-radius:50% !important;}
+.lp-sk-dot.lg{width:34px; height:34px;}
+.lp-sk-line{height:11px; flex:1 1 auto !important; min-width:40px;}
+.lp-sk-line.w40{flex:0 0 40% !important;}
+.lp-sk-line.w60{flex:0 0 60% !important;}
+.lp-sk-line.w70{flex:0 0 70% !important;}
+.lp-sk-line.w80{flex:0 0 80% !important;}
+.lp-sk-tag{width:38px; height:15px; border-radius:20px !important;}
+.lp-sk-bar{height:7px; width:100%; flex:0 0 auto !important; border-radius:20px !important;}
+
+.lp-sk-goal, .lp-sk-note{flex-direction:column; align-items:stretch; gap:8px; padding:14px;}
+.lp-sk-note{min-height:96px;}
+.lp-sk-quest{padding:14px; gap:14px;}
+.lp-sk-mini{padding:9px 10px;}
+.lp-sk-mini .lp-sk-line{height:10px;}
+
+/* ---------- scroll reveal ---------- */
+.lp-pending{opacity:0; transform:translateY(14px);}
+.lp-in{opacity:1; transform:none;}
+.task-row.lp-pending, .task-row.lp-in,
+.habit-card.lp-pending, .habit-card.lp-in,
+.goal-card.lp-pending, .goal-card.lp-in,
+.note-card.lp-pending, .note-card.lp-in{
+  transition:opacity .32s ease, transform .32s cubic-bezier(.22,.61,.36,1),
+             background var(--dur,.25s), border-color var(--dur,.25s);
+}
+.lp-noanim{transition:none !important;}
+
+/* ---------- tasks view: tabs (v16) ---------- */
+.lp-task-tabs{flex-wrap:wrap;}
+.lp-task-tabs .chip-opt{display:inline-flex; align-items:center; gap:7px;}
+.chip-count{
+  font-size:10.5px; font-weight:900; padding:1px 7px; border-radius:20px; white-space:nowrap;
+  background:var(--track); color:var(--txt-dim2); border:1px solid var(--line);
+}
+.chip-opt.sel .chip-count{
+  color:var(--neon); background:var(--neon-15, rgba(0,229,255,.12));
+  border-color:color-mix(in srgb, var(--neon) 30%, transparent);
+}
+
+/* ---------- goals: 4 step buttons + edit ---------- */
+.goal-steps{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+.goal-steps .btn{flex:1 1 auto; min-width:62px; justify-content:center; text-align:center; padding-left:6px; padding-right:6px;}
+
+/* ---------- edit affordance on habit / goal cards ---------- */
+.lp-edit{color:var(--txt-dim2); cursor:pointer; font-size:13px; opacity:.6; transition:.15s; padding:2px; flex:0 0 auto;}
+.lp-edit:hover{color:var(--neon); opacity:1;}
+.lp-row-actions{display:flex; align-items:center; gap:6px; flex:0 0 auto;}
+/* the trash icon used to be hover-only, so on a phone it was invisible */
+.habit-card .task-del, .goal-card .task-del{opacity:.5;}
+.habit-card:hover .task-del, .goal-card:hover .task-del{opacity:1;}
+@media(hover:none){
+  .lp-edit{opacity:.85;}
+  .habit-card .task-del, .goal-card .task-del{opacity:.7;}
+}
+
+/* ---------- performance ---------- */
+/* Long lists: the browser skips layout+paint for rows that are off screen.
+   Ignored entirely by browsers without support, so nothing can break. */
+.task-row{content-visibility:auto; contain-intrinsic-size:auto 58px;}
+.habit-card{content-visibility:auto; contain-intrinsic-size:auto 66px;}
+.goal-card{content-visibility:auto; contain-intrinsic-size:auto 132px;}
+.note-card{content-visibility:auto; contain-intrinsic-size:auto 150px;}
+.lp-sk{content-visibility:visible;}
+
+/* Low-end phones (js/v16.js adds .lp-lite): flatten the decorative gradient
+   and shadows that are repainted once per repeated row. */
+html.lp-lite .task-row,
+html.lp-lite .boss-task-row,
+html.lp-lite .pomo-history-item,
+html.lp-lite .shop-inv-row,
+html.lp-lite .yvy-record-row,
+html.lp-lite .milestone-row,
+html.lp-lite .city-entry-row,
+html.lp-lite .pinned-nav-row,
+html.lp-lite .sheet-nav-item,
+html.lp-lite .sheet-xp{background:var(--bg2);}
+html.lp-lite .card,
+html.lp-lite .stat-card{box-shadow:none;}
+html.lp-lite .lp-sk i::after{animation-duration:1.8s;}
+
+@media (prefers-reduced-motion: reduce){
+  .lp-pending{opacity:1 !important; transform:none !important;}
+  .lp-sk i::after{animation:none;}
+}

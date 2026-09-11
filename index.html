@@ -136,24 +136,27 @@
       </div>
 
       <!-- ░░ MOSAIC ░░ کاشی‌های داشبورد -->
+      <!-- v16: the lp-sk-* blocks below are boot skeletons. They are pure
+           placeholders that each renderer replaces with real content on the
+           very first render, so nothing has to wait for an empty white card. -->
       <div class="dash-grid">
         <section class="dash-tile dash-tile-quest">
-          <div id="questCard"></div>
+          <div id="questCard"><div class="lp-sk lp-sk-quest"><i class="lp-sk-dot lg"></i><i class="lp-sk-line w70"></i><i class="lp-sk-line w40"></i></div></div>
         </section>
 
         <section class="dash-tile dash-tile-tasks">
           <div class="card-head"><h3>📋 برنامه‌ی امروز</h3><span class="muted" id="todayCount">۰ تسک</span></div>
-          <div id="todayTasks"></div>
+          <div id="todayTasks"><div class="lp-sk lp-sk-row"><i class="lp-sk-dot"></i><i class="lp-sk-line"></i></div><div class="lp-sk lp-sk-row"><i class="lp-sk-dot"></i><i class="lp-sk-line w80"></i></div><div class="lp-sk lp-sk-row"><i class="lp-sk-dot"></i><i class="lp-sk-line w60"></i></div></div>
         </section>
 
         <section class="dash-tile dash-tile-habits">
           <div class="card-head"><h3>🔥 استریک عادت‌ها</h3><button class="dash-more" type="button" onclick="showView('habits')">همه ›</button></div>
-          <div id="habitMini"></div>
+          <div id="habitMini"><div class="lp-sk lp-sk-mini"><i class="lp-sk-line w60"></i><i class="lp-sk-tag"></i></div><div class="lp-sk lp-sk-mini"><i class="lp-sk-line w80"></i><i class="lp-sk-tag"></i></div></div>
         </section>
 
         <section class="dash-tile dash-tile-goals">
           <div class="card-head"><h3>🎯 اهداف در جریان</h3><button class="dash-more" type="button" onclick="showView('goals')">همه ›</button></div>
-          <div id="goalMini"></div>
+          <div id="goalMini"><div class="lp-sk lp-sk-goal"><i class="lp-sk-line w60"></i><i class="lp-sk-bar"></i></div><div class="lp-sk lp-sk-goal"><i class="lp-sk-line w80"></i><i class="lp-sk-bar"></i></div></div>
         </section>
       </div>
     </div>
@@ -167,18 +170,15 @@
           <button class="btn" onclick="openTaskModal()">➕ تسک جدید</button>
         </div>
       </div>
-      <div class="card" style="margin-bottom:16px;">
-        <div class="card-head"><h3>✅ تکمیل‌شده</h3><span class="muted" id="completedCount">۰ تسک</span></div>
-        <div id="completedTasks"></div>
-      </div>
+      <!-- v16: "Completed" is a tab now, not a permanently open block. The
+           in-progress / queued / paused tabs were removed — the status of a
+           single task is still editable from its own details menu. -->
       <div class="card">
-        <div class="chip-group" style="margin-bottom:12px;" id="taskFilters">
+        <div class="chip-group lp-task-tabs" style="margin-bottom:12px;" id="taskFilters">
           <div class="chip-opt sel" data-f="all">📁 همه</div>
-          <div class="chip-opt" data-f="inprogress">▶️ در حال انجام</div>
-          <div class="chip-opt" data-f="queued">📥 در صف</div>
-          <div class="chip-opt" data-f="paused">⏸️ متوقف</div>
           <div class="chip-opt" data-f="notstarted">⬜ شروع نشده</div>
           <div class="chip-opt" data-f="inbox">📥 Inbox</div>
+          <div class="chip-opt" data-f="done">✅ تکمیل‌شده <span class="chip-count num" id="completedCount">۰ تسک</span></div>
         </div>
         <div class="chip-group" style="margin-bottom:16px;" id="categoryFilters"></div>
         <div id="allTasks"></div>
@@ -942,7 +942,7 @@
 </div></div>
 
 <div class="modal-bg" id="habitModalBg"><div class="modal">
-  <h2>🔥 عادت جدید</h2>
+  <h2 id="habitModalTitle">🔥 عادت جدید</h2>
   <div class="field"><label>نام عادت</label><input type="text" id="hName" placeholder="مثلاً: مطالعه، ورزش، خواب به‌موقع"></div>
   <div class="field"><label>ایموجی</label>
     <div class="chip-group" id="hIcon">
@@ -955,7 +955,7 @@
 </div></div>
 
 <div class="modal-bg" id="goalModalBg"><div class="modal">
-  <h2>🎯 هدف جدید</h2>
+  <h2 id="goalModalTitle">🎯 هدف جدید</h2>
   <div class="field"><label>عنوان هدف</label><input type="text" id="gTitle" placeholder="مثلاً: یادگیری زبان انگلیسی"></div>
   <div class="field"><label>سطح هدف</label>
     <div class="chip-group" id="gLevel">
@@ -1168,6 +1168,7 @@
 
 <script src="js/pomodoro.js"></script>
 <script src="js/lang.js"></script>
+<script src="js/v16.js"></script>
 
 </body>
 </html>

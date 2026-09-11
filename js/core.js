@@ -121,11 +121,35 @@ if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
 if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
 if(!DB.newRecordFlags) DB.newRecordFlags = {};
 function persist(){ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
+/* PERF (v16): the repaint is coalesced into one animation frame instead of
+   running synchronously inside every save(). Saving itself is unchanged —
+   persist() still writes to localStorage immediately. Two effects:
+     • a burst of saves inside one frame repaints once, not N times (e.g.
+       ticking the last subtask completes the parent task: 2 saves -> 1 paint);
+     • a click handler is no longer blocked by a full list rebuild.
+   A timer backs the rAF up, so a WebView that throttles rAF still repaints.
+   No renderer in this app reads DOM produced by renderAll() right after
+   save() — they all re-render their own widget explicitly. */
+let __renderPending = false, __renderFallback = 0;
+function scheduleRender(){
+  if(__renderPending) return;
+  __renderPending = true;
+  const run = ()=>{
+    if(!__renderPending) return;
+    __renderPending = false;
+    clearTimeout(__renderFallback);
+    // A renderer must never be able to break saving or every other part of the app.
+    try{ renderAll(); }
+    catch(err){ console.error('[Life Planner render error]', err); }
+  };
+  if(typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+  /* Insurance: some WebViews throttle or never run rAF (background tab, exotic
+     browser). The repaint must still happen, so a timer backs it up. */
+  __renderFallback = setTimeout(run, 250);
+}
 function save(){
   persist();
-  // A renderer must never be able to break saving or every other part of the app.
-  // Render each subsystem independently so one bad widget cannot freeze the whole UI.
-  renderAll();
+  scheduleRender();
 }
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function todayISO(){
@@ -2971,40 +2995,40 @@ function renderTasks(filter='all'){
   currentStatusFilter = filter;
   renderCategoryFolders();
 
-  // v14: dedicated "Completed" section at the top of the Tasks view.
-  const doneList = sortTasks(DB.tasks.filter(t=>!t.inbox && t.done));
-  const completedEl = document.getElementById('completedTasks');
-  if(completedEl){
-    completedEl.innerHTML = doneList.length
-      ? doneList.map(taskRow).join('')
-      : `<div class="empty"><div class="ic">✅</div>هنوز تسکی کامل نکردی</div>`;
-  }
+  // v16: the completed counter now lives on the "✅ تکمیل‌شده" tab itself.
   const completedCountEl = document.getElementById('completedCount');
-  if(completedCountEl) completedCountEl.textContent = doneList.length + ' تسک';
+  if(completedCountEl) completedCountEl.textContent = DB.tasks.filter(t=>!t.inbox && t.done).length + ' تسک';
 
   const el = document.getElementById('allTasks');
-  let list = sortTasks(DB.tasks).filter(t=>!t.inbox && !t.done);
+  let list;
   if(filter==='inbox'){
     list = sortTasks(DB.tasks).filter(t=>t.inbox);
+  } else if(filter==='done'){
+    /* v16: "Completed" used to be a permanently open block above the list;
+       it is a tab now, so its rows render into the same list container. */
+    list = sortTasks(DB.tasks).filter(t=>!t.inbox && t.done);
   } else {
-    // default views exclude inbox tasks and show only active (not done) tasks;
-    // completed tasks now live in the "Completed" section above.
+    // default views exclude inbox tasks and show only active (not done) tasks
+    list = sortTasks(DB.tasks).filter(t=>!t.inbox && !t.done);
     if(filter==='inprogress') list = list.filter(t=>!t.done && (t.status||'notstarted')==='inprogress');
     else if(filter==='queued') list = list.filter(t=>!t.done && (t.status||'notstarted')==='queued');
     else if(filter==='paused') list = list.filter(t=>!t.done && (t.status||'notstarted')==='paused');
     else if(filter==='notstarted') list = list.filter(t=>!t.done && (t.status||'notstarted')==='notstarted');
     else if(filter==='active') list = list.filter(t=>!t.done);
-    else if(filter==='done') list = list.filter(t=>t.done);
     else if(filter==='critical') list = list.filter(t=>t.priority==='critical');
     else if(filter==='high') list = list.filter(t=>t.priority==='high');
     // 'all' shows all active non-inbox tasks
   }
   if(currentCatFilter && filter!=='inbox') list = list.filter(t=>(t.cat||'').trim()===currentCatFilter);
-  el.innerHTML = list.length ? list.map(taskRow).join('') : `<div class="empty"><div class="ic">📭</div>تسکی پیدا نشد</div>`;
+  el.innerHTML = list.length ? list.map(taskRow).join('') : `<div class="empty"><div class="ic">${filter==='done'?'✅':'📭'}</div>${filter==='done'?'هنوز تسکی کامل نکردی':'تسکی پیدا نشد'}</div>`;
 
-  const today = sortTasks(DB.tasks.filter(isTaskForToday));
-  document.getElementById('todayTasks').innerHTML = today.length ? today.slice(0,6).map(taskRow).join('') : `<div class="empty"><div class="ic">🌤️</div>امروز تسکی نداری، یکی اضافه کن!</div>`;
-  document.getElementById('todayCount').textContent = today.length + ' تسک';
+  /* PERF (v16): #todayTasks / #todayCount belong to the Dashboard, which is
+     display:none while the Tasks view is open, so rebuilding them here wrote
+     markup nobody could see — a second pass over the whole task list plus six
+     rendered rows on every single toggle. Small, but free to drop:
+     renderTodayWidget() repaints the widget when the Dashboard opens again
+     (showView -> renderView('dashboard') and renderAll both call it). */
+  if(viewActive('dashboard')) renderTodayWidget();
 }
 /* v13.1: isTaskForToday must be a top-level function. It used to be nested
    inside renderTasks(), so renderTodayWidget() (which runs on every save()
@@ -3032,16 +3056,35 @@ function renderTodayWidget(){
 }
 
 /* ============ HABITS ============ */
-function openHabitModal(){
-  document.getElementById('hName').value='';
+/* v16 — the same modal now creates AND edits. openHabitModal() with no
+   argument keeps behaving exactly like before (brand new habit). */
+let editingHabitId = null;
+function openHabitModal(id=null){
+  const h = id ? DB.habits.find(x=>x.id===id) : null;
+  editingHabitId = h ? h.id : null;
+  const titleEl = document.getElementById('habitModalTitle');
+  if(titleEl) titleEl.textContent = h ? '✏️ ویرایش عادت' : '🔥 عادت جدید';
+  document.getElementById('hName').value = h ? (h.name||'') : '';
   document.querySelectorAll('#hIcon .chip-opt').forEach(o=>o.classList.remove('sel'));
-  document.querySelector('#hIcon [data-v="📚"]').classList.add('sel');
+  const wanted = (h && h.icon) ? h.icon : '📚';
+  let matched = false;
+  document.querySelectorAll('#hIcon .chip-opt').forEach(o=>{
+    if(o.dataset.v === wanted){ o.classList.add('sel'); matched = true; }
+  });
+  if(!matched) document.querySelector('#hIcon [data-v="📚"]')?.classList.add('sel');
   openModal('habitModalBg');
 }
 function saveHabit(){
   const name = document.getElementById('hName').value.trim();
   if(!name){ toast('⚠️ اسم عادت رو بنویس'); return; }
-  const icon = document.querySelector('#hIcon .sel').dataset.v;
+  const icon = document.querySelector('#hIcon .sel')?.dataset.v || '📚';
+  if(editingHabitId){
+    const h = DB.habits.find(x=>x.id===editingHabitId);
+    if(h){ h.name = name; h.icon = icon; }   // the daily log is never touched
+    editingHabitId = null;
+    closeModal('habitModalBg'); save(); toast('✏️ عادت ویرایش شد');
+    return;
+  }
   DB.habits.push({id:uid(), name, icon, log:{}});
   closeModal('habitModalBg'); save(); toast('🔥 عادت اضافه شد');
 }
@@ -3101,7 +3144,10 @@ function renderHabits(){
             return `<div class="wd ${h.log[d]?'on':''} ${isToday?'today':''}" onclick="${isToday?`toggleHabitDay('${h.id}','${d}')`:''}" >${label}</div>`;
           }).join('')}
         </div>
-        <div class="task-del" onclick="deleteHabit('${h.id}')">🗑️</div>
+        <div class="lp-row-actions">
+          <div class="lp-edit" onclick="openHabitModal('${h.id}')" title="ویرایش عادت">✏️</div>
+          <div class="task-del" onclick="deleteHabit('${h.id}')">🗑️</div>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -3122,17 +3168,48 @@ function renderHabitMini(){
 function deleteHabit(id){ if(!DB.habits.find(x=>x.id===id)) return; DB.habits = DB.habits.filter(x=>x.id!==id); save(); }
 
 /* ============ GOALS ============ */
-function openGoalModal(){
-  document.getElementById('gTitle').value=''; document.getElementById('gProgress').value=0;
+/* v16 — the same modal now creates AND edits. openGoalModal() with no
+   argument keeps behaving exactly like before (brand new weekly goal). */
+let editingGoalId = null;
+function openGoalModal(id=null){
+  const g = id ? DB.goals.find(x=>x.id===id) : null;
+  editingGoalId = g ? g.id : null;
+  const titleEl = document.getElementById('goalModalTitle');
+  if(titleEl) titleEl.textContent = g ? '✏️ ویرایش هدف' : '🎯 هدف جدید';
+  document.getElementById('gTitle').value = g ? (g.title||'') : '';
+  document.getElementById('gProgress').value = g ? (g.progress||0) : 0;
   document.querySelectorAll('#gLevel .chip-opt').forEach(o=>o.classList.remove('sel'));
-  document.querySelector('#gLevel [data-v="weekly"]').classList.add('sel');
+  const wanted = (g && g.level) ? g.level : 'weekly';
+  let matched = false;
+  document.querySelectorAll('#gLevel .chip-opt').forEach(o=>{
+    if(o.dataset.v === wanted){ o.classList.add('sel'); matched = true; }
+  });
+  if(!matched) document.querySelector('#gLevel [data-v="weekly"]')?.classList.add('sel');
   openModal('goalModalBg');
 }
 function saveGoal(){
   const title = document.getElementById('gTitle').value.trim();
   if(!title){ toast('⚠️ عنوان هدف رو بنویس'); return; }
-  const level = document.querySelector('#gLevel .sel').dataset.v;
+  const level = document.querySelector('#gLevel .sel')?.dataset.v || 'weekly';
   const progress = Math.max(0,Math.min(100, parseInt(document.getElementById('gProgress').value)||0));
+  if(editingGoalId){
+    const g = DB.goals.find(x=>x.id===editingGoalId);
+    if(g){
+      const old = g.progress;
+      g.title = title; g.level = level; g.progress = progress;
+      // same bookkeeping as setGoalProgress(), so Perfect Day / stats agree
+      if(progress > old){
+        const d = todayISO();
+        DB.dailyGoalProgress[d] = DB.dailyGoalProgress[d] || {};
+        DB.dailyGoalProgress[d][g.id] = (DB.dailyGoalProgress[d][g.id]||0) + (progress - old);
+      }
+      if(progress===100 && old<100) addXP(40);
+      checkPerfectDay();
+    }
+    editingGoalId = null;
+    closeModal('goalModalBg'); save(); toast('✏️ هدف ویرایش شد');
+    return;
+  }
   DB.goals.push({id:uid(), title, level, progress});
   closeModal('goalModalBg'); save(); toast('🎯 هدف اضافه شد');
 }
@@ -3159,12 +3236,15 @@ function renderGoals(){
       <div><div class="goal-title">${esc(g.title)}</div><span class="pill cat">${levelLabel(g.level)}</span></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <span class="num" style="font-weight:800;color:var(--neon)">${g.progress}٪</span>
+        <div class="lp-edit" onclick="openGoalModal('${g.id}')" title="ویرایش هدف">✏️</div>
         <div class="task-del" onclick="deleteGoal('${g.id}')">🗑️</div>
       </div>
     </div>
     <div class="bar-track"><div class="bar-fill" style="width:${g.progress}%"></div></div>
-    <div style="display:flex;gap:8px;margin-top:10px;">
+    <div class="goal-steps">
       <button class="btn ghost sm" onclick="setGoalProgress('${g.id}', ${g.progress-10})">-۱۰٪</button>
+      <button class="btn ghost sm" onclick="setGoalProgress('${g.id}', ${g.progress-2})">-۲٪</button>
+      <button class="btn ghost sm" onclick="setGoalProgress('${g.id}', ${g.progress+2})">+۲٪</button>
       <button class="btn ghost sm" onclick="setGoalProgress('${g.id}', ${g.progress+10})">+۱۰٪</button>
     </div>
   </div>`).join('');
@@ -4336,7 +4416,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='15.0';
+const LP_APP_VERSION='16.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
