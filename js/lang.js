@@ -28,6 +28,31 @@
   window.lpGetLang = getLang;
 
   var EXACT = {
+    /* ---- v16.2: notes workspace ---- */
+    "🗂️ همه": "🗂️ All",
+    "🧹 پاک کردن فیلتر": "🧹 Clear filters",
+    "➕ اولین یادداشت رو بنویس": "➕ Write your first note",
+    "🆕 جدیدترین": "🆕 Newest",
+    "🕓 قدیمی‌ترین": "🕓 Oldest",
+    "🔤 عنوان (الف‌با)": "🔤 Title (A–Z)",
+    "📄 طولانی‌ترین": "📄 Longest",
+    "📄 کپی": "📄 Duplicate",
+    "📋 متن": "📋 Copy text",
+    "📄 کپی یادداشت ساخته شد": "📄 Note duplicated",
+    "📋 متن یادداشت کپی شد": "📋 Note text copied",
+    "⚠️ کپی خودکار نشد؛ متن را دستی انتخاب کن": "⚠️ Automatic copy failed; select the text manually",
+    "رنگ یادداشت (اختیاری)": "Note colour (optional)",
+    "بدون رنگ": "No colour",
+    "تغییر حالت نمایش": "Change layout",
+    "ترتیب نمایش یادداشت‌ها": "Note order",
+    /* ---- v16.2: performance mode ---- */
+    "⚡ پرفورمنس": "⚡ Performance",
+    "⚡ حالت پرفورمنس (خاموش کردن انیمیشن‌ها)": "⚡ Performance mode (animations off)",
+    "⚡ حالت پرفورمنس فعال شد": "⚡ Performance mode on",
+    "✨ حالت پرفورمنس غیرفعال شد": "✨ Performance mode off",
+    "⛔ غیرفعال": "⛔ Off",
+    "مخصوص گوشی‌های ضعیف: با فعال کردن این گزینه، همه‌ی انیمیشن‌ها، جلوه‌های حرکتی و افکت‌های شیشه‌ایِ برنامه خاموش می‌شوند تا اسکرول و جابه‌جایی بین بخش‌ها روان‌تر شود. ظاهر، رنگ‌ها، تم‌ها و همه‌ی دکمه‌ها دقیقاً بدون تغییر می‌مانند.": "Made for weaker phones: turning this on switches off every animation, motion effect and frosted-glass layer so scrolling and moving between sections feels smoother. The look, the colours, the themes and every button stay exactly the same.",
+
     "محافظت Streak Shield": "Streak Shield protection",
     "انتخاب کن این Shield از کدام عادت‌ها محافظت کند.": "Choose which habits this Shield protects.",
     "اول یک عادت بساز.": "Create a habit first.",
@@ -818,6 +843,10 @@
     "۸": "8",
     "۹": "9",
   };  var PATTERNS = [
+    /* v16.2: "۳ از ۱۰ یادداشت" (notes counter while a filter is on) */
+    [new RegExp("^([\\s\\S]*?) از ([\\s\\S]*?) یادداشت$"), "$1 of $2 notes"],
+    /* v16.2: "📄 ۱۲ کلمه · ۶۴ کاراکتر" (live counter under the note editor) */
+    [new RegExp("^📄 ([\\s\\S]*?) کلمه · ([\\s\\S]*?) کاراکتر$"), "📄 $1 words · $2 characters"],
     [new RegExp("^تبریک!\\ یک\\ دور\\ کامل\\ از\\ جلسات\\ فوکوس\\ رو\\ با\\ موفقیت\\ پشت\\ سر\\ گذاشتی\\.\\ حالا\\ ([\\s\\S]*?)\\ دقیقه\\ با\\ خیال\\ راحت\\ استراحت\\ کن\\ تا\\ کاملاً\\ شارژ\\ بشی\\.$"), "Congratulations! You made it through a full round of focus sessions. Now take $1 minutes to rest and fully recharge."],
     [new RegExp("^([\\s\\S]*?)\\ دقیقه\\ استراحت\\ یعنی\\ واقعاً\\ چند\\ دقیقه\\ ذهنت\\ رو\\ از\\ کار\\ جدا\\ کنی؛\\ یک\\ دور\\ کوتاه\\ راه\\ برو\\ یا\\ آب\\ بخور\\.$"), "A $1-minute break means really taking your mind off work for a few minutes; take a short walk or drink some water."],
     [new RegExp("^⚠️\\ دکمه‌های\\ اضافی\\ باید\\ متفاوت\\ باشن\\ و\\ با\\ چهار\\ دکمهٔ\\ اصلی\\ تکرار\\ نشون\\ \\(حداکثر\\ ([\\s\\S]*?)\\ عدد\\)$"), "⚠️ Extra buttons must be different and must not repeat the four main ones (max $1)"],
@@ -947,7 +976,10 @@
     [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*پومودورو$/,  'Pomodoro', 'Pomodoros'],
     [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*کوئست$/,     'quest',    'quests'],
     [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*رویداد$/,    'event',    'events'],
-    [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*روز$/,       'day',      'days']
+    [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*روز$/,       'day',      'days'],
+    /* v16.2: notes counter ("۱۰ یادداشت") and word count ("📄 ۱۲ کلمه") */
+    [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*یادداشت$/,   'note',     'notes'],
+    [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*کلمه$/,      'word',     'words']
   ];
   function countUnit(s){
     for(var i = 0; i < COUNT_UNITS.length; i++){
@@ -1085,8 +1117,12 @@
   var SKIP_TAGS = { SCRIPT:1, STYLE:1, TEXTAREA:1, CANVAS:1 };
   var ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
   /* Anything the user typed themselves is never touched. */
+  /* v16.2: `.note-card p` is narrowed to the note's own body, so the built-in
+     "بدون محتوا" hint inside an empty note is translated like any other UI
+     string; the tag pill (`.note-tag`) is user text and is never touched. */
   var USER_CONTENT = '.task-title,.habit-name,.goal-title,.ev-title,.lp-cat-name,' +
-                     '.subtask-item-title,.subtask-edit-title,.note-card h4,.note-card p';
+                     '.subtask-item-title,.subtask-edit-title,.note-card h4,' +
+                     '.note-card p.note-body,.note-card .note-tag';
 
   function isUserContent(node){
     var el = node.nodeType === 1 ? node : node.parentElement;

@@ -3278,6 +3278,125 @@ function deleteGoal(id){ if(!DB.goals.find(x=>x.id===id)) return; DB.goals = DB.
 
 /* ============ NOTES ============ */
 let editingNoteId=null;
+/* v16.2 — notes workspace state. Plain globals keep the toolbar chips and the
+   grid in sync. Every default reproduces the pre-16.2 behaviour (no tag
+   filter, newest first, grid layout), so nothing changes until the user
+   actually touches one of the new controls. */
+window.__lpNoteTag  = window.__lpNoteTag  || '';
+window.__lpNoteSort = window.__lpNoteSort || 'newest';
+window.__lpNoteView = window.__lpNoteView || 'grid';
+window.__noteColorPicked = window.__noteColorPicked || '';
+
+function noteWordCount(n){
+  const t=String(n&&n.body||'').trim();
+  return t?t.split(/\s+/).length:0;
+}
+/* A tag can contain quotes, so an inline onclick needs both escapes. */
+function noteAttr(v){ return esc(v==null?'':v).replace(/'/g,'&#39;'); }
+/* Escape first, highlight afterwards: a search term can never inject markup. */
+function noteHighlight(text,q){
+  const safe=esc(text||'');
+  if(!q) return safe;
+  const needle=esc(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  try{ return safe.replace(new RegExp(needle,'gi'), m=>'<mark class="note-hl">'+m+'</mark>'); }
+  catch(_){ return safe; }
+}
+function noteMetaHtml(n){
+  const d=isoToJalaliText(n.updatedAt||n.date||'');
+  const w=noteWordCount(n);
+  return `<span>🕓 ${d||'—'}</span><span>📄 ${toFaDigits(String(w))} کلمه</span>`;
+}
+function renderNoteColorRow(){
+  const box=document.getElementById('nColorRow'); if(!box) return;
+  box.innerHTML=lpColorRowHtml(window.__noteColorPicked,'بدون رنگ');
+  wireColorRow('nColorRow', hex=>{ window.__noteColorPicked=hex||''; renderNoteColorRow(); });
+}
+function updateNoteBodyCounter(){
+  const el=document.getElementById('nBodyCounter'); if(!el) return;
+  const v=document.getElementById('nBody')?.value||'';
+  const words=v.trim()?v.trim().split(/\s+/).length:0;
+  el.textContent=`📄 ${toFaDigits(String(words))} کلمه · ${toFaDigits(String(v.length))} کاراکتر`;
+}
+/* Counter / tag chips / sort select / layout: rebuilt from the notes that are
+   actually on screen, and never from a saved copy, so it can never drift. */
+function renderNoteToolbar(){
+  const grid=document.getElementById('noteGrid');
+  if(grid) grid.classList.toggle('notes-list',(window.__lpNoteView||'grid')==='list');
+  const sortEl=document.getElementById('noteSort');
+  if(sortEl) sortEl.value=window.__lpNoteSort||'newest';
+  const box=document.getElementById('noteTagFilter');
+  if(box){
+    const counts={};
+    (DB.notes||[]).forEach(n=>{ const t=String(n.tag||'').trim(); if(t) counts[t]=(counts[t]||0)+1; });
+    const tags=Object.keys(counts).sort((a,b)=>a.localeCompare(b,'fa'));
+    const cur=window.__lpNoteTag||'';
+    const chip=(val,label,count)=>`<div class="chip-opt${cur===val?' sel':''}" onclick="setNoteTagFilter('${noteAttr(val)}')">${esc(label)}<span class="chip-count">${toFaDigits(String(count))}</span></div>`;
+    box.innerHTML = chip('','🗂️ همه',(DB.notes||[]).length) + tags.map(t=>chip(t,'🏷️ '+t,counts[t])).join('');
+  }
+  const cnt=document.getElementById('noteCount');
+  if(cnt){
+    const vis=Number(window.__lpNoteVisible||0);
+    const total=Number(window.__lpNoteTotal||(DB.notes||[]).length);
+    cnt.textContent = (vis!==total)
+      ? `${toFaDigits(String(vis))} از ${toFaDigits(String(total))} یادداشت`
+      : `${toFaDigits(String(total))} یادداشت`;
+  }
+  const reset=document.getElementById('noteResetFilters');
+  if(reset){
+    const q=(document.getElementById('noteSearch')?.value||'').trim();
+    reset.style.display=(q||window.__lpNoteTag)?'':'none';
+  }
+}
+function setNoteTagFilter(tag){ window.__lpNoteTag=tag||''; renderNotes(); }
+function setNoteSort(v){ window.__lpNoteSort=v||'newest'; renderNotes(); }
+function toggleNoteViewMode(){ window.__lpNoteView=(window.__lpNoteView==='list')?'grid':'list'; renderNotes(); }
+function resetNoteFilters(){
+  window.__lpNoteTag='';
+  window.__lpNoteSort='newest';
+  const s=document.getElementById('noteSearch'); if(s) s.value='';
+  renderNotes();
+}
+/* Expanding a card is a pure view toggle: no save and no re-render, so the
+   list cannot jump or flicker under the finger. */
+function toggleNoteExpand(id,ev){
+  if(ev&&ev.target&&ev.target.closest&&ev.target.closest('.note-actions')) return;
+  const card=document.querySelector('#noteGrid [data-note-id="'+String(id).replace(/["\\]/g,'')+'"]');
+  if(card) card.classList.toggle('open');
+}
+function duplicateNote(id){
+  const n=DB.notes.find(x=>x.id===id); if(!n) return;
+  DB.notes.unshift({
+    id:uid(), title:(n.title||'')+' (کپی)', body:n.body||'', tag:n.tag||'',
+    color:n.color||'', pinned:false, date:todayISO(), updatedAt:todayISO()
+  });
+  save(); renderNotes(); toast('📄 کپی یادداشت ساخته شد');
+}
+function copyNoteText(id){
+  const n=DB.notes.find(x=>x.id===id); if(!n) return;
+  const text=(String(n.title||'')+'\n'+String(n.body||'')).trim();
+  const done=()=>toast('📋 متن یادداشت کپی شد');
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done,()=>lpCopyNoteFallback(text,done));
+      return;
+    }
+  }catch(_){ }
+  lpCopyNoteFallback(text,done);
+}
+function lpCopyNoteFallback(text,done){
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text; ta.setAttribute('readonly','');
+    ta.style.cssText='position:fixed;top:-1000px;left:-1000px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select(); ta.setSelectionRange(0,ta.value.length);
+    const ok=(typeof document.execCommand==='function')?document.execCommand('copy'):false;
+    document.body.removeChild(ta);
+    if(ok){ done(); return; }
+  }catch(_){ }
+  toast('⚠️ کپی خودکار نشد؛ متن را دستی انتخاب کن');
+}
+
 function openNoteModal(id=null){
   editingNoteId=id;
   const titleEl=document.getElementById('noteModalTitle');
@@ -3288,14 +3407,21 @@ function openNoteModal(id=null){
     document.getElementById('nBody').value=ev.body||'';
     document.getElementById('nTag').value=ev.tag||'';
     document.getElementById('nPinned').checked=!!ev.pinned;
+    window.__noteColorPicked=ev.color||'';
   }else{
     titleEl.textContent='📝 یادداشت جدید';
     document.getElementById('nTitle').value='';
     document.getElementById('nBody').value='';
     document.getElementById('nTag').value='';
     document.getElementById('nPinned').checked=false;
+    window.__noteColorPicked='';
   }
+  renderNoteColorRow();
+  updateNoteBodyCounter();
   openModal('noteModalBg');
+  /* Focus lands on the title so typing starts immediately; harmless when the
+     element is missing and never steals focus from a filled-in edit form. */
+  setTimeout(()=>{ try{ document.getElementById('nTitle')?.focus(); }catch(_){ } },60);
 }
 function saveNote(){
   const title=document.getElementById('nTitle').value.trim();
@@ -3303,16 +3429,17 @@ function saveNote(){
   const body=document.getElementById('nBody').value.trim();
   const tag=document.getElementById('nTag').value.trim();
   const pinned=document.getElementById('nPinned').checked;
+  const color=window.__noteColorPicked||'';
 
   if(editingNoteId){
     const n=DB.notes.find(x=>x.id===editingNoteId);
     if(n){
-      n.title=title;n.body=body;n.tag=tag;n.pinned=pinned;
+      n.title=title;n.body=body;n.tag=tag;n.pinned=pinned;n.color=color;
       n.updatedAt=todayISO();
     }
     toast('✏️ یادداشت ویرایش شد');
   }else{
-    DB.notes.unshift({id:uid(),title,body,tag,pinned,date:todayISO(),updatedAt:todayISO()});
+    DB.notes.unshift({id:uid(),title,body,tag,pinned,color,date:todayISO(),updatedAt:todayISO()});
     toast('📝 یادداشت ذخیره شد');
   }
   editingNoteId=null;
@@ -3334,25 +3461,55 @@ function toggleNotePin(id){
 function renderNotes(){
   const el=document.getElementById('noteGrid');if(!el)return;
   const q=(document.getElementById('noteSearch')?.value||'').trim().toLowerCase();
+  const tag=window.__lpNoteTag||'';
+  const sort=window.__lpNoteSort||'newest';
   const list=[...DB.notes]
-    .filter(n=>!q||[n.title,n.body,n.tag].some(v=>String(v||'').toLowerCase().includes(q)))
-    .sort((a,b)=>(Number(!!b.pinned)-Number(!!a.pinned))||String(b.updatedAt||b.date||'').localeCompare(String(a.updatedAt||a.date||'')));
+    .filter(n=>{
+      if(tag && String(n.tag||'').trim()!==tag) return false;
+      if(!q) return true;
+      return [n.title,n.body,n.tag].some(v=>String(v||'').toLowerCase().includes(q));
+    })
+    .sort((a,b)=>{
+      const pin=(Number(!!b.pinned)-Number(!!a.pinned));
+      if(pin) return pin;   // pinned notes always lead, whatever the sort is
+      if(sort==='oldest')  return String(a.updatedAt||a.date||'').localeCompare(String(b.updatedAt||b.date||''));
+      if(sort==='title')   return String(a.title||'').localeCompare(String(b.title||''),'fa');
+      if(sort==='longest') return String(b.body||'').length-String(a.body||'').length;
+      return String(b.updatedAt||b.date||'').localeCompare(String(a.updatedAt||a.date||''));
+    });
+
+  window.__lpNoteVisible=list.length;
+  window.__lpNoteTotal=(DB.notes||[]).length;
 
   if(!list.length){
-    el.innerHTML=`<div class="empty"><div class="ic">📝</div>${q?'چیزی با این جستجو پیدا نشد':'یادداشتی نداری'}</div>`;
+    const filtered=!!(q||tag);
+    el.innerHTML=`<div class="empty"><div class="ic">📝</div>${filtered?'چیزی با این جستجو پیدا نشد':'یادداشتی نداری'}`+
+      (filtered
+        ? '<div class="empty-cta"><button class="btn ghost" onclick="resetNoteFilters()">🧹 پاک کردن فیلتر</button></div>'
+        : '<div class="empty-cta"><button class="btn" onclick="openNoteModal()">➕ اولین یادداشت رو بنویس</button></div>')+
+      `</div>`;
+    if(typeof renderNoteToolbar==='function') renderNoteToolbar();
     return;
   }
-  el.innerHTML=list.map(n=>`<div class="note-card">
-    ${n.pinned?'<span class="pill cat tag">📌 سنجاق‌شده</span>':''}
-    <h4>${esc(n.title)}</h4>
-    <p>${esc(n.body||'بدون محتوا')}</p>
-    ${n.tag?`<span class="pill cat tag">${esc(n.tag)}</span>`:''}
+  el.innerHTML=list.map(n=>{
+    const pills=(n.pinned?'<span class="pill cat tag">📌 سنجاق‌شده</span>':'')+
+                (n.tag?`<span class="pill cat tag note-tag">🏷️ ${noteHighlight(n.tag,q)}</span>`:'');
+    return `<div class="note-card${n.pinned?' is-pinned':''}" data-note-id="${esc(n.id)}"${n.color?` style="--note-accent:${esc(n.color)};"`:''} onclick="toggleNoteExpand('${esc(n.id)}',event)">
+    <span class="note-stripe" aria-hidden="true"></span>
+    ${pills?`<div class="note-pills">${pills}</div>`:''}
+    <h4>${noteHighlight(n.title,q)}</h4>
+    ${n.body?`<p class="note-body">${noteHighlight(n.body,q)}</p>`:'<p class="note-empty">بدون محتوا</p>'}
+    <div class="note-meta">${noteMetaHtml(n)}</div>
     <div class="note-actions">
-      <button class="note-action" onclick="openNoteModal('${n.id}')">✏️ ویرایش</button>
-      <button class="note-action" onclick="toggleNotePin('${n.id}')">${n.pinned?'📍 برداشتن سنجاق':'📌 سنجاق'}</button>
-      <button class="note-action" onclick="deleteNote('${n.id}')">🗑️ حذف</button>
+      <button class="note-action" onclick="openNoteModal('${esc(n.id)}')">✏️ ویرایش</button>
+      <button class="note-action" onclick="toggleNotePin('${esc(n.id)}')">${n.pinned?'📍 برداشتن سنجاق':'📌 سنجاق'}</button>
+      <button class="note-action" onclick="duplicateNote('${esc(n.id)}')">📄 کپی</button>
+      <button class="note-action" onclick="copyNoteText('${esc(n.id)}')">📋 متن</button>
+      <button class="note-action danger" onclick="deleteNote('${esc(n.id)}')">🗑️ حذف</button>
     </div>
-  </div>`).join('');
+  </div>`;
+  }).join('');
+  if(typeof renderNoteToolbar==='function') renderNoteToolbar();
 }
 
 /* ============ CALENDAR ============ */
@@ -4217,7 +4374,9 @@ function buildBackupPayload(){
     activeTheme:localStorage.getItem(THEME_KEY)||'dark',
     uiScale:localStorage.getItem('lifePlannerUIScale_v1')||'medium',
     pinnedNav:(()=>{try{return JSON.parse(localStorage.getItem(PINNED_NAV_KEY)||'null')}catch(_){return null}})(),
-    pinnedNavExtra:(()=>{try{return JSON.parse(localStorage.getItem(PINNED_NAV_EXTRA_KEY)||'null')}catch(_){return null}})()
+    pinnedNavExtra:(()=>{try{return JSON.parse(localStorage.getItem(PINNED_NAV_EXTRA_KEY)||'null')}catch(_){return null}})(),
+    /* v16.2: the Performance switch travels with the backup like the other UI settings */
+    perfMode:localStorage.getItem('lifePlannerPerfMode_v1')||''
   };
   return payload;
 }
@@ -4267,6 +4426,9 @@ document.getElementById('importFile').onchange = (e)=>{
         if(Array.isArray(restoredUI.pinnedNavExtra) && restoredUI.pinnedNavExtra.length<=PINNED_NAV_EXTRA_MAX) localStorage.setItem(PINNED_NAV_EXTRA_KEY,JSON.stringify(restoredUI.pinnedNavExtra));
         PINNED_VIEWS=getPinnedNav();
         PINNED_VIEWS_EXTRA=getPinnedNavExtra();
+        /* v16.2: restore the Performance switch (js/v162.js applies the class) */
+        if(restoredUI.perfMode) localStorage.setItem('lifePlannerPerfMode_v1',restoredUI.perfMode);
+        try{ if(window.lpV162){ window.lpV162.applyPerfMode(); window.lpV162.syncPerfUI(); } }catch(_){ }
       }
       DB.notes = Array.isArray(DB.notes)?DB.notes:[];
       DB.events = Array.isArray(DB.events)?DB.events:[];
@@ -4426,7 +4588,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='16.1';
+const LP_APP_VERSION='16.2';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

@@ -1484,3 +1484,120 @@ html.lp-lite .lp-sk i::after{animation-duration:1.8s;}
   .lp-pending{opacity:1 !important; transform:none !important;}
   .lp-sk i::after{animation:none;}
 }
+
+/* ============================================================
+   v16.2 — NOTES WORKSPACE, SMOOTHER SCROLLING, PERFORMANCE MODE
+   Additive only: no existing rule is redefined in place, no ID,
+   class or handler changes, and every colour comes from the theme
+   variables, so all 5 themes keep working exactly as before.
+   ============================================================ */
+
+/* ---------- notes: toolbar ---------- */
+.notes-tools{padding:12px 14px;}
+.notes-tools-row{display:flex; align-items:center; gap:8px;}
+.notes-search-field{flex:1 1 auto; min-width:0; margin:0;}
+.notes-view-btn{flex:0 0 auto; padding:9px 12px; font-size:14px; line-height:1;}
+.notes-meta{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px;}
+.notes-count{font-size:11.5px; font-weight:800;}
+.notes-reset{flex:0 0 auto; padding:6px 10px; font-size:11px;}
+.notes-sort{flex:0 0 auto; width:auto; min-width:132px; padding:7px 10px; font-size:11.5px; margin-inline-start:auto;}
+.notes-tag-filter{margin-top:10px;}
+.notes-tag-filter .chip-opt{display:inline-flex; align-items:center; gap:6px; padding:5px 10px; font-size:11.5px;}
+@media(max-width:540px){ .notes-sort{margin-inline-start:0; min-width:0; flex:1 1 100%;} }
+
+/* ---------- notes: card ---------- */
+.note-card{overflow:hidden; padding-inline-start:18px; cursor:pointer;}
+.note-stripe{position:absolute; inset-block:0; inset-inline-start:0; width:4px; background:var(--note-accent, var(--neon)); opacity:.85;}
+.note-pills{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;}
+.note-card h4{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+.note-card p{display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical;}
+.note-card.open{height:auto;}
+.note-card.open h4,
+.note-card.open p{-webkit-line-clamp:unset; overflow:visible;}
+.note-meta{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px; font-size:10.5px; font-weight:700; color:var(--txt-dim2);}
+.note-hl{background:var(--neon-15); color:var(--txt); border-radius:4px; padding:0 1px;}
+.note-card.is-pinned{border-color:var(--neon-35);}
+.note-card .note-actions{margin-top:auto; padding-top:10px;}
+.note-action.danger:hover{border-color:var(--danger); color:var(--danger);}
+.empty-cta{margin-top:12px;}
+/* list layout: one column, full note height (the toggle in the toolbar) */
+#noteGrid.notes-list{grid-template-columns:1fr;}
+#noteGrid.notes-list .note-card{height:auto;}
+#noteGrid.notes-list .note-card p{-webkit-line-clamp:6;}
+#noteGrid.notes-list .note-card.open p{-webkit-line-clamp:unset; overflow:visible;}
+/* the empty state is one message, not one card: let it span the whole grid */
+#noteGrid > .empty{grid-column:1/-1;}
+
+/* ---------- smoother scrolling ---------- */
+/* More repeated rows skip layout+paint while they are off screen (same
+   technique v16 uses for tasks / habits / goals / notes). */
+.pomo-history-item{content-visibility:auto; contain-intrinsic-size:auto 54px;}
+.shop-inv-row{content-visibility:auto; contain-intrinsic-size:auto 46px;}
+.yvy-record-row{content-visibility:auto; contain-intrinsic-size:auto 52px;}
+.milestone-row{content-visibility:auto; contain-intrinsic-size:auto 52px;}
+.city-entry-row{content-visibility:auto; contain-intrinsic-size:auto 52px;}
+.boss-task-row{content-visibility:auto; contain-intrinsic-size:auto 56px;}
+.pinned-nav-row{content-visibility:auto; contain-intrinsic-size:auto 48px;}
+
+/* While a scroll is in flight the fixed bottom bar is the only surface that
+   re-blurs moving content every frame, so its blur is paused for the duration
+   of the scroll and comes back the instant the page settles. */
+html.lp-scrolling .bottom-nav{backdrop-filter:none; -webkit-backdrop-filter:none;}
+html.lp-scrolling .task-row,
+html.lp-scrolling .note-card,
+html.lp-scrolling .habit-card,
+html.lp-scrolling .goal-card{transition:none;}
+
+/* ---------- performance mode (Settings -> ⚡ پرفورمنس) ---------- */
+/* One class, set by js/v162.js from the switch in Settings. Every animation,
+   transition and blurred glass layer is switched off; the layout, the colours,
+   the themes and every button stay exactly the same. */
+html.lp-perf *,
+html.lp-perf *::before,
+html.lp-perf *::after{
+  animation-duration:.001ms !important;
+  animation-delay:0s !important;
+  animation-iteration-count:1 !important;
+  transition-duration:.001ms !important;
+  transition-delay:0s !important;
+  scroll-behavior:auto !important;
+}
+html.lp-perf #citySvg{will-change:auto;}
+html.lp-perf .lp-sk i::after{display:none;}
+html.lp-perf .lp-pending{opacity:1 !important; transform:none !important;}
+html.lp-perf .glass-surface,
+html.lp-perf .card,
+html.lp-perf .lp62-card,
+html.lp-perf .settings-card,
+html.lp-perf .settings-version-card,
+html.lp-perf .motivation-card,
+html.lp-perf .stat-card,
+html.lp-perf .goal-card,
+html.lp-perf .habit-card,
+html.lp-perf .note-card,
+html.lp-perf .shop-item-card,
+html.lp-perf .mystery-card,
+html.lp-perf .skill-card,
+html.lp-perf .boss-card,
+html.lp-perf .xp-wallet-card,
+html.lp-perf .pomo-v66-card,
+html.lp-perf .theme-card,
+html.lp-perf .quest-box,
+html.lp-perf .toast,
+html.lp-perf .bottom-nav,
+html.lp-perf .modal,
+html.lp-perf .modal-bg,
+html.lp-perf .sheet-drawer,
+html.lp-perf .sheet-overlay,
+html.lp-perf .crisis-modal{
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+html.lp-perf .card,
+html.lp-perf .stat-card,
+html.lp-perf .note-card,
+html.lp-perf .habit-card,
+html.lp-perf .goal-card,
+html.lp-perf .quest-box,
+html.lp-perf .bottom-nav,
+html.lp-perf .toast{box-shadow:none !important;}
