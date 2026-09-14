@@ -28,6 +28,10 @@
   window.lpGetLang = getLang;
 
   var EXACT = {
+    "محافظت Streak Shield": "Streak Shield protection",
+    "انتخاب کن این Shield از کدام عادت‌ها محافظت کند.": "Choose which habits this Shield protects.",
+    "اول یک عادت بساز.": "Create a habit first.",
+
     "همه‌ی داده‌هات فقط روی همین گوشی ذخیره می‌شن. اگه گوشی ریست بشه یا اپ پاک بشه، یه فایل که همین‌جا دانلود بشه هم از بین می‌ره — پس بهتره یه نسخه رو بفرستی بیرون از گوشی (گوگل‌درایو، ایمیل و...).": "All of your data is stored only on this phone. If the phone is reset or the app is deleted, a file downloaded here is gone too — so send a copy off your phone (Google Drive, email and so on).",
     "چهار دکمه پایین برنامه رو خودت انتخاب کن؛ چیزهایی که بیشتر استفاده می‌کنی همیشه دم دستت باشن. می‌تونی تا ۵ دکمه اضافه هم اضافه کنی تا نوار پایین به دو ردیف وسط‌چین تبدیل بشه.": "Choose the four buttons at the bottom yourself; keep what you use most within reach. You can also add up to 5 extra buttons to turn the bottom bar into two centered rows.",
     "🛡️ ثبت‌های دستی مثل پومودورو بخشی از تاریخچه‌ی اصلی هستند و برای جلوگیری از خراب شدن XP/آمار حذف کامل نمی‌شوند.": "🛡️ Manual entries are part of the main history just like Pomodoro, and they are not fully deleted so your XP/stats stay intact.",

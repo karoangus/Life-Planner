@@ -87,6 +87,8 @@ if(!DB.newRecordFlags || typeof DB.newRecordFlags!=='object') DB.newRecordFlags 
 if(!DB.perfectDayHistory || typeof DB.perfectDayHistory!=='object') DB.perfectDayHistory = {};
 if(!DB.dailyGoalProgress || typeof DB.dailyGoalProgress!=='object') DB.dailyGoalProgress = {};
 if(!DB.streakShields || typeof DB.streakShields!=='number') DB.streakShields = 0;
+if(!Array.isArray(DB.streakShieldHabits)) DB.streakShieldHabits = [];
+if(typeof DB.streakShieldArmedAt!=='number') DB.streakShieldArmedAt = 0;
 if(!DB.streakShieldWeekly || typeof DB.streakShieldWeekly!=='object') DB.streakShieldWeekly = { weekStart: weekStartMs(), count: 0 };
 if(typeof DB.streakShieldWeekly.weekStart!=='number') DB.streakShieldWeekly.weekStart = weekStartMs();
 if(typeof DB.streakShieldWeekly.count!=='number') DB.streakShieldWeekly.count = 0;
@@ -2171,6 +2173,7 @@ function buyStreakShield(){
   const cost = applyShopDiscount(500);
   if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
   DB.streakShields = (DB.streakShields||0)+1;
+  DB.streakShieldArmedAt = Date.now();
   w.count = (w.count||0)+1;
   DB.streakShieldWeekly = w;
   persist();
@@ -2253,8 +2256,11 @@ function checkStreakShields(){
   const y2 = new Date(); y2.setDate(y2.getDate()-2);
   const y1ISO = dateToLocalISO(y1), y2ISO = dateToLocalISO(y2);
   let used = false;
+  if(DB.streakShieldArmedAt && new Date(DB.streakShieldArmedAt).toDateString() === y1.toDateString()) return;
   DB.habits.forEach(h=>{
     if(DB.streakShields<=0) return;
+    const configured = DB.streakShieldHabits || [];
+    if(configured.length && !configured.includes(h.id)) return;
     if(!h.log[y1ISO] && h.log[y2ISO]){
       h.log[y1ISO] = true;
       DB.streakShields--;
@@ -3072,12 +3078,16 @@ function openHabitModal(id=null){
     if(o.dataset.v === wanted){ o.classList.add('sel'); matched = true; }
   });
   if(!matched) document.querySelector('#hIcon [data-v="📚"]')?.classList.add('sel');
+  const shieldEl = document.getElementById('hShieldHabits');
+  if(shieldEl){ const selected = DB.streakShieldHabits || []; shieldEl.innerHTML = DB.habits.map(x => `<label><input type="checkbox" value="${x.id}" ${selected.length===0 || selected.includes(x.id)?'checked':''}> ${esc(x.icon)} ${esc(x.name)}</label>`).join('') || '<span>اول یک عادت بساز.</span>'; }
   openModal('habitModalBg');
 }
 function saveHabit(){
   const name = document.getElementById('hName').value.trim();
   if(!name){ toast('⚠️ اسم عادت رو بنویس'); return; }
   const icon = document.querySelector('#hIcon .sel')?.dataset.v || '📚';
+  const shieldEl = document.getElementById('hShieldHabits');
+  if(shieldEl) DB.streakShieldHabits = [...shieldEl.querySelectorAll('input:checked')].map(x=>x.value);
   if(editingHabitId){
     const h = DB.habits.find(x=>x.id===editingHabitId);
     if(h){ h.name = name; h.icon = icon; }   // the daily log is never touched
@@ -4416,7 +4426,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='16.0';
+const LP_APP_VERSION='16.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
