@@ -11,6 +11,17 @@
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/design-system.css">
 
+<script>
+/* v16.2 — apply the saved Performance Mode before the first paint, so a phone
+   that has it enabled never renders one animated frame first. One class, set
+   from one stored flag; nothing else runs here and a failure is harmless. */
+try{
+  var v = localStorage.getItem('lifePlannerPerfMode_v1');
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(v === '1' || (v !== '0' && reduce)) document.documentElement.classList.add('lp-perf');
+}catch(e){}
+</script>
+
 </head>
 <body>
 
@@ -225,9 +236,23 @@
         <div class="top-actions"><button class="btn" onclick="openNoteModal()">➕ یادداشت جدید</button></div>
       </div>
       <div class="card notes-tools">
-        <div class="field" style="margin:0;">
-          <input type="search" id="noteSearch" placeholder="🔎 جستجو در عنوان، متن یا برچسب..." oninput="renderNotes()">
+        <div class="notes-tools-row">
+          <div class="field notes-search-field" style="margin:0;">
+            <input type="search" id="noteSearch" placeholder="🔎 جستجو در عنوان، متن یا برچسب..." oninput="renderNotes()">
+          </div>
+          <button class="btn ghost notes-view-btn" id="noteViewToggle" onclick="toggleNoteViewMode()" title="تغییر حالت نمایش" aria-label="تغییر حالت نمایش">▦</button>
         </div>
+        <div class="notes-meta">
+          <span class="muted notes-count" id="noteCount">۰ یادداشت</span>
+          <button class="btn ghost notes-reset" id="noteResetFilters" onclick="resetNoteFilters()" style="display:none;">🧹 پاک کردن فیلتر</button>
+          <select id="noteSort" class="settings-select notes-sort" onchange="setNoteSort(this.value)" aria-label="ترتیب نمایش یادداشت‌ها">
+            <option value="newest">🆕 جدیدترین</option>
+            <option value="oldest">🕓 قدیمی‌ترین</option>
+            <option value="title">🔤 عنوان (الف‌با)</option>
+            <option value="longest">📄 طولانی‌ترین</option>
+          </select>
+        </div>
+        <div class="chip-group notes-tag-filter" id="noteTagFilter"></div>
       </div>
       <div class="grid g3" id="noteGrid"></div>
     </div>
@@ -851,6 +876,12 @@
       </div>
 
       <div class="card settings-card">
+        <div class="card-head"><h3>⚡ پرفورمنس</h3><span class="muted settings-perf-state" id="settingsPerfState">⛔ غیرفعال</span></div>
+        <p class="muted settings-help">مخصوص گوشی‌های ضعیف: با فعال کردن این گزینه، همه‌ی انیمیشن‌ها، جلوه‌های حرکتی و افکت‌های شیشه‌ایِ برنامه خاموش می‌شوند تا اسکرول و جابه‌جایی بین بخش‌ها روان‌تر شود. ظاهر، رنگ‌ها، تم‌ها و همه‌ی دکمه‌ها دقیقاً بدون تغییر می‌مانند.</p>
+        <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="settingsPerfMode" onchange="setSettingsPerfMode(this.checked)"><span>⚡ حالت پرفورمنس (خاموش کردن انیمیشن‌ها)</span></label>
+      </div>
+
+      <div class="card settings-card">
         <div class="card-head"><h3>📱 نوار پایین</h3></div>
         <p class="muted settings-help">چهار میانبر پایین برنامه را هر طور که می‌خواهی بچین.</p>
         <button class="btn" style="width:100%;justify-content:center;" onclick="openSettingsNav()">🛠️ شخصی‌سازی نوار پایین</button>
@@ -974,8 +1005,9 @@
 <div class="modal-bg" id="noteModalBg"><div class="modal">
   <h2 id="noteModalTitle">📝 یادداشت جدید</h2>
   <div class="field"><label>عنوان</label><input type="text" id="nTitle" placeholder="عنوان یادداشت"></div>
-  <div class="field"><label>محتوا</label><textarea id="nBody" style="min-height:140px;" placeholder="هر چی دوست داری بنویس..."></textarea></div>
+  <div class="field"><label>محتوا</label><textarea id="nBody" style="min-height:140px;" placeholder="هر چی دوست داری بنویس..." oninput="updateNoteBodyCounter()"></textarea><div class="muted notes-counter" id="nBodyCounter">📄 ۰ کلمه · ۰ کاراکتر</div></div>
   <div class="field"><label>برچسب</label><input type="text" id="nTag" placeholder="مثلاً: کار، ایده، درس"></div>
+  <div class="field"><label>رنگ یادداشت (اختیاری)</label><div class="chip-group lp-color-row" id="nColorRow"></div></div>
   <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="nPinned"><span>📌 سنجاق کردن یادداشت</span></label>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('noteModalBg')">انصراف</button><button class="btn" onclick="saveNote()">ذخیره</button></div>
 </div></div>
@@ -1170,6 +1202,7 @@
 <script src="js/pomodoro.js"></script>
 <script src="js/lang.js"></script>
 <script src="js/v16.js"></script>
+<script src="js/v162.js"></script>
 
 </body>
 </html>

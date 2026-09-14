@@ -177,6 +177,8 @@ if (!useFallback) {
   const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf-8');
   const v16Path = path.join(ROOT, 'js/v16.js');
   const v16Js = fs.existsSync(v16Path) ? fs.readFileSync(v16Path, 'utf-8') : '';
+  const v162Path = path.join(ROOT, 'js/v162.js');
+  const v162Js = fs.existsSync(v162Path) ? fs.readFileSync(v162Path, 'utf-8') : '';
 
   // v16 (1) — the in-progress / queued / paused tabs are gone, the rest stayed.
   const removedTabs = ['inprogress', 'queued', 'paused'].every(f => !indexHtml.includes(`data-f="${f}"`));
@@ -218,6 +220,73 @@ if (!useFallback) {
   check('v16 strings translated for English mode',
     ['✏️ ویرایش عادت', '✏️ ویرایش هدف', '✏️ عادت ویرایش شد', '✏️ هدف ویرایش شد']
       .every(k => langJs.includes(k)));
+
+  // ---------- v16.2: notes workspace ----------
+  const notesToolbar =
+    indexHtml.includes('id="noteSearch"') &&   // the original search box must survive
+    indexHtml.includes('id="noteTagFilter"') &&
+    indexHtml.includes('id="noteSort"') &&
+    indexHtml.includes('id="noteCount"') &&
+    indexHtml.includes('id="noteResetFilters"') &&
+    indexHtml.includes('id="noteViewToggle"');
+  check('v16.2 notes toolbar present (search kept, filters/sort/counter added)', notesToolbar);
+
+  const notesFns = ['function renderNoteToolbar', 'function setNoteTagFilter', 'function setNoteSort',
+    'function toggleNoteViewMode', 'function resetNoteFilters', 'function toggleNoteExpand',
+    'function duplicateNote', 'function copyNoteText', 'function noteHighlight',
+    'function renderNoteColorRow', 'function updateNoteBodyCounter'];
+  check('v16.2 notes functions present', notesFns.every(f => coreJs.includes(f)),
+    notesFns.filter(f => !coreJs.includes(f)).join(', '));
+
+  // the original note actions must still be there, the new ones are additive
+  check('v16.2 note card keeps its original actions and adds new ones',
+    coreJs.includes(`openNoteModal('`) && coreJs.includes('toggleNotePin(') &&
+    coreJs.includes('deleteNote(') && coreJs.includes('duplicateNote(') &&
+    coreJs.includes('copyNoteText(') && coreJs.includes('>📄 کپی<') && coreJs.includes('>📋 متن<'));
+
+  check('v16.2 note cards carry colour, meta and highlighted search hits',
+    coreJs.includes('--note-accent') && coreJs.includes('note-meta') &&
+    coreJs.includes('noteHighlight(n.body,q)') && coreJs.includes('note-tag'));
+
+  // ---------- v16.2: performance mode ----------
+  check('v16.2 performance switch present in Settings',
+    indexHtml.includes('id="settingsPerfMode"') && indexHtml.includes('⚡ پرفورمنس') &&
+    indexHtml.includes('setSettingsPerfMode(this.checked)'));
+
+  check('v16.2 performance mode kills every animation',
+    v162Js.includes("'lp-perf'") && v162Js.includes('setSettingsPerfMode') &&
+    appCss.includes('html.lp-perf *') && appCss.includes('animation-duration:.001ms !important') &&
+    appCss.includes('transition-duration:.001ms !important') &&
+    appCss.includes('backdrop-filter:none !important'));
+
+  // the switch must survive a reload and a backup round-trip of the setting
+  check('v16.2 performance mode is persisted and travels with the backup',
+    v162Js.includes('localStorage.setItem(PERF_KEY') && v162Js.includes('lifePlannerPerfMode_v1') &&
+    indexHtml.includes('lifePlannerPerfMode_v1') &&
+    coreJs.includes("perfMode:localStorage.getItem('lifePlannerPerfMode_v1')"));
+
+  // ---------- v16.2: smoother scrolling ----------
+  check('v16.2 scroll work reduced (off-screen rows, paused blur, coalesced typing)',
+    appCss.includes('html.lp-scrolling .bottom-nav') &&
+    appCss.includes('.pomo-history-item{content-visibility:auto') &&
+    appCss.includes('.shop-inv-row{content-visibility:auto') &&
+    v162Js.includes('lp-scrolling') && v162Js.includes("id === 'noteSearch'"));
+
+  // the new file must be precached, otherwise the offline PWA loses it
+  check('v16.2 script is precached by the service worker',
+    swJs.includes("'./js/v162.js'") && indexHtml.includes('js/v162.js'));
+
+  check('v16.2 strings translated for English mode',
+    ['⚡ پرفورمنس', '⚡ حالت پرفورمنس (خاموش کردن انیمیشن‌ها)', '⚡ حالت پرفورمنس فعال شد',
+     '🧹 پاک کردن فیلتر', '➕ اولین یادداشت رو بنویس', '📄 کپی یادداشت ساخته شد',
+     '📋 متن یادداشت کپی شد', '🗂️ همه', '🔤 عنوان (الف‌با)', 'رنگ یادداشت (اختیاری)', 'بدون رنگ']
+      .every(k => langJs.includes(k)));
+
+  // the notes counter and the editor counter are built from digits + unit, so
+  // both units need a plural rule for the English mode
+  check('v16.2 counters translated (یادداشت / کلمه)',
+    langJs.includes("یادداشت$/") && langJs.includes("'note',     'notes'") &&
+    langJs.includes("کلمه$/") && langJs.includes("'word',     'words'"));
 
   // all five themes must still be defined in both JS and CSS.
   // "dark" is the default theme: its variables live in the plain :root block.
