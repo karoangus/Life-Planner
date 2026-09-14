@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-16.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 16.0" />
+  <img src="https://img.shields.io/badge/نسخه-16.1-00e5ff?style=for-the-badge&logoColor=white" alt="Version 16.1" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -282,13 +282,13 @@ npm test
 
 هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **هر پنج جا با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"16.0"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '16.0';`
-3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"16.0.0"`).
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"16.1"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '16.1';`
+3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"16.1.0"`).
 4. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 5. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v63';
+   const CACHE_NAME = 'life-planner-cache-v64';
    ```
 
 > ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ هر ۱۲ تست باید سبز باشند.
@@ -297,7 +297,7 @@ npm test
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
 
-### ✨ نسخه 16.0
+### ✨ نسخه 16.1
 - 🗂️ **تب‌های ساده‌تر بخش تسک‌ها:** تب‌های «▶️ در حال انجام»، «📥 در صف» و «⏸️ متوقف» حذف شدند. نوار تب‌ها حالا فقط «📁 همه»، «⬜ شروع نشده»، «📥 Inbox» و «✅ تکمیل‌شده» است. وضعیت یک تسک همچنان از منوی جزئیات خودش قابل تغییر است.
 - ✅ **تکمیل‌شده‌ها به شکل تب:** بلوک همیشه‌باز «تکمیل‌شده» از بالای صفحه برداشته شد و به تب «✅ تکمیل‌شده» با شمارنده‌ی زنده تبدیل شد.
 - 🦴 **لودینگ اسکلتی (Skeleton):** به‌جای اسپینر روی کل صفحه، تا آماده شدن لیست‌ها اسکلت خاکستری و چشمک‌زنِ همان آیتم‌ها نمایش داده می‌شود — هم در لحظه‌ی باز شدن برنامه و هم هنگام جابه‌جایی بین بخش‌ها.
