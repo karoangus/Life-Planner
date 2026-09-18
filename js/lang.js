@@ -28,6 +28,15 @@
   window.lpGetLang = getLang;
 
   var EXACT = {
+    /* ---- v16.3: quest timers & streak shield ---- */
+    "⏳ مهلت انجام:": "⏳ Time left:",
+    "⏳ مهلت انجام": "⏳ Time left",
+    "⏳ مهلت:": "⏳ Deadline:",
+    "آماده شروع": "Ready to start",
+    "فعال‌سازی محافظت خودکار از استریک عادت‌ها": "Enable automatic habit streak protection",
+    "🛡️ محافظت Streak Shield فعال شد": "🛡️ Streak Shield protection enabled",
+    "🛡️ محافظت Streak Shield غیرفعال شد": "🛡️ Streak Shield protection disabled",
+    "⏰ زمان مأموریت تمام شد": "⏰ Quest time expired",
     /* ---- v16.2: notes workspace ---- */
     "🗂️ همه": "🗂️ All",
     "🧹 پاک کردن فیلتر": "🧹 Clear filters",
@@ -891,6 +900,8 @@
     [new RegExp("^«([\\s\\S]*?)»\\ شکست\\ خورد!\\ \\+۱۰۰\\ XP$"), "“$1” was defeated! +100 XP"],
     [new RegExp("^🕒\\ «([\\s\\S]*?)»\\ به\\ ([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ منتقل\\ شد$"), "🕒 “$1” moved to $2 to $3"],
     [new RegExp("^×۲\\ بوست\\ فعال\\ \\(پایه\\ ([\\s\\S]*?)\\)$"), "×2 boost active (base $1)"],
+    [new RegExp("^⏰\\ مهلت\\ انجام\\ مأموریت\\ تمام\\ شد\\ —\\ ([\\s\\S]*?)\\ XP\\ کسر\\ شد$"), "⏰ Quest time expired — $1 XP deducted"],
+    [new RegExp("^⏰\\ زمان\\ مأموریت\\ تمام\\ شد\\ —\\ ([\\s\\S]*?)\\ XP\\ کسر\\ شد$"), "⏰ Quest time expired — $1 XP deducted"],
     [new RegExp("^⏭️\\ رد\\ شد\\ —\\ ([\\s\\S]*?)\\ XP\\ کم\\ شد$"), "⏭️ Skipped — $1 XP deducted"],
     [new RegExp("^☕\\ دقیقه\\ ([\\s\\S]*?)\\ از\\ ([\\s\\S]*?)\\ استراحت$"), "☕ Minute $1 of $2 of the break"],
     [new RegExp("^♾️\\ دقیقه\\ ([\\s\\S]*?)\\ فوکوس\\ آزاد$"), "♾️ Minute $1 of free focus"],

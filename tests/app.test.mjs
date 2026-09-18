@@ -288,6 +288,20 @@ if (!useFallback) {
     langJs.includes("یادداشت$/") && langJs.includes("'note',     'notes'") &&
     langJs.includes("کلمه$/") && langJs.includes("'word',     'words'"));
 
+  // ---------- v16.3: quest timers, streak shield midnight protection & habits toggle ----------
+  check('v16.3 quest durations & timer logic present',
+    coreJs.includes('getQuestDurationMs') && coreJs.includes('failQuest') &&
+    coreJs.includes('durationMin') && coreJs.includes('quest-active-countdown'));
+
+  check('v16.3 streak shield midnight protection & toggle present',
+    coreJs.includes('toggleStreakShieldActive') && coreJs.includes('checkMidnightTransition') &&
+    indexHtml.includes('id="habitStreakShieldToggle"') && indexHtml.includes('id="habitShieldSection"'));
+
+  check('v16.3 strings translated for English mode',
+    ['فعال‌سازی محافظت خودکار از استریک عادت‌ها', '🛡️ محافظت Streak Shield فعال شد',
+     '🛡️ محافظت Streak Shield غیرفعال شد', '⏳ مهلت انجام:', 'آماده شروع']
+      .every(k => langJs.includes(k)));
+
   // all five themes must still be defined in both JS and CSS.
   // "dark" is the default theme: its variables live in the plain :root block.
   const themeIds = ['dark', 'light', 'neonPurple', 'fireSunset', 'legendaryGold'];
