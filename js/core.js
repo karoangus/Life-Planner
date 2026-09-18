@@ -56,6 +56,7 @@ function loadStore(){
   if(typeof db.history !== 'object' || Array.isArray(db.history)) db.history = {};
   if(typeof db.xp    !== 'number') db.xp    = 0;
   if(typeof db.level !== 'number' || db.level < 1) db.level = 1;
+  if(typeof db.streakShieldActive !== 'boolean') db.streakShieldActive = true;
   // ensure each task has extraDeadlines, subtasks, workflow status and inbox flag
   db.tasks.forEach(t=>{
     if(!Array.isArray(t.extraDeadlines)) t.extraDeadlines=[];
@@ -87,6 +88,7 @@ if(!DB.newRecordFlags || typeof DB.newRecordFlags!=='object') DB.newRecordFlags 
 if(!DB.perfectDayHistory || typeof DB.perfectDayHistory!=='object') DB.perfectDayHistory = {};
 if(!DB.dailyGoalProgress || typeof DB.dailyGoalProgress!=='object') DB.dailyGoalProgress = {};
 if(!DB.streakShields || typeof DB.streakShields!=='number') DB.streakShields = 0;
+if(typeof DB.streakShieldActive!=='boolean') DB.streakShieldActive = true;
 if(!Array.isArray(DB.streakShieldHabits)) DB.streakShieldHabits = [];
 if(typeof DB.streakShieldArmedAt!=='number') DB.streakShieldArmedAt = 0;
 if(!DB.streakShieldWeekly || typeof DB.streakShieldWeekly!=='object') DB.streakShieldWeekly = { weekStart: weekStartMs(), count: 0 };
@@ -112,6 +114,7 @@ if(!DB.motivation) DB.motivation = { mood:'energize' }; if(typeof DB.motivation.
 if(DB.xpWallet===undefined) DB.xpWallet = DB.stats.totalXPEarned||0;
 if(!DB.xpBoost) DB.xpBoost = { activeUntil:0 };
 if(DB.streakShields===undefined) DB.streakShields = 0;
+if(DB.streakShieldActive===undefined) DB.streakShieldActive = true;
 if(!DB.cityBonusItems) DB.cityBonusItems = [];
 if(!DB.themes) DB.themes = { owned:['dark','light'] };
 if(DB.lastBackupReminder===undefined) DB.lastBackupReminder = Date.now();
@@ -1121,57 +1124,57 @@ const QUEST_TIERS = {
 };
 const QUEST_POOL = {
   easy:[
-    {id:'e1', icon:'🥤', text:'یک لیوان آب بنوش.'},
-    {id:'e2', icon:'🚶', text:'۳ دقیقه راه برو.'},
-    {id:'e3', icon:'👀', text:'۲۰ ثانیه به نقطه‌ای دور نگاه کن و به چشمت استراحت بده.'},
-    {id:'e4', icon:'🧹', text:'میز کارت را ۲ دقیقه مرتب کن.'},
-    {id:'e5', icon:'🌬️', text:'۵ نفس عمیق و آرام بکش.'},
-    {id:'e6', icon:'🎵', text:'یک آهنگ آرامش‌بخش گوش بده.'},
-    {id:'e7', icon:'🗑️', text:'یک وسیله یا زباله اضافه را از اتاقت جمع کن.'},
-    {id:'e8', icon:'💧', text:'صورتت را با آب بشور یا کمی آب به دست و صورتت بزن.'},
-    {id:'e9', icon:'🍎', text:'یک میان‌وعده سالم بخور (مثل میوه یا مغزها).'},
-    {id:'e10', icon:'🌞', text:'اگر امکانش هست ۲ دقیقه کنار پنجره یا در هوای آزاد باش.'},
-    {id:'e11', icon:'🎯', text:'یک کار کمتر از ۲ دقیقه‌ای را همین الان کامل کن.'},
-    {id:'e12', icon:'🧹', text:'یک کشو یا بخش کوچیک از اتاقت رو مرتب کن.'},
-    {id:'e13', icon:'💡', text:'یک ایده‌ای که مدت‌ها تو ذهنت بوده رو یادداشت کن.'},
-    {id:'e14', icon:'🎒', text:'کیف یا میزت رو برای فردا آماده کن.'},
-    {id:'e15', icon:'🌱', text:'به یک گیاه رسیدگی کن یا اگر نداری، چند دقیقه کنار پنجره باش.'},
-    {id:'e16', icon:'🌙', text:'قبل از اینکه Quest بعدی بیاد، یک دقیقه هیچ کاری نکن و فقط به محیط اطرافت توجه کن.'},
-    {id:'e17', icon:'🧠', text:'یک چیز جدید که امروز یاد گرفتی رو در یک جمله ثبت کن.'},
-    {id:'e18', icon:'🚶', text:'یه دور کوتاه توی خونه راه برو.'},
-    {id:'e19', icon:'🧹', text:'۵ دقیقه اتاقت رو مرتب کن.'},
-    {id:'e20', icon:'📺', text:'یک قسمت کوتاه یا چند دقیقه تلویزیون ببین.'},
-    {id:'e21', icon:'😌', text:'۵ دقیقه استراحت واقعی داشته باش؛ بدون گوشی.'},
+    {id:'e1', icon:'🥤', text:'یک لیوان آب بنوش.', durationMin:10},
+    {id:'e2', icon:'🚶', text:'۳ دقیقه راه برو.', durationMin:10},
+    {id:'e3', icon:'👀', text:'۲۰ ثانیه به نقطه‌ای دور نگاه کن و به چشمت استراحت بده.', durationMin:10},
+    {id:'e4', icon:'🧹', text:'میز کارت را ۲ دقیقه مرتب کن.', durationMin:10},
+    {id:'e5', icon:'🌬️', text:'۵ نفس عمیق و آرام بکش.', durationMin:10},
+    {id:'e6', icon:'🎵', text:'یک آهنگ آرامش‌بخش گوش بده.', durationMin:10},
+    {id:'e7', icon:'🗑️', text:'یک وسیله یا زباله اضافه را از اتاقت جمع کن.', durationMin:10},
+    {id:'e8', icon:'💧', text:'صورتت را با آب بشور یا کمی آب به دست و صورتت بزن.', durationMin:10},
+    {id:'e9', icon:'🍎', text:'یک میان‌وعده سالم بخور (مثل میوه یا مغزها).', durationMin:15},
+    {id:'e10', icon:'🌞', text:'اگر امکانش هست ۲ دقیقه کنار پنجره یا در هوای آزاد باش.', durationMin:10},
+    {id:'e11', icon:'🎯', text:'یک کار کمتر از ۲ دقیقه‌ای را همین الان کامل کن.', durationMin:10},
+    {id:'e12', icon:'🧹', text:'یک کشو یا بخش کوچیک از اتاقت رو مرتب کن.', durationMin:15},
+    {id:'e13', icon:'💡', text:'یک ایده‌ای که مدت‌ها تو ذهنت بوده رو یادداشت کن.', durationMin:10},
+    {id:'e14', icon:'🎒', text:'کیف یا میزت رو برای فردا آماده کن.', durationMin:15},
+    {id:'e15', icon:'🌱', text:'به یک گیاه رسیدگی کن یا اگر نداری، چند دقیقه کنار پنجره باش.', durationMin:10},
+    {id:'e16', icon:'🌙', text:'قبل از اینکه Quest بعدی بیاد، یک دقیقه هیچ کاری نکن و فقط به محیط اطرافت توجه کن.', durationMin:10},
+    {id:'e17', icon:'🧠', text:'یک چیز جدید که امروز یاد گرفتی رو در یک جمله ثبت کن.', durationMin:12},
+    {id:'e18', icon:'🚶', text:'یه دور کوتاه توی خونه راه برو.', durationMin:10},
+    {id:'e19', icon:'🧹', text:'۵ دقیقه اتاقت رو مرتب کن.', durationMin:15},
+    {id:'e20', icon:'📺', text:'یک قسمت کوتاه یا چند دقیقه تلویزیون ببین.', durationMin:15},
+    {id:'e21', icon:'😌', text:'۵ دقیقه استراحت واقعی داشته باش؛ بدون گوشی.', durationMin:12},
 
   ],
   normal:[
-    {id:'n1', icon:'🤸', text:'۱۰ حرکت کششی انجام بده.'},
-    {id:'n2', icon:'📖', text:'۲ صفحه کتاب بخوان.'},
-    {id:'n3', icon:'📝', text:'یک جمله درباره هدفت امروز بنویس.'},
-    {id:'n4', icon:'📵', text:'۵ دقیقه گوشی را کنار بگذار.'},
-    {id:'n5', icon:'😄', text:'به یک اتفاق خوب امروز فکر کن و ثبتش کن.'},
-    {id:'n6', icon:'📚', text:'۵ دقیقه روی مهم‌ترین کارت تمرکز کن.'},
-    {id:'n7', icon:'🎮', text:'اگر در دسترسه، ۱۰ دقیقه با کنسول یا کامپیوتر سرگرم شو.'},
-    {id:'n8', icon:'🏃', text:'۵ دقیقه فعالیت ورزشی سبک انجام بده؛ مثل اسکات، کشش یا راه رفتن تند.'},
-    {id:'n9', icon:'📝', text:'برای یکی از ویدیوهای آینده‌ات یک سناریوی کوتاه بنویس.'},
-    {id:'n10', icon:'📚', text:'۱۰ دقیقه مطالعه کن.'},
-    {id:'n11', icon:'🎲', text:'۱۰ دقیقه یک سرگرمی غیرموبایلی انجام بده؛ مثل کتاب، نقاشی یا بازی رومیزی.'},
+    {id:'n1', icon:'🤸', text:'۱۰ حرکت کششی انجام بده.', durationMin:15},
+    {id:'n2', icon:'📖', text:'۲ صفحه کتاب بخوان.', durationMin:15},
+    {id:'n3', icon:'📝', text:'یک جمله درباره هدفت امروز بنویس.', durationMin:15},
+    {id:'n4', icon:'📵', text:'۵ دقیقه گوشی را کنار بگذار.', durationMin:15},
+    {id:'n5', icon:'😄', text:'به یک اتفاق خوب امروز فکر کن و ثبتش کن.', durationMin:15},
+    {id:'n6', icon:'📚', text:'۵ دقیقه روی مهم‌ترین کارت تمرکز کن.', durationMin:20},
+    {id:'n7', icon:'🎮', text:'اگر در دسترسه، ۱۰ دقیقه با کنسول یا کامپیوتر سرگرم شو.', durationMin:25},
+    {id:'n8', icon:'🏃', text:'۵ دقیقه فعالیت ورزشی سبک انجام بده؛ مثل اسکات، کشش یا راه رفتن تند.', durationMin:20},
+    {id:'n9', icon:'📝', text:'برای یکی از ویدیوهای آینده‌ات یک سناریوی کوتاه بنویس.', durationMin:25},
+    {id:'n10', icon:'📚', text:'۱۰ دقیقه مطالعه کن.', durationMin:25},
+    {id:'n11', icon:'🎲', text:'۱۰ دقیقه یک سرگرمی غیرموبایلی انجام بده؛ مثل کتاب، نقاشی یا بازی رومیزی.', durationMin:25},
 
-    {id:'n12', icon:'🧘', text:'۲ دقیقه مدیتیشن یا آرام‌سازی انجام بده.'},
-    {id:'n13', icon:'📱', text:'۱۰ دقیقه نوتیفیکیشن‌های غیرضروری گوشیت رو خاموش کن.'},
-    {id:'n14', icon:'🖥️', text:'یک فایل، عکس یا برنامه‌ای که دیگه لازم نداری رو مرتب یا حذف کن.'},
-    {id:'n15', icon:'🧩', text:'۵ دقیقه یک معما، پازل، سودوکو یا بازی فکری انجام بده.'},
-    {id:'n16', icon:'🎯', text:'کوچک‌ترین کاری که امروز عقب انداختی رو همین الان انجام بده.'},
+    {id:'n12', icon:'🧘', text:'۲ دقیقه مدیتیشن یا آرام‌سازی انجام بده.', durationMin:15},
+    {id:'n13', icon:'📱', text:'۱۰ دقیقه نوتیفیکیشن‌های غیرضروری گوشیت رو خاموش کن.', durationMin:20},
+    {id:'n14', icon:'🖥️', text:'یک فایل، عکس یا برنامه‌ای که دیگه لازم نداری رو مرتب یا حذف کن.', durationMin:15},
+    {id:'n15', icon:'🧩', text:'۵ دقیقه یک معما، پازل، سودوکو یا بازی فکری انجام بده.', durationMin:20},
+    {id:'n16', icon:'🎯', text:'کوچک‌ترین کاری که امروز عقب انداختی رو همین الان انجام بده.', durationMin:20},
   ],
   rare:[
-    {id:'r1', icon:'💪', text:'۱۰ تا شنا یا ۱۵ تا اسکوات (هرکدام که راحت‌تری).'},
-    {id:'r2', icon:'✉️', text:'یک کار کوچک که مدت‌ها عقب انداختی را انجام بده.'},
-    {id:'r3', icon:'📴', text:'۱۵ دقیقه کامل بدون گوشی سپری کن.'},
+    {id:'r1', icon:'💪', text:'۱۰ تا شنا یا ۱۵ تا اسکوات (هرکدام که راحت‌تری).', durationMin:30},
+    {id:'r2', icon:'✉️', text:'یک کار کوچک که مدت‌ها عقب انداختی را انجام بده.', durationMin:35},
+    {id:'r3', icon:'📴', text:'۱۵ دقیقه کامل بدون گوشی سپری کن.', durationMin:30},
   ],
   epic:[
-    {id:'ep1', icon:'🌆', text:'تمام تسک‌های امروزت را تا قبل از ساعت ۸ شب کامل کن.'},
-    {id:'ep2', icon:'🔥', text:'امروز هیچ تسک بحرانی رو نادیده نذار و انجامش بده.'},
-    {id:'ep3', icon:'⏳', text:'بدون هیچ وقفه‌ای ۲۵ دقیقه رو یه کار مشخص کار کن.'},
+    {id:'ep1', icon:'🌆', text:'تمام تسک‌های امروزت را تا قبل از ساعت ۸ شب کامل کن.', durationMin:120},
+    {id:'ep2', icon:'🔥', text:'امروز هیچ تسک بحرانی رو نادیده نذار و انجامش بده.', durationMin:60},
+    {id:'ep3', icon:'⏳', text:'بدون هیچ وقفه‌ای ۲۵ دقیقه رو یه کار مشخص کار کن.', durationMin:45},
   ],
 };
 function shuffle(arr){
@@ -1186,6 +1189,11 @@ function pickWeightedTier(){
   for(const [key,t] of entries){ if(r < t.weight) return key; r -= t.weight; }
   return entries[0][0];
 }
+function getQuestDurationMs(def, tier){
+  const fallback = tier==='epic'?60:tier==='rare'?30:tier==='normal'?15:10;
+  const min = Math.max(10, Number(def?.durationMin) || fallback);
+  return min * 60 * 1000;
+}
 function generateQuest(){
   const tier = pickWeightedTier();
   if(!DB.quest.bags[tier] || !DB.quest.bags[tier].length){
@@ -1193,7 +1201,17 @@ function generateQuest(){
   }
   const id = DB.quest.bags[tier].pop();
   const def = QUEST_POOL[tier].find(q=>q.id===id);
-  DB.quest.current = { tier, id, text:def.text, icon:def.icon, xp:QUEST_TIERS[tier].xp };
+  const durationMs = getQuestDurationMs(def, tier);
+  DB.quest.current = {
+    tier,
+    id,
+    text: def.text,
+    icon: def.icon,
+    xp: QUEST_TIERS[tier].xp,
+    durationMs,
+    startedAt: null,
+    expiresAt: null
+  };
 }
 /* v13: quest cooldown is 20 minutes; each level of the "Faster Quests"
    skill reduces it by 1 minute (min 5 minutes). */
@@ -1219,22 +1237,41 @@ function completeQuest(){
   checkPerfectDay();
   checkNewRecords();
   save();
+  renderXP();
 }
 function skipQuest(){
   if(!DB.quest.current) return;
   const q = DB.quest.current;
-  const penalty = Math.ceil(q.xp/2);
+  const timerPenalty = Math.floor(q.xp / 2);
+  const penalty = Math.max(timerPenalty + 1, Math.ceil(q.xp * 0.65));
   DB.quest.current = null;
   DB.quest.waitStart = Date.now();
   DB.quest.nextAt = Date.now() + questCooldownMs();
   addXP(-penalty);
   toast(`⏭️ رد شد — ${penalty} XP کم شد`);
   save();
+  renderXP();
+}
+function failQuest(){
+  if(!DB.quest.current) return;
+  const q = DB.quest.current;
+  const penalty = Math.floor(q.xp / 2);
+  DB.quest.current = null;
+  DB.quest.waitStart = Date.now();
+  DB.quest.nextAt = Date.now() + questCooldownMs();
+  addXP(-penalty);
+  toast(`⏰ مهلت انجام مأموریت تمام شد — ${penalty} XP کسر شد`);
+  save();
+  renderXP();
 }
 function fmtCountdown(ms){
   if(ms<0) ms=0;
   const totalSec = Math.floor(ms/1000);
-  const m = Math.floor(totalSec/60), s = totalSec%60;
+  const h = Math.floor(totalSec/3600);
+  const m = Math.floor((totalSec%3600)/60), s = totalSec%60;
+  if(h > 0){
+    return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  }
   return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
 }
 /* PERF: this runs every second. The card's HTML is only rebuilt when the quest
@@ -1255,24 +1292,50 @@ function renderQuestBox(){
   if(!el) return;
   const q = DB.quest.current;
   if(q){
-    const sig = 'q|'+q.tier+'|'+q.xp+'|'+q.text;
-    if(sig === __questSig) return;
-    __questSig = sig; __questCountdownEl = null; __questFillEl = null;
-    const meta = QUEST_TIERS[q.tier];
-    el.innerHTML = `<div class="quest-box tier-${q.tier}">
-      <div class="quest-top">
-        <div class="quest-emoji">${q.icon}</div>
-        <div class="quest-info">
-          <div class="quest-tier-lbl" style="color:${meta.color};">${meta.icon} ${meta.label}</div>
-          <div class="quest-title">${esc(q.text)}</div>
+    if(!q.durationMs) q.durationMs = getQuestDurationMs(null, q.tier);
+    const isVisible = dashboardActive() && !document.hidden && el.offsetParent !== null;
+    if(!q.startedAt && isVisible){
+      q.startedAt = now;
+      q.expiresAt = now + q.durationMs;
+      save();
+    }
+    if(q.startedAt && now >= q.expiresAt){
+      failQuest();
+      return;
+    }
+    const remain = q.startedAt ? Math.max(0, q.expiresAt - now) : q.durationMs;
+    const pct = Math.min(100, Math.max(0, (remain / q.durationMs) * 100));
+    const sig = 'q|'+q.tier+'|'+q.xp+'|'+q.text+'|'+(q.startedAt ? 'running' : 'idle');
+    if(sig !== __questSig){
+      __questSig = sig; __questCountdownEl = null; __questFillEl = null;
+      const meta = QUEST_TIERS[q.tier] || QUEST_TIERS.easy;
+      el.innerHTML = `<div class="quest-box tier-${q.tier}">
+        <div class="quest-top">
+          <div class="quest-emoji">${q.icon}</div>
+          <div class="quest-info">
+            <div class="quest-tier-lbl" style="color:${meta.color};">${meta.icon} ${meta.label}</div>
+            <div class="quest-title">${esc(q.text)}</div>
+            <div class="quest-active-timer" style="margin-top:6px; font-size:12px; color:var(--txt-dim); display:flex; align-items:center; gap:6px;">
+              <span>⏳ مهلت انجام:</span>
+              <span class="quest-active-countdown" style="font-family:'Consolas','JetBrains Mono',monospace; font-weight:800; color:${meta.color}; font-size:13px;">${fmtCountdown(remain)}</span>
+            </div>
+          </div>
+          <div class="quest-xp" style="color:${meta.color};">+${q.xp} XP</div>
         </div>
-        <div class="quest-xp" style="color:${meta.color};">+${q.xp} XP</div>
-      </div>
-      <div class="quest-actions">
-        <button class="btn" onclick="completeQuest()">✅ انجامش دادم</button>
-        <button class="btn ghost" onclick="skipQuest()">⏭️ ردش کن</button>
-      </div>
-    </div>`;
+        <div class="quest-wait-track" style="margin-top:10px;"><div class="quest-active-fill quest-wait-fill" style="width:${pct.toFixed(2)}%; background:${meta.color};"></div></div>
+        <div class="quest-actions">
+          <button class="btn" onclick="completeQuest()">✅ انجامش دادم</button>
+          <button class="btn ghost" onclick="skipQuest()">⏭️ ردش کن</button>
+        </div>
+      </div>`;
+    }
+    if(dashboardActive()){
+      const activeCountEl = el.querySelector('.quest-active-countdown');
+      const activeFillEl = el.querySelector('.quest-active-fill');
+      const txt = fmtCountdown(remain);
+      if(activeCountEl && activeCountEl.textContent !== txt) activeCountEl.textContent = txt;
+      if(activeFillEl) activeFillEl.style.width = pct.toFixed(2)+'%';
+    }
   } else {
     const remain = Math.max(0, DB.quest.nextAt - now);
     const totalWait = Math.max(1, DB.quest.nextAt - (DB.quest.waitStart||now));
@@ -2187,7 +2250,7 @@ const MYSTERY_REWARDS = [
   { key:'xp10', weight:30, label:'⭐ +۱۰ XP — جایزه‌ی معمولی', apply:()=>{ addXP(10); } },
   { key:'xp25', weight:20, label:'⭐⭐ +۲۵ XP — جایزه‌ی خوب', apply:()=>{ addXP(25); } },
   { key:'boost', weight:15, label:'⚡ XP Boost ×۲ برای ۳۰ دقیقه فعال شد', apply:()=>{ DB.xpBoost = { activeUntil: Date.now()+30*60*1000 }; } },
-  { key:'quest', weight:12, label:'🎯 یک Quest ویژه با XP بیشتر برات اومد', apply:()=>{ DB.quest.current = { tier:'bonus', id:'mysteryquest', text:'یک Quest ویژه از جعبه‌ی شانس! همین الان یه کار مهم رو تموم کن.', icon:'🎁', xp:75 }; } },
+  { key:'quest', weight:12, label:'🎯 یک Quest ویژه با XP بیشتر برات اومد', apply:()=>{ DB.quest.current = { tier:'bonus', id:'mysteryquest', text:'یک Quest ویژه از جعبه‌ی شانس! همین الان یه کار مهم رو تموم کن.', icon:'🎁', xp:75, durationMs:30*60*1000, startedAt:null, expiresAt:null }; } },
   { key:'shield', weight:10, label:'🔥 یک Streak Shield گرفتی — جلوی از دست رفتن یه روز استریک رو می‌گیره', apply:()=>{ DB.streakShields = (DB.streakShields||0)+1; } },
   { key:'xp50', weight:7, label:'⭐⭐⭐ +۵۰ XP — جایزه‌ی عالی', apply:()=>{ addXP(50); } },
   { key:'cityitem', weight:8, label:'🏙️ یه آیتم جدید برای Life City گرفتی', apply:()=>{
@@ -2251,24 +2314,35 @@ function closeMysteryModal(){
   if(cb) cb();
 }
 function checkStreakShields(){
+  if(DB.streakShieldActive === false) return;
   if(!DB.streakShields || DB.streakShields<=0) return;
   const y1 = new Date(); y1.setDate(y1.getDate()-1);
   const y2 = new Date(); y2.setDate(y2.getDate()-2);
   const y1ISO = dateToLocalISO(y1), y2ISO = dateToLocalISO(y2);
   let used = false;
-  if(DB.streakShieldArmedAt && new Date(DB.streakShieldArmedAt).toDateString() === y1.toDateString()) return;
-  DB.habits.forEach(h=>{
-    if(DB.streakShields<=0) return;
-    const configured = DB.streakShieldHabits || [];
-    if(configured.length && !configured.includes(h.id)) return;
+  (DB.habits||[]).forEach(h=>{
     if(!h.log[y1ISO] && h.log[y2ISO]){
       h.log[y1ISO] = true;
-      DB.streakShields--;
       used = true;
     }
   });
-  if(used){ toast('🔥 Streak Shield ازت محافظت کرد و استریکت حفظ شد!'); save(); }
+  if(used){
+    DB.streakShields = Math.max(0, (DB.streakShields||1) - 1);
+    toast('🔥 Streak Shield ازت محافظت کرد و استریکت حفظ شد!');
+    save();
+    renderAll();
+  }
 }
+let __lastActiveDay = todayISO();
+function checkMidnightTransition(){
+  const nowDay = todayISO();
+  if(nowDay !== __lastActiveDay){
+    __lastActiveDay = nowDay;
+    checkStreakShields();
+    renderAll();
+  }
+}
+setInterval(checkMidnightTransition, 1000);
 function buyTheme(theme){
   const meta = THEME_META[theme];
   if(!meta) return;
@@ -3079,15 +3153,13 @@ function openHabitModal(id=null){
   });
   if(!matched) document.querySelector('#hIcon [data-v="📚"]')?.classList.add('sel');
   const shieldEl = document.getElementById('hShieldHabits');
-  if(shieldEl){ const selected = DB.streakShieldHabits || []; shieldEl.innerHTML = DB.habits.map(x => `<label><input type="checkbox" value="${x.id}" ${selected.length===0 || selected.includes(x.id)?'checked':''}> ${esc(x.icon)} ${esc(x.name)}</label>`).join('') || '<span>اول یک عادت بساز.</span>'; }
+  if(shieldEl){ shieldEl.innerHTML = ''; }
   openModal('habitModalBg');
 }
 function saveHabit(){
   const name = document.getElementById('hName').value.trim();
   if(!name){ toast('⚠️ اسم عادت رو بنویس'); return; }
   const icon = document.querySelector('#hIcon .sel')?.dataset.v || '📚';
-  const shieldEl = document.getElementById('hShieldHabits');
-  if(shieldEl) DB.streakShieldHabits = [...shieldEl.querySelectorAll('input:checked')].map(x=>x.value);
   if(editingHabitId){
     const h = DB.habits.find(x=>x.id===editingHabitId);
     if(h){ h.name = name; h.icon = icon; }   // the daily log is never touched
@@ -3128,14 +3200,31 @@ function toggleHabitDay(hid, date){
   save();
 }
 function habitStreak(h){
+  if(!h || !h.log) return 0;
   let streak=0; let d = new Date();
+  const todayIso = dateToLocalISO(d);
+  if(!h.log[todayIso]){
+    d.setDate(d.getDate()-1);
+  }
   while(true){
     const iso = dateToLocalISO(d);
     if(h.log[iso]){ streak++; d.setDate(d.getDate()-1); } else break;
   }
   return streak;
 }
+function toggleStreakShieldActive(active){
+  DB.streakShieldActive = !!active;
+  save();
+  toast(active ? '🛡️ محافظت Streak Shield فعال شد' : '🛡️ محافظت Streak Shield غیرفعال شد');
+  renderHabitShieldToggle();
+}
+function renderHabitShieldToggle(){
+  const toggle = document.getElementById('habitStreakShieldToggle');
+  if(!toggle) return;
+  toggle.checked = (DB.streakShieldActive !== false);
+}
 function renderHabits(){
+  renderHabitShieldToggle();
   const wDates = weekDates();
   const dayLetters = ['ش','ی','د','س','چ','پ','ج'];
   const listEl = document.getElementById('habitList');
@@ -4450,6 +4539,7 @@ document.getElementById('importFile').onchange = (e)=>{
       if(DB.xpWallet===undefined) DB.xpWallet = DB.stats.totalXPEarned||0;
       if(!DB.xpBoost) DB.xpBoost = { activeUntil:0 };
       if(DB.streakShields===undefined) DB.streakShields = 0;
+      if(DB.streakShieldActive===undefined) DB.streakShieldActive = true;
       if(!DB.cityBonusItems) DB.cityBonusItems = [];
       if(!DB.themes) DB.themes = { owned:['dark','light'] };
       if(DB.lastBackupReminder===undefined) DB.lastBackupReminder = Date.now();
@@ -4588,7 +4678,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='16.2';
+const LP_APP_VERSION='16.3';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
