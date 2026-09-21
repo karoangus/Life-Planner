@@ -1221,6 +1221,19 @@ function questCooldownMs(){
   const tier = DB.skillTiers?.questCooldown || 0;
   return Math.max(5, QUEST_COOLDOWN_MIN - tier*QUEST_COOLDOWN_STEP_MIN) * 60*1000;
 }
+/* v16.4: the punishment system is gone. Running out of time and honestly
+   declining a quest ("من شرایط انجام این کوئست رو ندارم") no longer cost any
+   XP — the quest is simply discarded and the next one shows up after this
+   short break. Only the deliberate "⏭️ ردش کن (با جریمه)" button still takes
+   XP away, and it keeps the long cooldown. */
+const QUEST_DECLINE_COOLDOWN_MIN = 5;
+function questDeclineCooldownMs(){ return QUEST_DECLINE_COOLDOWN_MIN * 60*1000; }
+/* Shared exit: drop the current quest and schedule the next one soon. */
+function discardQuest(){
+  DB.quest.current = null;
+  DB.quest.waitStart = Date.now();
+  DB.quest.nextAt = Date.now() + questDeclineCooldownMs();
+}
 function completeQuest(){
   if(!DB.quest.current) return;
   const q = DB.quest.current;
@@ -1239,6 +1252,8 @@ function completeQuest(){
   save();
   renderXP();
 }
+/* Deliberate skip: this is the only option that still costs XP, and it is
+   labelled as such on the card so the two ways out stay distinguishable. */
 function skipQuest(){
   if(!DB.quest.current) return;
   const q = DB.quest.current;
@@ -1252,15 +1267,21 @@ function skipQuest(){
   save();
   renderXP();
 }
+/* v16.4: "🚫 شرایط انجامش رو ندارم" — an honest decline.
+   No XP is lost; the next quest arrives after QUEST_DECLINE_COOLDOWN_MIN. */
+function abandonQuest(){
+  if(!DB.quest.current) return;
+  discardQuest();
+  toast('🚫 اشکالی نداره — این مأموریت بدون کسر XP رد شد');
+  save();
+  renderXP();
+}
+/* v16.4: the timer running out is no longer punished (the old half-XP
+   deduction was removed) — the quest just expires quietly. */
 function failQuest(){
   if(!DB.quest.current) return;
-  const q = DB.quest.current;
-  const penalty = Math.floor(q.xp / 2);
-  DB.quest.current = null;
-  DB.quest.waitStart = Date.now();
-  DB.quest.nextAt = Date.now() + questCooldownMs();
-  addXP(-penalty);
-  toast(`⏰ مهلت انجام مأموریت تمام شد — ${penalty} XP کسر شد`);
+  discardQuest();
+  toast('⏰ زمان این مأموریت تموم شد — بدون کسر XP');
   save();
   renderXP();
 }
@@ -1319,13 +1340,17 @@ function renderQuestBox(){
               <span>⏳ مهلت انجام:</span>
               <span class="quest-active-countdown" style="font-family:'Consolas','JetBrains Mono',monospace; font-weight:800; color:${meta.color}; font-size:13px;">${fmtCountdown(remain)}</span>
             </div>
+            <div class="quest-no-penalty">🍃 بدون جریمه — اگه شرایطش رو نداری راحت رد کن</div>
           </div>
           <div class="quest-xp" style="color:${meta.color};">+${q.xp} XP</div>
         </div>
         <div class="quest-wait-track" style="margin-top:10px;"><div class="quest-active-fill quest-wait-fill" style="width:${pct.toFixed(2)}%; background:${meta.color};"></div></div>
         <div class="quest-actions">
           <button class="btn" onclick="completeQuest()">✅ انجامش دادم</button>
-          <button class="btn ghost" onclick="skipQuest()">⏭️ ردش کن</button>
+        </div>
+        <div class="quest-actions quest-actions-sub">
+          <button class="btn ghost" onclick="abandonQuest()">🚫 شرایط انجامش رو ندارم</button>
+          <button class="btn ghost" onclick="skipQuest()">⏭️ ردش کن (با جریمه)</button>
         </div>
       </div>`;
     }
@@ -4678,7 +4703,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='16.3';
+const LP_APP_VERSION='16.4';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

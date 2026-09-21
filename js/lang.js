@@ -29,6 +29,12 @@
 
   var EXACT = {
     /* ---- v16.3: quest timers & streak shield ---- */
+    /* ---- v16.4: quest decline button & punishment system removed ---- */
+    "🚫 شرایط انجامش رو ندارم": "🚫 I can't do this quest",
+    "⏭️ ردش کن (با جریمه)": "⏭️ Skip it (with penalty)",
+    "🍃 بدون جریمه — اگه شرایطش رو نداری راحت رد کن": "🍃 No penalty — decline it freely if you can't do it",
+    "🚫 اشکالی نداره — این مأموریت بدون کسر XP رد شد": "🚫 No problem — this quest was declined with no XP lost",
+    "⏰ زمان این مأموریت تموم شد — بدون کسر XP": "⏰ This quest's time ran out — no XP lost",
     "⏳ مهلت انجام:": "⏳ Time left:",
     "⏳ مهلت انجام": "⏳ Time left",
     "⏳ مهلت:": "⏳ Deadline:",
