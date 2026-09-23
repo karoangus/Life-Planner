@@ -136,7 +136,9 @@ if (!useFallback) {
     check(`view renders: ${view}`, true, ''); // if we got here without new fatal errors, consider ok
   }
 
-  // 8) v16.4 — the quest card offers the honest decline and the punishment is gone.
+  // 8) v16.5 — the honest decline stays free with the 5-minute break, while a
+  // quest whose time runs out is punished EXACTLY like a deliberate skip
+  // (same XP deduction via questSkipPenalty, same normal cooldown).
   // The card only rebuilds its HTML when the quest itself changes, so each step
   // below installs a quest with its own unique text (that is the signature).
   const labels = await page.evaluate(() => {
@@ -147,8 +149,8 @@ if (!useFallback) {
     renderQuestBox();
     return [...document.querySelectorAll('#questCard button')].map(b => b.textContent.trim());
   });
-  check('v16.4 quest card shows the decline button', labels.some(l => l.includes('شرایط انجامش رو ندارم')), labels.join(' | '));
-  check('v16.4 quest card still shows complete + penalised skip', labels.some(l => l.includes('انجامش دادم')) && labels.some(l => l.includes('ردش کن')), labels.join(' | '));
+  check('v16.5 quest card shows the decline button', labels.some(l => l.includes('شرایط انجامش رو ندارم')), labels.join(' | '));
+  check('v16.5 quest card still shows complete + penalised skip', labels.some(l => l.includes('انجامش دادم')) && labels.some(l => l.includes('ردش کن')), labels.join(' | '));
 
   const decline = await page.evaluate(() => {
     DB.quest.current = { tier:'easy', id:'e1', text:'آزمون خودکار کوئست', icon:'🥤', xp:10,
@@ -158,26 +160,40 @@ if (!useFallback) {
     const afterDecline = DB.xp;
     const cleared = DB.quest.current === null;
     const waitMin = Math.round((DB.quest.nextAt - Date.now())/60000);
-    // expiry path: a quest whose deadline already passed must not cost XP either
-    DB.quest.current = { tier:'epic', id:'ep1', text:'آزمون خودکار کوئست', icon:'🌆', xp:50,
+    return { before, afterDecline, cleared, waitMin };
+  });
+  check('v16.5 declining a quest costs no XP', decline.afterDecline === decline.before && decline.cleared, JSON.stringify(decline));
+  check('v16.5 next quest after a decline arrives in 5 minutes', decline.waitMin === 5, 'waitMin=' + decline.waitMin);
+
+  // expiry path: a quest whose deadline already passed deducts exactly the
+  // same XP as a deliberate skip and uses the normal (default) cooldown —
+  // the 5-minute break is reserved for the honest decline only.
+  const expiry = await page.evaluate(() => {
+    addXP(200); save(); // negative XP clamps at 0, so the pot has to be non-empty first
+    const expected = questSkipPenalty(50);
+    DB.quest.current = { tier:'epic', id:'ep1', text:'آزمون خودکار کوئست — انقضا', icon:'🌆', xp:50,
       durationMs:60*60*1000, startedAt:Date.now()-2*60*60*1000, expiresAt:Date.now()-1000 };
     const beforeExpiry = DB.xp;
-    renderQuestBox();
-    return { before, afterDecline, cleared, waitMin, beforeExpiry, afterExpiry: DB.xp, clearedOnExpiry: DB.quest.current === null };
+    renderQuestBox(); // the ticker notices the passed deadline and calls failQuest()
+    const afterExpiry = DB.xp;
+    const waitMin = Math.round((DB.quest.nextAt - Date.now())/60000);
+    const normalMin = Math.round(questCooldownMs()/60000);
+    return { beforeExpiry, afterExpiry, expected, deducted: beforeExpiry - afterExpiry,
+      clearedOnExpiry: DB.quest.current === null, waitMin, normalMin };
   });
-  check('v16.4 declining a quest costs no XP', decline.afterDecline === decline.before && decline.cleared, JSON.stringify(decline));
-  check('v16.4 quest expiry costs no XP', decline.afterExpiry === decline.beforeExpiry && decline.clearedOnExpiry, JSON.stringify(decline));
-  check('v16.4 next quest after a decline arrives in 5 minutes', decline.waitMin === 5, 'waitMin=' + decline.waitMin);
+  check('v16.5 quest expiry deducts exactly the skip penalty', expiry.clearedOnExpiry && expiry.deducted === expiry.expected, JSON.stringify(expiry));
+  check('v16.5 quest expiry uses the normal cooldown (not the 5-minute decline break)', expiry.waitMin === expiry.normalMin && expiry.waitMin !== 5, JSON.stringify(expiry));
 
   const skip = await page.evaluate(() => {
     addXP(120); save(); // negative XP clamps at 0, so the pot has to be non-empty first
-    DB.quest.current = { tier:'easy', id:'e1', text:'آزمون خودکار کوئست', icon:'🥤', xp:10,
+    DB.quest.current = { tier:'easy', id:'e1', text:'آزمون خودکار کوئست — رد', icon:'🥤', xp:10,
       durationMs:10*60*1000, startedAt:Date.now(), expiresAt:Date.now()+10*60*1000 };
     const before = DB.xp;
+    const expected = questSkipPenalty(10);
     skipQuest();
-    return { before, after: DB.xp, cleared: DB.quest.current === null };
+    return { before, after: DB.xp, deducted: before - DB.xp, expected, cleared: DB.quest.current === null };
   });
-  check('v16.4 deliberate skip still takes XP (kept on purpose)', skip.after < skip.before && skip.cleared, JSON.stringify(skip));
+  check('v16.5 deliberate skip deducts the shared skip penalty', skip.deducted === skip.expected && skip.cleared, JSON.stringify(skip));
 
   check('no fatal JS errors after quest flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
@@ -347,31 +363,43 @@ if (!useFallback) {
      '🛡️ محافظت Streak Shield غیرفعال شد', '⏳ مهلت انجام:', 'آماده شروع']
       .every(k => langJs.includes(k)));
 
-  // ---------- v16.4: quest decline button & punishment system removed ----------
-  // Pull the real function bodies out of core.js: expiry and honest decline must
-  // never subtract XP again, while the deliberate skip keeps its penalty.
+  // ---------- v16.4: quest decline button (kept in v16.5) ----------
+  // Pull the real function bodies out of core.js.
   const fnBody = (name) => (coreJs.match(new RegExp('function ' + name + '\\(\\)\\{[\\s\\S]*?\\n\\}')) || [''])[0];
   const failBody = fnBody('failQuest'), abandonBody = fnBody('abandonQuest'), skipBody = fnBody('skipQuest');
 
-  check('v16.4 quest expiry & honest decline cost no XP',
-    failBody.length > 0 && abandonBody.length > 0 &&
-    !failBody.includes('addXP(-') && !abandonBody.includes('addXP(-'),
-    `failBody=${failBody.length} abandonBody=${abandonBody.length}`);
+  check('v16.5 honest decline still costs no XP (5-minute break only)',
+    abandonBody.length > 0 && !abandonBody.includes('addXP(-') && abandonBody.includes('discardQuest()'),
+    `abandonBody=${abandonBody.length}`);
 
-  check('v16.4 deliberate skip still costs XP with the normal cooldown',
+  // ---------- v16.5: quest expiry punished exactly like a deliberate skip ----------
+  // Both paths must share one penalty helper and the normal cooldown; only the
+  // honest decline keeps the short 5-minute break.
+  check('v16.5 skip & expiry share one penalty helper (questSkipPenalty)',
+    coreJs.includes('function questSkipPenalty') &&
+    skipBody.includes('questSkipPenalty(') && failBody.includes('questSkipPenalty('),
+    `skipBody=${skipBody.length} failBody=${failBody.length}`);
+
+  check('v16.5 quest expiry deducts XP with the normal cooldown (not the 5-minute break)',
+    failBody.includes('addXP(-') && failBody.includes('questCooldownMs()') &&
+    !failBody.includes('discardQuest()') && !failBody.includes('questDeclineCooldownMs()'));
+
+  check('v16.5 deliberate skip still costs XP with the normal cooldown',
     skipBody.includes('addXP(-') && skipBody.includes('questCooldownMs()'));
 
-  check('v16.4 decline button, no-penalty hint & 5-minute cooldown present',
+  check('v16.5 decline button, no-penalty hint & 5-minute cooldown present',
     coreJs.includes('QUEST_DECLINE_COOLDOWN_MIN = 5') && coreJs.includes('function discardQuest') &&
     coreJs.includes('function questDeclineCooldownMs') &&
     coreJs.includes('🚫 شرایط انجامش رو ندارم') && coreJs.includes('⏭️ ردش کن (با جریمه)') &&
     coreJs.includes('quest-actions-sub') && coreJs.includes('quest-no-penalty') &&
     appCss.includes('.quest-actions-sub') && appCss.includes('.quest-no-penalty'));
 
-  check('v16.4 strings translated for English mode',
+  check('v16.5 strings translated for English mode',
     ['🚫 شرایط انجامش رو ندارم', '⏭️ ردش کن (با جریمه)', '🍃 بدون جریمه — اگه شرایطش رو نداری راحت رد کن',
      '🚫 اشکالی نداره — این مأموریت بدون کسر XP رد شد', '⏰ زمان این مأموریت تموم شد — بدون کسر XP']
-      .every(k => langJs.includes(k)));
+      .every(k => langJs.includes(k)) &&
+    // the restored expiry toast reuses the v16.3 wording, translated via PATTERNS
+    langJs.includes('مهلت انجام مأموریت تمام شد') && langJs.includes('Quest time expired'));
 
   // all five themes must still be defined in both JS and CSS.
   // "dark" is the default theme: its variables live in the plain :root block.
