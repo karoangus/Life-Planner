@@ -30,6 +30,11 @@
   var EXACT = {
     /* ---- v16.3: quest timers & streak shield ---- */
     /* ---- v16.4: quest decline button & punishment system removed ---- */
+    /* ---- v16.5: quest expiry punished exactly like a deliberate skip ----
+       The expiry toast reuses the v16.3 wording ("⏰ مهلت انجام مأموریت تمام شد
+       — X XP کسر شد"), whose PATTERNS entry below already translates it, so
+       no new dictionary entry is needed. The v16.4 "بدون کسر XP" entry stays
+       as a harmless fallback. */
     "🚫 شرایط انجامش رو ندارم": "🚫 I can't do this quest",
     "⏭️ ردش کن (با جریمه)": "⏭️ Skip it (with penalty)",
     "🍃 بدون جریمه — اگه شرایطش رو نداری راحت رد کن": "🍃 No penalty — decline it freely if you can't do it",

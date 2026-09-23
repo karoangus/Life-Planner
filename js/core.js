@@ -1221,18 +1221,27 @@ function questCooldownMs(){
   const tier = DB.skillTiers?.questCooldown || 0;
   return Math.max(5, QUEST_COOLDOWN_MIN - tier*QUEST_COOLDOWN_STEP_MIN) * 60*1000;
 }
-/* v16.4: the punishment system is gone. Running out of time and honestly
-   declining a quest ("من شرایط انجام این کوئست رو ندارم") no longer cost any
-   XP — the quest is simply discarded and the next one shows up after this
-   short break. Only the deliberate "⏭️ ردش کن (با جریمه)" button still takes
-   XP away, and it keeps the long cooldown. */
+/* v16.4: honestly declining a quest ("من شرایط انجام این کوئست رو ندارم")
+   costs no XP — the quest is simply discarded and the next one shows up
+   after this short break. v16.5: the short break is ONLY for this honest
+   decline; running out of time is punished exactly like a deliberate skip
+   (same XP penalty, same normal cooldown). */
 const QUEST_DECLINE_COOLDOWN_MIN = 5;
 function questDeclineCooldownMs(){ return QUEST_DECLINE_COOLDOWN_MIN * 60*1000; }
-/* Shared exit: drop the current quest and schedule the next one soon. */
+/* Honest-decline exit: drop the current quest and schedule the next one soon.
+   Only abandonQuest() uses this; every other exit keeps the normal cooldown. */
 function discardQuest(){
   DB.quest.current = null;
   DB.quest.waitStart = Date.now();
   DB.quest.nextAt = Date.now() + questDeclineCooldownMs();
+}
+/* v16.5: single source of truth for the quest punishment. Both the deliberate
+   "⏭️ ردش کن (با جریمه)" button (skipQuest) and the timer running out
+   (failQuest) deduct exactly this amount, so the two can never drift apart. */
+function questSkipPenalty(questXp){
+  const xp = Math.max(0, Number(questXp) || 0);
+  const timerPenalty = Math.floor(xp / 2);
+  return Math.max(timerPenalty + 1, Math.ceil(xp * 0.65));
 }
 function completeQuest(){
   if(!DB.quest.current) return;
@@ -1252,13 +1261,13 @@ function completeQuest(){
   save();
   renderXP();
 }
-/* Deliberate skip: this is the only option that still costs XP, and it is
-   labelled as such on the card so the two ways out stay distinguishable. */
+/* Deliberate skip: costs XP (see questSkipPenalty) and keeps the normal
+   cooldown. Labelled as such on the card so the two ways out stay
+   distinguishable. */
 function skipQuest(){
   if(!DB.quest.current) return;
   const q = DB.quest.current;
-  const timerPenalty = Math.floor(q.xp / 2);
-  const penalty = Math.max(timerPenalty + 1, Math.ceil(q.xp * 0.65));
+  const penalty = questSkipPenalty(q.xp);
   DB.quest.current = null;
   DB.quest.waitStart = Date.now();
   DB.quest.nextAt = Date.now() + questCooldownMs();
@@ -1276,12 +1285,18 @@ function abandonQuest(){
   save();
   renderXP();
 }
-/* v16.4: the timer running out is no longer punished (the old half-XP
-   deduction was removed) — the quest just expires quietly. */
+/* v16.5: the timer running out is punished EXACTLY like a deliberate skip —
+   same XP deduction (questSkipPenalty) and same normal cooldown. The short
+   5-minute break is reserved for the honest "شرایطش رو ندارم" decline only. */
 function failQuest(){
   if(!DB.quest.current) return;
-  discardQuest();
-  toast('⏰ زمان این مأموریت تموم شد — بدون کسر XP');
+  const q = DB.quest.current;
+  const penalty = questSkipPenalty(q.xp);
+  DB.quest.current = null;
+  DB.quest.waitStart = Date.now();
+  DB.quest.nextAt = Date.now() + questCooldownMs();
+  addXP(-penalty);
+  toast(`⏰ مهلت انجام مأموریت تمام شد — ${penalty} XP کسر شد`);
   save();
   renderXP();
 }
@@ -4703,7 +4718,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='16.4';
+const LP_APP_VERSION='16.5';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
