@@ -1609,3 +1609,15 @@ html.lp-perf .goal-card,
 html.lp-perf .quest-box,
 html.lp-perf .bottom-nav,
 html.lp-perf .toast{box-shadow:none !important;}
+
+/* ============ v16.6 — calendar block description ============ */
+/* hint on a block that has a description (opposite corner of the reminder dot) */
+.ev-block.has-desc::after{content:"";position:absolute;top:3px;left:3px;width:8px;height:6px;z-index:9;opacity:.85;pointer-events:none;
+  background:linear-gradient(currentColor,currentColor) 0 0/100% 1.5px no-repeat,
+             linear-gradient(currentColor,currentColor) 0 50%/100% 1.5px no-repeat,
+             linear-gradient(currentColor,currentColor) 0 100%/65% 1.5px no-repeat;}
+html[data-lang="en"] .ev-block.has-desc::after{left:auto;right:3px;}
+.ev-block.event-tiny.has-desc::after,.ev-block.event-short.has-desc::after{display:none;}
+/* description shown inside the block's action sheet */
+.lp-ev-desc{margin:10px 0 4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);color:var(--txt);
+  font-size:13px;line-height:1.9;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;max-height:38vh;overflow:auto;text-align:start;}

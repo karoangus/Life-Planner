@@ -28,6 +28,9 @@
   window.lpGetLang = getLang;
 
   var EXACT = {
+    /* ---- v16.6: optional description for calendar blocks ---- */
+    "توضیحات (اختیاری) — با زدن روی بلوک در تقویم نمایش داده می‌شود": "Description (optional) — shown when you tap the block in the calendar",
+    "مثلاً: فصل ۳ کتاب، مرور لغت‌ها و ۲۰ دقیقه لیسنینگ": "e.g. Chapter 3 of the book, review vocabulary and 20 minutes of listening",
     /* ---- v16.3: quest timers & streak shield ---- */
     /* ---- v16.4: quest decline button & punishment system removed ---- */
     /* ---- v16.5: quest expiry punished exactly like a deliberate skip ----
@@ -1142,7 +1145,7 @@
   /* v16.2: `.note-card p` is narrowed to the note's own body, so the built-in
      "بدون محتوا" hint inside an empty note is translated like any other UI
      string; the tag pill (`.note-tag`) is user text and is never touched. */
-  var USER_CONTENT = '.task-title,.habit-name,.goal-title,.ev-title,.lp-cat-name,' +
+  var USER_CONTENT = '.task-title,.habit-name,.goal-title,.ev-title,.lp-ev-desc,.lp-cat-name,' +
                      '.subtask-item-title,.subtask-edit-title,.note-card h4,' +
                      '.note-card p.note-body,.note-card .note-tag';
 

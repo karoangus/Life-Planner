@@ -195,6 +195,51 @@ if (!useFallback) {
   });
   check('v16.5 deliberate skip deducts the shared skip penalty', skip.deducted === skip.expected && skip.cleared, JSON.stringify(skip));
 
+  // ---------- v16.6: calendar block description ----------
+  await page.evaluate(() => showView('calendar'));
+  const evDesc = await page.evaluate(async () => {
+    DB.events = []; save();
+    openEventModal();
+    document.getElementById('eTitle').value = 'زبان';
+    document.getElementById('eDesc').value = 'فصل ۳ کتاب\nمرور لغت‌ها';
+    document.querySelector('#eDays .chip-opt[data-v="0"]').classList.add('sel');
+    document.getElementById('eHourStart').value = '10:00';
+    document.getElementById('eHourEnd').value = '11:00';
+    await saveEvent();
+    const ev = DB.events[0] || {};
+    const stored = ev.desc; // captured now: `ev` is live and gets edited below
+    const block = document.querySelector('#weekGrid .ev-block');
+    const blockText = block ? block.textContent.trim() : '';
+    const hasHint = !!(block && block.classList.contains('has-desc'));
+    block && block.click();
+    const box = document.getElementById('eventActionDesc');
+    const shown = box && box.style.display !== 'none' ? box.textContent : '';
+    closeModal('eventActionModalBg');
+    // an event with no description shows no description box
+    openEventModal();
+    const cleared = document.getElementById('eDesc').value === '';
+    document.getElementById('eTitle').value = 'ورزش';
+    document.querySelector('#eDays .chip-opt[data-v="1"]').classList.add('sel');
+    await saveEvent();
+    const plain = DB.events.find(e => e.title === 'ورزش');
+    onEventBlockClick(plain.id, 1);
+    const plainHidden = document.getElementById('eventActionDesc').style.display === 'none';
+    closeModal('eventActionModalBg');
+    // editing keeps / updates the description
+    onEventBlockClick(ev.id, 0); startEditEvent();
+    const prefilled = document.getElementById('eDesc').value;
+    document.getElementById('eDesc').value = 'فصل ۴';
+    await saveEvent();
+    const edited = DB.events.find(e => e.id === ev.id)?.desc;
+    DB.events = []; save(); renderCalendar();
+    return { stored, blockText, hasHint, shown, cleared, plainHidden, prefilled, edited };
+  });
+  check('v16.6 event description saved with the event', evDesc.stored === 'فصل ۳ کتاب\nمرور لغت‌ها', JSON.stringify(evDesc));
+  check('v16.6 block shows only the title (plus a small hint)', evDesc.blockText === 'زبان' && evDesc.hasHint, JSON.stringify(evDesc));
+  check('v16.6 tapping the block shows the description', evDesc.shown === 'فصل ۳ کتاب\nمرور لغت‌ها', JSON.stringify(evDesc));
+  check('v16.6 no description → nothing extra shown', evDesc.cleared && evDesc.plainHidden, JSON.stringify(evDesc));
+  check('v16.6 editing pre-fills and updates the description', evDesc.prefilled === 'فصل ۳ کتاب\nمرور لغت‌ها' && evDesc.edited === 'فصل ۴', JSON.stringify(evDesc));
+
   check('no fatal JS errors after quest flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
   await browser.close();
@@ -400,6 +445,17 @@ if (!useFallback) {
       .every(k => langJs.includes(k)) &&
     // the restored expiry toast reuses the v16.3 wording, translated via PATTERNS
     langJs.includes('مهلت انجام مأموریت تمام شد') && langJs.includes('Quest time expired'));
+
+  // ---------- v16.6: calendar block description ----------
+  check('v16.6 description field in the event modal + action sheet',
+    indexHtml.includes('id="eDesc"') && indexHtml.includes('id="eventActionDesc"') &&
+    coreJs.includes('function eventDesc') && coreJs.includes('function lpReadEventDesc') &&
+    appCss.includes('.lp-ev-desc') && appCss.includes('.ev-block.has-desc'));
+  check('v16.6 description kept on save, edit and drag-split',
+    (coreJs.match(/id:uid\(\),title,desc,/g) || []).length === 2 && coreJs.includes('ev.desc=desc') &&
+    coreJs.includes('desc:eventDesc(ev)') && (coreJs.match(/  lpFillEventDesc\(ev\);/g) || []).length === 2);
+  check('v16.6 description is user content (never translated) and labels are translated',
+    langJs.includes('.lp-ev-desc') && langJs.includes('توضیحات (اختیاری) — با زدن روی بلوک در تقویم نمایش داده می‌شود'));
 
   // all five themes must still be defined in both JS and CSS.
   // "dark" is the default theme: its variables live in the plain :root block.
