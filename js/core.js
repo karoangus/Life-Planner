@@ -3654,6 +3654,7 @@ function openEventModal(){
   const scopeHint=document.getElementById('eEditScopeHint');
   if(scopeHint){ scopeHint.style.display='none'; scopeHint.innerHTML=''; }
   document.getElementById('eTitle').value='';
+  const descBox=document.getElementById('eDesc'); if(descBox) descBox.value='';
   document.getElementById('eHourStart').value='09:00';
   document.getElementById('eHourEnd').value='12:00';
   document.getElementById('eReminder').checked=false;
@@ -3698,6 +3699,7 @@ async function requestEventReminderPermission(box){
 async function saveEvent(){
   const title=document.getElementById('eTitle').value.trim();
   if(!title){toast('⚠️ عنوان رویداد رو بنویس');return;}
+  const desc=lpReadEventDesc();
   const days=[...document.querySelectorAll('#eDays .chip-opt.sel')].map(o=>+o.dataset.v);
   if(!days.length){toast('⚠️ حداقل یک روز رو انتخاب کن');return;}
 
@@ -3738,7 +3740,7 @@ async function saveEvent(){
     if(remainderDays.length){ ev.days=remainderDays; delete ev.day; }
     else { DB.events=DB.events.filter(x=>x.id!==ev.id); }
     DB.events.push({
-      id:uid(),title,days,startMin,endMin,reminder,cat,color,
+      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
     window.__editingEventId=null;
@@ -3763,13 +3765,13 @@ async function saveEvent(){
     if(ev){
       ev.title=title;ev.days=days;ev.startMin=startMin;ev.endMin=endMin;ev.reminder=reminder;
       ev.startHour=Math.floor(startMin/60);ev.endHour=Math.min(24,Math.floor(endMin/60));
-      ev.cat=cat;ev.color=color;
+      ev.cat=cat;ev.color=color;ev.desc=desc;
       delete ev.day;
     }
     toast('✏️ رویداد ویرایش شد');
   }else{
     DB.events.push({
-      id:uid(),title,days,startMin,endMin,reminder,cat,color,
+      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
     toast(reminder?'📅 رویداد اضافه شد؛ یادآورش فعاله':'📅 رویداد اضافه شد');
@@ -3858,6 +3860,16 @@ function startEventReminderScheduler(){
 }
 function deleteEvent(id){ DB.events = DB.events.filter(x=>x.id!==id); save(); rescheduleAllEventReminders(); }
 function eventDays(e){ return e.days || (e.day!==undefined ? [e.day] : []); }
+/* v16.6 — optional free-text description for a calendar block. */
+const LP_EVENT_DESC_MAX=1000;
+function eventDesc(e){ return (e && typeof e.desc==='string') ? e.desc.trim() : ''; }
+function lpReadEventDesc(){
+  const box=document.getElementById('eDesc');
+  return box ? String(box.value||'').trim().slice(0,LP_EVENT_DESC_MAX) : '';
+}
+function lpFillEventDesc(ev){
+  const box=document.getElementById('eDesc'); if(box) box.value=eventDesc(ev);
+}
 
 function onEventBlockClick(eventId, dayIdx){
   const ev = DB.events.find(x=>x.id===eventId); if(!ev) return;
@@ -3876,6 +3888,13 @@ function onEventBlockClick(eventId, dayIdx){
     const cat=ev.cat?categoryById(ev.cat):null;
     meta.innerHTML=`🕒 <b style="color:var(--neon);direction:ltr;display:inline-block">${formatTimeMinutes(s%1440)} → ${formatTimeMinutes(e%1440)}</b> · ⏱️ ${dur}${cat?` · 🏷️ ${esc(cat.name)}`:''}`;
   }
+  // v16.6: the block's optional description, shown only when one was written
+  const descEl=document.getElementById('eventActionDesc');
+  if(descEl){
+    const desc=eventDesc(ev);
+    descEl.textContent=desc;
+    descEl.style.display=desc?'block':'none';
+  }
   openModal('eventActionModalBg');
 }
 function startEditEvent(){
@@ -3888,6 +3907,7 @@ function startEditEvent(){
   const scopeHint=document.getElementById('eEditScopeHint');
   if(scopeHint){ scopeHint.style.display='none'; scopeHint.innerHTML=''; }
   document.getElementById('eTitle').value=ev.title;
+  lpFillEventDesc(ev);
   document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
   document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
   document.getElementById('eReminder').checked=!!ev.reminder;
@@ -3913,6 +3933,7 @@ function startEditEventThisDay(){
     scopeHint.innerHTML=`📌 این تغییرات <b>فقط ${dayNames[ctx.dayIdx]}</b> را عوض می‌کند؛ بقیه‌ی روزهای این رویداد سر جایشان می‌مانند.`;
   }
   document.getElementById('eTitle').value=ev.title;
+  lpFillEventDesc(ev);
   document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
   document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
   document.getElementById('eReminder').checked=!!ev.reminder;
@@ -4271,7 +4292,7 @@ function lpApplyEventDrag(evRef, fromDay, toDay, newStart){
     ev.days=days.filter(dd=>dd!==fromDay);
     delete ev.day;
     DB.events.push({
-      id:uid(), title:ev.title, days:[toDay], startMin:ns, endMin:ne,
+      id:uid(), title:ev.title, desc:eventDesc(ev), days:[toDay], startMin:ns, endMin:ne,
       reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null,
       startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
@@ -4335,6 +4356,10 @@ function renderCalendar(){
       el.style.top=((from-START*60)/60*PX_HOUR)+'px';
       el.style.height=Math.max(10,(to-from)/60*PX_HOUR-2)+'px';
       el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
+      if(eventDesc(e)){
+        // v16.6: small hint that tapping the block reveals a description
+        el.classList.add('has-desc');
+      }
       if(e.reminder){
         const dot=document.createElement('span');
         dot.className='ev-reminder-dot';
@@ -4718,7 +4743,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='16.5';
+const LP_APP_VERSION='16.6';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

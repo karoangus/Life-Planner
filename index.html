@@ -1028,6 +1028,7 @@ try{
   <h2 id="eventModalTitle">📅 رویداد جدید</h2>
   <div class="lp-scope-hint" id="eEditScopeHint" style="display:none;"></div>
   <div class="field"><label>عنوان</label><input type="text" id="eTitle" placeholder="مثلاً: کلاس زبان"></div>
+  <div class="field"><label>توضیحات (اختیاری) — با زدن روی بلوک در تقویم نمایش داده می‌شود</label><textarea id="eDesc" dir="auto" maxlength="1000" placeholder="مثلاً: فصل ۳ کتاب، مرور لغت‌ها و ۲۰ دقیقه لیسنینگ"></textarea></div>
   <div class="field"><label>دسته‌بندی (اختیاری) — با انتخاب دسته، رنگ پیش‌فرض همان دسته می‌شود</label>
     <div class="chip-group" id="eCats"></div>
   </div>
@@ -1056,6 +1057,7 @@ try{
 <div class="modal-bg" id="eventActionModalBg"><div class="modal">
   <h2 id="eventActionTitle">📅 رویداد</h2>
   <div id="eventActionDetails" style="font-size:12px;color:var(--txt-dim);line-height:1.8;margin:4px 0 2px;text-align:center;"></div>
+  <div class="lp-ev-desc" id="eventActionDesc" dir="auto" style="display:none;"></div>
   <div class="modal-actions" style="flex-direction:column;">
     <div class="lp-act-group-lbl">✏️ ویرایش</div>
     <button class="btn" id="editThisDayBtn" style="width:100%; justify-content:center; display:none;" onclick="startEditEventThisDay()">✏️ ویرایش فقط این روز</button>
