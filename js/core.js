@@ -98,6 +98,8 @@ if(typeof DB.skillPoints!=='number') DB.skillPoints = 0;
 if(typeof DB.xpWallet!=='number') DB.xpWallet = DB.stats.totalXPEarned || 0;
 if(!DB.quest){ DB.quest = { current:null, nextAt: Date.now()+2*60*1000, waitStart: Date.now(), bags:{} }; }
 if(DB.quest.waitStart===undefined) DB.quest.waitStart = Date.now();
+/* v17: «مرخصی» — when true, no new quest is generated until the user unticks it. */
+if(typeof DB.quest.leave!=='boolean') DB.quest.leave = false;
 if(!DB.stats){ DB.stats = { tasksCompleted:0, questsCompleted:0, bestStreak:0 }; }
 if(DB.stats.perfectDays===undefined) DB.stats.perfectDays = 0;
 if(DB.stats.questsCompletedByDate===undefined) DB.stats.questsCompletedByDate = {};
@@ -1316,8 +1318,61 @@ function fmtCountdown(ms){
    (quest generation + notifications still happen regardless). */
 let __questSig = null, __questCountdownEl = null, __questFillEl = null;
 function dashboardActive(){ return !!document.getElementById('view-dashboard')?.classList.contains('active'); }
+/* v17: «مرخصی» (time off) — one tick on the quest card puts the quests on hold.
+   It is a pause, never a punishment: ticking it puts the quest in hand away
+   exactly like the honest decline (no XP lost), and while it stays ticked no
+   new quest is generated, nothing expires and no notification is sent.
+   Unticking it starts the usual short break before the next quest arrives.
+   The answer lives in DB.quest.leave, so it survives a reload and travels
+   inside the backup file like every other setting. */
+function questLeaveOn(){ return !!(DB.quest && DB.quest.leave); }
+function setQuestLeave(on, silent){
+  if(!DB.quest) return;
+  on = !!on;
+  const was = !!DB.quest.leave;
+  DB.quest.leave = on;
+  if(was !== on){
+    DB.quest.current = null;                            // nothing runs during the break — and nothing is deducted
+    DB.quest.waitStart = Date.now();
+    DB.quest.nextAt = Date.now() + questDeclineCooldownMs();
+  }
+  __questSig = null;                                    // force the card to repaint in its new state
+  save();
+  renderQuestBox();
+  if(!silent && was !== on){
+    toast(on ? '🌴 مرخصی فعال شد — تا تیکش رو برنداری کوئستی نمیاد' : '🎯 مرخصی تموم شد — کوئست بعدی تا ۵ دقیقه دیگه میاد');
+  }
+}
+function toggleQuestLeave(on){ setQuestLeave(on); }
+/* The same tick row is shown in every state of the card, so the way back is
+   always one tap away. */
+function questLeaveRowHtml(){
+  return `<label class="quest-leave-row"><input type="checkbox" id="questLeaveToggle" ${questLeaveOn()?'checked':''} onchange="toggleQuestLeave(this.checked)"><span class="quest-leave-name">🌴 مرخصی</span><span class="quest-leave-hint">تیک بزنی، دیگه کوئست نمیاد</span></label>`;
+}
 function renderQuestBox(){
   const now = Date.now();
+  /* v17: on «مرخصی» the whole quest engine rests — no generation, no timer,
+     no penalty. Only the card that explains it and the tick to come back. */
+  if(questLeaveOn()){
+    const leaveEl = document.getElementById('questCard');
+    if(!leaveEl) return;
+    if(__questSig !== 'leave'){
+      if(!dashboardActive()) return;
+      __questSig = 'leave'; __questCountdownEl = null; __questFillEl = null;
+      leaveEl.innerHTML = `<div class="quest-box quest-box-leave">
+        <div class="quest-waiting">
+          <div class="quest-emoji">🌴</div>
+          <div class="quest-info">
+            <div class="quest-tier-lbl" style="color:var(--txt-dim);">🌴 مرخصی</div>
+            <div class="quest-title">کوئست‌ها متوقف شدن — هر وقت خواستی تیک «مرخصی» رو بردار تا دوباره شروع بشن.</div>
+            <div class="quest-no-penalty">🍃 توی مرخصی هیچ XP ای کم نمی‌شه</div>
+          </div>
+        </div>
+        ${questLeaveRowHtml()}
+      </div>`;
+    }
+    return;
+  }
   if(!DB.quest.current && now >= DB.quest.nextAt){
     generateQuest();
     localStorage.setItem(STORE_KEY, JSON.stringify(DB));
@@ -1367,6 +1422,7 @@ function renderQuestBox(){
           <button class="btn ghost" onclick="abandonQuest()">🚫 شرایط انجامش رو ندارم</button>
           <button class="btn ghost" onclick="skipQuest()">⏭️ ردش کن (با جریمه)</button>
         </div>
+        ${questLeaveRowHtml()}
       </div>`;
     }
     if(dashboardActive()){
@@ -1392,6 +1448,7 @@ function renderQuestBox(){
           </div>
         </div>
         <div class="quest-wait-track"><div class="quest-wait-fill" style="width:${pct}%"></div></div>
+        ${questLeaveRowHtml()}
       </div>`;
       return;
     }
@@ -4591,6 +4648,8 @@ document.getElementById('importFile').onchange = (e)=>{
       // run migration guards (same as after loadStore)
       if(!DB.quest){ DB.quest = { current:null, nextAt: Date.now()+2*60*1000, waitStart: Date.now(), bags:{} }; }
       if(DB.quest.waitStart===undefined) DB.quest.waitStart = Date.now();
+      /* v17: a backup written before v17 simply comes back with «مرخصی» off */
+      if(typeof DB.quest.leave!=='boolean') DB.quest.leave = false;
       if(!DB.stats){ DB.stats = { tasksCompleted:0, questsCompleted:0, bestStreak:0 }; }
       if(DB.stats.perfectDays===undefined) DB.stats.perfectDays = 0;
       if(DB.stats.questsCompletedByDate===undefined) DB.stats.questsCompletedByDate = {};
@@ -4743,7 +4802,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='16.6';
+const LP_APP_VERSION='17.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

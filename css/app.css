@@ -452,8 +452,17 @@ body{ font-size: 1rem; }
 .quest-actions-sub{margin-top:8px; gap:8px;}
 .quest-actions-sub .btn{font-size:12.5px; padding:9px 8px; line-height:1.5;}
 .quest-no-penalty{margin-top:5px; font-size:11.5px; font-weight:600; color:var(--txt-dim);}
+/* v17: «مرخصی» — the tick that pauses the quests. It sits on its own row under
+   everything else so it can never be hit by accident, and it is built only from
+   theme variables, so all five themes keep working. */
+.quest-leave-row{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:12px; padding:9px 12px; border:1px dashed var(--line); border-radius:12px; background:var(--panel2); cursor:pointer; user-select:none;}
+.quest-leave-row input[type="checkbox"]{width:18px; height:18px; accent-color:var(--neon); cursor:pointer; flex-shrink:0;}
+.quest-leave-name{font-size:13px; font-weight:800;}
+.quest-leave-hint{font-size:11.5px; font-weight:600; color:var(--txt-dim);}
+.quest-box-leave{border-style:dashed;}
 @media (max-width:420px){
   .quest-actions-sub .btn{font-size:11.5px; padding:8px 6px;}
+  .quest-leave-hint{font-size:11px;}
 }
 .quest-waiting{display:flex; align-items:center; gap:14px;}
 .quest-waiting .quest-emoji{background:rgba(255,255,255,.05); font-size:24px;}
