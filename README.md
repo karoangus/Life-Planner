@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-16.6-00e5ff?style=for-the-badge&logoColor=white" alt="Version 16.6" />
+  <img src="https://img.shields.io/badge/نسخه-17.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 17.0" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -147,7 +147,7 @@ https://karoangus.github.io/Life-Planner/
   - *XP Boost:* دو برابر شدن تمام XPهای دریافتی به مدت ۳۰ دقیقه
   - *Mystery Box:* جعبه شگفت‌انگیز حاوی XP جکپات و آیتم‌های جدید برای شهر
   - *Streak Shield (سپر استریک):* محافظت از قطع شدن زنجیره عادت‌ها در روزهای فراموش‌شده با قوانین ضد اسپم (سقف خرید هفتگی حداکثر ۳ عدد و نگهداری ۱ عدد در هر زمان).
-- **⚡ مأموریت‌های تصادفی روزانه (Quests):** پیشنهاد مأموریت‌های روزانه با درجات سختی متنوع (Easy تا Special)، پاداش فوری و تایمر اختصاصی؛ اگر شرایط انجامش رو نداشتی با دکمه‌ی «🚫 شرایط انجامش رو ندارم» بدون کسر XP ردش کن (مأموریت بعدی ۵ دقیقه بعد می‌رسه) — «⏭️ ردش کن (با جریمه)» و تموم شدن مهلت مأموریت هر دو دقیقاً یک مقدار XP کم می‌کنن و کول‌داون عادی (۲۰ دقیقه، قابل کاهش با مهارت «کوئست سریع») دارن.
+- **⚡ مأموریت‌های تصادفی روزانه (Quests):** پیشنهاد مأموریت‌های روزانه با درجات سختی متنوع (Easy تا Special)، پاداش فوری و تایمر اختصاصی؛ اگر شرایط انجامش رو نداشتی با دکمه‌ی «🚫 شرایط انجامش رو ندارم» بدون کسر XP ردش کن (مأموریت بعدی ۵ دقیقه بعد می‌رسه) — «⏭️ ردش کن (با جریمه)» و تموم شدن مهلت مأموریت هر دو دقیقاً یک مقدار XP کم می‌کنن و کول‌داون عادی (۲۰ دقیقه، قابل کاهش با مهارت «کوئست سریع») دارن. با تیک «🌴 مرخصی» پایین همین کارت هم می‌تونی هر وقت خواستی کوئست‌ها رو کامل متوقف کنی (بدون کسر XP) و با برداشتن تیک دوباره برشون گردونی.
 - **🌟 جشن روز طلایی (Perfect Day):** جشن بصری ویژه و دریافت پاداش مضاعف در صورت تکمیل ۱۰۰٪ مأموریت‌ها و برنامه‌های روز.
 - **🚨 حالت بحران (Crisis Mode):** فعال‌سازی پوسته هشدار اضطراری و شمارش معکوس زمانی که کارهای حیاتی عقب افتاده‌اند.
 
@@ -282,13 +282,13 @@ npm test
 
 هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **هر پنج جا با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"16.6"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '16.6';`
-3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"16.6.0"`).
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"17.0"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '17.0';`
+3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"17.0.0"`).
 4. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 5. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v69';
+   const CACHE_NAME = 'life-planner-cache-v70';
    ```
 
 > ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ هر ۱۲ تست باید سبز باشند.
@@ -296,6 +296,14 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 17.0
+- 🌴 **دکمه‌ی «مرخصی» برای کوئست‌ها:** پایین کارت مأموریت در داشبورد یک تیک جدید به اسم «🌴 مرخصی» اضافه شد. تا وقتی تیکش خورده باشد، هیچ مأموریت جدیدی نمی‌آید، هیچ تایمری اجرا نمی‌شود و هیچ نوتیفیکیشن کوئستی فرستاده نمی‌شود.
+- 🍃 **مرخصی هیچ جریمه‌ای ندارد:** اگر وسط یک مأموریت تیک «مرخصی» را بزنی، آن مأموریت دقیقاً مثل دکمه‌ی «🚫 شرایط انجامش رو ندارم» کنار گذاشته می‌شود؛ **بدون کسر حتی یک XP** و بدون دست خوردن استریک‌ها.
+- 🔁 **برگشت از مرخصی با یک تیک:** در حالت مرخصی، کارت مأموریت خودش توضیح می‌دهد که کوئست‌ها متوقف‌اند و همان تیک «مرخصی» روی کارت می‌ماند؛ به‌محض برداشتن تیک، مأموریت بعدی بعد از همان استراحت کوتاه ۵ دقیقه‌ای می‌رسد.
+- 💾 **مرخصی یادش می‌ماند:** وضعیت مرخصی داخل داده‌های برنامه ذخیره می‌شود، پس با بستن برنامه یا ریستارت گوشی پاک نمی‌شود و همراه فایل پشتیبان (Export/Import) هم جابه‌جا می‌شود.
+- 🎯 **بقیه‌ی برنامه دست‌نخورده:** دکمه‌های «✅ انجامش دادم»، «🚫 شرایط انجامش رو ندارم» و «⏭️ ردش کن (با جریمه)» دقیقاً سر جایشان هستند؛ فقط توجه کن که در «روز بی‌نقص»، شرط «۳ مأموریت در روز» موقع مرخصی کامل نمی‌شود چون کوئستی نمی‌آید.
+- 🌐 **ترجمه‌ی انگلیسی کامل:** «🌴 مرخصی»، راهنمای زیرش و همه‌ی پیام‌های جدید در حالت English هم ترجمه شده‌اند (Time off).
 
 ### ✨ نسخه 16.6
 - 📝 **توضیحات برای بلوک‌های تقویم:** در فرم رویداد، زیر «عنوان» یک فیلد جدید «توضیحات (اختیاری)» اضافه شد. روی بلوک در تقویم فقط اسم کوتاهش (مثلاً «زبان») دیده می‌شود و با زدن روی بلوک، توضیحات کامل (مثلاً «فصل ۳ کتاب، مرور لغت‌ها و ۲۰ دقیقه لیسنینگ») در پنجره‌ی رویداد نمایش داده می‌شود. اگر توضیحاتی ننوشته باشی، چیزی اضافه نمایش داده نمی‌شود.
@@ -383,6 +391,7 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
+- **🌴 Time off for quests (new in v17):** A single tick named «🌴 مرخصی» (Time off) under the quest card pauses the random quests completely — no new quest, no timer, no notification and **no XP deducted**, not even for the quest you were holding. Untick it and the next quest arrives after the usual short 5-minute break. The choice is saved with your data and travels inside the backup file.
 - **🦴 Skeleton loading + scroll reveal (new in v16):** Lists show shimmering skeleton rows while they are being built instead of a full-screen spinner, and rows you scroll down to slide up into place. Rows already on screen never re-animate, so ticking a task cannot flicker.
 - **⚡ Low-end phone mode (new in v16):** Consecutive renders are coalesced into a single frame, off-screen rows are skipped with `content-visibility`, and on small devices the decorative gradients/shadows on repeated rows are flattened — same layout, same colors, same buttons.
 - **✏️ Editable habits & goals (new in v16):** Every habit card and goal card has an ✏️ button. Goal progress also got fine-grained **-2% / +2%** buttons next to the existing -10% / +10%.

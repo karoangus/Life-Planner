@@ -195,6 +195,60 @@ if (!useFallback) {
   });
   check('v16.5 deliberate skip deducts the shared skip penalty', skip.deducted === skip.expected && skip.cleared, JSON.stringify(skip));
 
+  // ---------- v17: «مرخصی» (time off) tick on the quest card ----------
+  // Ticking it must stop every new quest without costing a single XP, and
+  // unticking it must bring the quests back after the short break.
+  const leave = await page.evaluate(() => {
+    showView('dashboard');
+    addXP(80); save(); // so a penalty, if one ever appeared, would be visible
+    DB.quest.leave = false;
+    DB.quest.current = { tier:'easy', id:'e1', text:'آزمون خودکار کوئست — مرخصی', icon:'🥤', xp:10,
+      durationMs:10*60*1000, startedAt:Date.now(), expiresAt:Date.now()+10*60*1000 };
+    __questSig = null;
+    renderQuestBox();
+    const tickOnQuestCard = !!document.getElementById('questLeaveToggle');
+
+    const xpBefore = DB.xp;
+    toggleQuestLeave(true);            // tick «مرخصی»
+    const xpAfter = DB.xp;
+    const questPutAway = DB.quest.current === null && DB.quest.leave === true;
+
+    // even long past due, no quest may be generated while the tick is on
+    DB.quest.nextAt = Date.now() - 60 * 1000;
+    renderQuestBox();
+    const stillNoQuest = DB.quest.current === null;
+    const box = document.getElementById('questLeaveToggle');
+    const tickStaysChecked = !!(box && box.checked);
+
+    toggleQuestLeave(false);           // untick it
+    const waitMin = Math.round((DB.quest.nextAt - Date.now()) / 60000);
+    const backOn = DB.quest.leave === false;
+    const tickAfterReturn = !!document.getElementById('questLeaveToggle');
+    return { tickOnQuestCard, xpBefore, xpAfter, questPutAway, stillNoQuest,
+      tickStaysChecked, waitMin, backOn, tickAfterReturn };
+  });
+  check('v17 «مرخصی» tick sits on the quest card', leave.tickOnQuestCard && leave.tickAfterReturn, JSON.stringify(leave));
+  check('v17 «مرخصی» stops new quests and costs no XP',
+    leave.questPutAway && leave.xpAfter === leave.xpBefore && leave.stillNoQuest && leave.tickStaysChecked,
+    JSON.stringify(leave));
+  check('v17 unticking «مرخصی» brings the quests back after the 5-minute break',
+    leave.backOn && leave.waitMin === 5, JSON.stringify(leave));
+
+  const leaveKept = await page.evaluate(async () => {
+    setQuestLeave(true, true);         // silent: no toast during the test
+    return DB.quest.leave === true;
+  });
+  await page.reload({ waitUntil: 'load' });
+  await new Promise(r => setTimeout(r, 2000));
+  const leaveSurvived = await page.evaluate(() => {
+    const on = DB.quest.leave === true && DB.quest.current === null;
+    const inBackup = buildBackupPayload().quest.leave === true;
+    setQuestLeave(false, true);        // leave the app the way we found it
+    return { on, inBackup };
+  });
+  check('v17 «مرخصی» survives a reload and travels with the backup',
+    leaveKept && leaveSurvived.on && leaveSurvived.inBackup, JSON.stringify(leaveSurvived));
+
   // ---------- v16.6: calendar block description ----------
   await page.evaluate(() => showView('calendar'));
   const evDesc = await page.evaluate(async () => {
@@ -456,6 +510,39 @@ if (!useFallback) {
     coreJs.includes('desc:eventDesc(ev)') && (coreJs.match(/  lpFillEventDesc\(ev\);/g) || []).length === 2);
   check('v16.6 description is user content (never translated) and labels are translated',
     langJs.includes('.lp-ev-desc') && langJs.includes('توضیحات (اختیاری) — با زدن روی بلوک در تقویم نمایش داده می‌شود'));
+
+  // ---------- v17: «مرخصی» (time off) tick on the quest card ----------
+  const questBoxBody = (coreJs.match(/function renderQuestBox\(\)\{[\s\S]*?\n\}/) || [''])[0];
+  const leaveBody = (coreJs.match(/function setQuestLeave\([\s\S]*?\n\}/) || [''])[0];
+
+  // the tick is rendered in all three states of the card (active / waiting / on leave)
+  check('v17 «مرخصی» tick present on the quest card',
+    coreJs.includes('function questLeaveRowHtml') && coreJs.includes('id="questLeaveToggle"') &&
+    coreJs.includes('toggleQuestLeave(this.checked)') && coreJs.includes('🌴 مرخصی') &&
+    (coreJs.match(/\$\{questLeaveRowHtml\(\)\}/g) || []).length === 3 &&
+    appCss.includes('.quest-leave-row') && appCss.includes('.quest-box-leave'),
+    `rows=${(coreJs.match(/\$\{questLeaveRowHtml\(\)\}/g) || []).length}`);
+
+  // the guard runs before anything else in the ticker, so no quest can slip through
+  check('v17 no quest is generated while «مرخصی» is ticked',
+    coreJs.includes('function questLeaveOn') && questBoxBody.includes('if(questLeaveOn()){') &&
+    questBoxBody.indexOf('if(questLeaveOn()){') < questBoxBody.indexOf('generateQuest()'),
+    `body=${questBoxBody.length}`);
+
+  // it is a pause, never a punishment — and it is remembered like every setting
+  check('v17 «مرخصی» never costs XP and is remembered (reload + backup)',
+    leaveBody.length > 0 && !leaveBody.includes('addXP(') &&
+    leaveBody.includes('DB.quest.leave = on') && leaveBody.includes('questDeclineCooldownMs()') &&
+    leaveBody.includes('save()') &&
+    (coreJs.match(/DB\.quest\.leave = false;/g) || []).length === 2,
+    `body=${leaveBody.length}`);
+
+  check('v17 strings translated for English mode',
+    ['🌴 مرخصی', 'تیک بزنی، دیگه کوئست نمیاد', '🍃 توی مرخصی هیچ XP ای کم نمی‌شه',
+     '🌴 مرخصی فعال شد — تا تیکش رو برنداری کوئستی نمیاد',
+     '🎯 مرخصی تموم شد — کوئست بعدی تا ۵ دقیقه دیگه میاد',
+     'کوئست‌ها متوقف شدن — هر وقت خواستی تیک «مرخصی» رو بردار تا دوباره شروع بشن.']
+      .every(k => langJs.includes(k)) && langJs.includes('Time off'));
 
   // all five themes must still be defined in both JS and CSS.
   // "dark" is the default theme: its variables live in the plain :root block.

@@ -28,6 +28,14 @@
   window.lpGetLang = getLang;
 
   var EXACT = {
+    /* ---- v17: «مرخصی» — the tick that pauses the quests ---- */
+    "کوئست‌ها متوقف شدن — هر وقت خواستی تیک «مرخصی» رو بردار تا دوباره شروع بشن.": "Quests are paused — untick “Time off” whenever you want them back.",
+    "🌴 مرخصی فعال شد — تا تیکش رو برنداری کوئستی نمیاد": "🌴 Time off is on — no quest arrives until you untick it",
+    "🎯 مرخصی تموم شد — کوئست بعدی تا ۵ دقیقه دیگه میاد": "🎯 Time off is over — the next quest arrives in 5 minutes",
+    "🍃 توی مرخصی هیچ XP ای کم نمی‌شه": "🍃 Nothing is deducted from your XP while you are off",
+    "تیک بزنی، دیگه کوئست نمیاد": "Tick it and no more quests arrive",
+    "🌴 مرخصی": "🌴 Time off",
+    "مرخصی": "Time off",
     /* ---- v16.6: optional description for calendar blocks ---- */
     "توضیحات (اختیاری) — با زدن روی بلوک در تقویم نمایش داده می‌شود": "Description (optional) — shown when you tap the block in the calendar",
     "مثلاً: فصل ۳ کتاب، مرور لغت‌ها و ۲۰ دقیقه لیسنینگ": "e.g. Chapter 3 of the book, review vocabulary and 20 minutes of listening",
