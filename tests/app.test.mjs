@@ -294,6 +294,73 @@ if (!useFallback) {
   check('v16.6 no description → nothing extra shown', evDesc.cleared && evDesc.plainHidden, JSON.stringify(evDesc));
   check('v16.6 editing pre-fills and updates the description', evDesc.prefilled === 'فصل ۳ کتاب\nمرور لغت‌ها' && evDesc.edited === 'فصل ۴', JSON.stringify(evDesc));
 
+  // ---------- v17.1: the weekly grid is blocked out 06:00 → 03:00 ----------
+  await page.evaluate(() => showView('calendar'));
+  const grid = await page.evaluate(async () => {
+    DB.events = []; save(); renderCalendar();
+    const axis = [...document.querySelectorAll('#weekGrid .lp-cal-time-row')].map(r => r.textContent.trim());
+    const perDay = document.querySelectorAll('#weekGrid .lp-cal-day[data-day="0"] .lp-cal-hour').length;
+    const nightRows = [...document.querySelectorAll('#weekGrid .lp-cal-time-row.next-day')].map(r => r.textContent.trim());
+    const body = document.querySelector('#weekGrid .lp-cal-body');
+    const col0 = document.querySelector('#weekGrid .lp-cal-day[data-day="0"]');
+    const tall = Math.round(body.getBoundingClientRect().height) === axis.length * 52 &&
+                 Math.round(col0.getBoundingClientRect().height) === axis.length * 52;
+
+    const addEvent = async (day, from, to) => {
+      openEventModal();
+      document.getElementById('eTitle').value = `t${day}-${from}`;
+      document.querySelector(`#eDays .chip-opt[data-v="${day}"]`).classList.add('sel');
+      document.getElementById('eHourStart').value = from;
+      document.getElementById('eHourEnd').value = to;
+      await saveEvent();
+      return DB.events[DB.events.length - 1];
+    };
+    const geom = (el) => ({ top: parseFloat(el.style.top), h: parseFloat(el.style.height) });
+
+    // 23:00 → 01:00 on Saturday: one unbroken block that runs past midnight
+    const overnight = await addEvent(0, '23:00', '01:00');
+    let blocks = [...document.querySelectorAll('#weekGrid .lp-cal-day[data-day="0"] .ev-block')];
+    const overnightOk = blocks.length === 1 &&
+      Math.round(geom(blocks[0]).top) === Math.round((23 - 6) * 52) &&
+      Math.round(geom(blocks[0]).h) === Math.round(2 * 52 - 2);
+
+    // 01:00 → 02:00 on Sunday belongs to Saturday's night tail, not Sunday's top
+    DB.events = []; save(); renderCalendar();
+    const afterMidnight = await addEvent(1, '01:00', '02:00');
+    const satBlocks = document.querySelectorAll('#weekGrid .lp-cal-day[data-day="0"] .ev-block');
+    const sunBlocks = document.querySelectorAll('#weekGrid .lp-cal-day[data-day="1"] .ev-block');
+    const tailOk = satBlocks.length === 1 && sunBlocks.length === 0 &&
+      Math.round(geom(satBlocks[0]).top) === Math.round((25 - 6) * 52) &&
+      satBlocks[0].classList.contains('ev-night');
+
+    // dropping on Saturday's 25:00 slot must store "Sunday 01:00", not 23:59
+    DB.events = []; save(); renderCalendar();
+    const dragged = await addEvent(2, '10:00', '11:00');
+    lpApplyEventDrag(dragged, 2, 0, 25 * 60);           // column Saturday, grid minute 1500
+    const moved = DB.events.find(e => e.id === dragged.id);
+    const dropOk = moved.days[0] === 1 && moved.startMin === 60 && moved.endMin === 120;
+
+    // 04:00 sits in the one gap the grid does not draw → it must be announced
+    DB.events = []; save(); renderCalendar();
+    await addEvent(3, '04:00', '05:00');
+    const offGrid = document.querySelector('#weekGrid .lp-cal-offgrid');
+    const offGridOk = !!offGrid && offGrid.textContent.includes('t3-04:00') &&
+      document.querySelectorAll('#weekGrid .ev-block').length === 0;
+
+    DB.events = []; save(); renderCalendar();
+    return { axis, perDay, nightRows, tall, overnightOk, tailOk, dropOk, offGridOk };
+  });
+  check('v17.1 the day is blocked out hour by hour from 06:00 to 03:00',
+    grid.axis.length === 21 && grid.perDay === 21 &&
+    grid.axis[0] === '06:00' && grid.axis[17] === '23:00' && grid.axis[20] === '02:00' && grid.tall,
+    JSON.stringify(grid.axis));
+  check('v17.1 the after-midnight hours are marked as such',
+    grid.nightRows.join(',') === '00:00,01:00,02:00', JSON.stringify(grid.nightRows));
+  check('v17.1 a 23:00 → 01:00 block is drawn in one piece', grid.overnightOk, JSON.stringify(grid));
+  check('v17.1 after-midnight events sit in the previous night\'s tail', grid.tailOk, JSON.stringify(grid));
+  check('v17.1 dropping past midnight stores the real next day + time', grid.dropOk, JSON.stringify(grid));
+  check('v17.1 blocks in the undrawn 03:00–06:00 gap are announced, not lost', grid.offGridOk, JSON.stringify(grid));
+
   check('no fatal JS errors after quest flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
   await browser.close();
@@ -510,6 +577,49 @@ if (!useFallback) {
     coreJs.includes('desc:eventDesc(ev)') && (coreJs.match(/  lpFillEventDesc\(ev\);/g) || []).length === 2);
   check('v16.6 description is user content (never translated) and labels are translated',
     langJs.includes('.lp-ev-desc') && langJs.includes('توضیحات (اختیاری) — با زدن روی بلوک در تقویم نمایش داده می‌شود'));
+
+  // ---------- v17.1: the weekly grid is blocked out 06:00 → 03:00 ----------
+  check('v17.1 the day is blocked out hour by hour from 06:00 to 03:00',
+    coreJs.includes('const CAL_START_HOUR=6, CAL_END_HOUR=27,') &&
+    coreJs.includes('const CAL_SPAN_MIN=(CAL_END_HOUR-CAL_START_HOUR)*60') &&
+    coreJs.includes('for(let h=START;h<END;h++)') && coreJs.includes('calHourLabel(h)'));
+
+  // the grid height follows the row count instead of the old hard-coded 884px
+  check('v17.1 the grid grows with the number of hour rows',
+    coreJs.includes('--lp-cal-rows:${END-START}') &&
+    appCss.includes('height:calc(var(--lp-cal-rows) * var(--lp-cal-px-hour))') &&
+    !appCss.includes('height:884px'));
+
+  // after-midnight hours are a visually distinct band
+  check('v17.1 the after-midnight hours are marked as such',
+    coreJs.includes("h>=24?' next-day':''") && coreJs.includes("h===24?' midnight':''") &&
+    appCss.includes('.lp-cal-time-row.next-day') && appCss.includes('.lp-cal-hour.next-day') &&
+    appCss.includes('.legend-dot-night') && indexHtml.includes('legend-dot legend-dot-night'));
+
+  // a block can now live in the previous column's night tail, and a drop past
+  // midnight has to come back as a real {day, clock time} pair
+  check('v17.1 after-midnight blocks map onto the previous night\'s tail',
+    coreJs.includes('function calEventPlacements') && coreJs.includes('function calNormalizeSlot') &&
+    coreJs.includes('[[day,0],[(day+6)%7,CAL_DAY_MIN]]') &&
+    coreJs.includes('const slot=calNormalizeSlot(toCol, gridStart);') &&
+    coreJs.includes('attachEventDrag(el,e,d,shift)'));
+
+  // times past 24:00 must wrap (01:00), never clamp to the old 23:59
+  check('v17.1 times past midnight are labelled, not clamped',
+    coreJs.includes('function calClockLabel') &&
+    !/formatTimeMinutes\(Math\.min\(ne,1439\)\)/.test(coreJs) &&
+    coreJs.includes('calClockLabel(ne)'));
+
+  // 03:00–06:00 is the only hidden stretch, and it is announced
+  check('v17.1 blocks in the undrawn 03:00–06:00 gap are announced, not lost',
+    coreJs.includes('lp-cal-offgrid') && coreJs.includes('بیرون از بازهٔ نمایش تقویم') &&
+    appCss.includes('.lp-cal-offgrid'));
+
+  check('v17.1 strings translated for English mode',
+    ['بلوک‌بندی ساعتی از ۶ صبح تا ۳ بامداد', 'بامداد', 'بیرون از بازهٔ نمایش تقویم',
+     'هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود.',
+     '🌙 هر روزِ تقویم از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ ساعت‌های بعد از نیمه‌شب در انتهای ستونِ شبِ قبلش می‌نشینند.']
+      .every(k => langJs.includes(k)) && langJs.includes('Hourly blocks from 6 AM to 3 AM'));
 
   // ---------- v17: «مرخصی» (time off) tick on the quest card ----------
   const questBoxBody = (coreJs.match(/function renderQuestBox\(\)\{[\s\S]*?\n\}/) || [''])[0];

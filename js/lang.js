@@ -28,6 +28,13 @@
   window.lpGetLang = getLang;
 
   var EXACT = {
+    /* ---- v17.1: the weekly grid runs 06:00 → 03:00 ---- */
+    "🌙 هر روزِ تقویم از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ ساعت‌های بعد از نیمه‌شب در انتهای ستونِ شبِ قبلش می‌نشینند.": "🌙 Every calendar day is blocked out from 6 AM to 3 AM; hours after midnight sit at the bottom of the previous night's column.",
+    "هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود.": "Every day is blocked out hour by hour from 6 AM to 3 AM; hold and drag an event to change its day or time.",
+    "بلوک‌بندی ساعتی از ۶ صبح تا ۳ بامداد": "Hourly blocks from 6 AM to 3 AM",
+    "بیرون از بازهٔ نمایش تقویم": "Outside the calendar's visible range",
+    "و چند مورد دیگر": "and a few more",
+    "بامداد": "After midnight",
     /* ---- v17: «مرخصی» — the tick that pauses the quests ---- */
     "کوئست‌ها متوقف شدن — هر وقت خواستی تیک «مرخصی» رو بردار تا دوباره شروع بشن.": "Quests are paused — untick “Time off” whenever you want them back.",
     "🌴 مرخصی فعال شد — تا تیکش رو برنداری کوئستی نمیاد": "🌴 Time off is on — no quest arrives until you untick it",

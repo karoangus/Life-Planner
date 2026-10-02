@@ -199,12 +199,12 @@ try{
     <!-- CALENDAR -->
     <div class="view" id="view-calendar">
       <div class="topbar calendar-topbar">
-        <div><h1>تقویم هفتگی</h1><div class="sub">بلوک‌بندی زمانی برای رویدادها و کارها</div></div>
+        <div><h1>تقویم هفتگی</h1><div class="sub">بلوک‌بندی ساعتی از ۶ صبح تا ۳ بامداد</div></div>
         <div class="top-actions"><button class="btn ghost" onclick="openCatManager()">🏷️ دسته‌ها</button><button class="btn" onclick="openEventModal()">➕ رویداد جدید</button></div>
       </div>
       <div class="calendar-intro" aria-label="راهنمای تقویم">
-        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><strong>هفته‌ات را یک‌جا ببین</strong><span>رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود؛ رنگ و دسته‌بندی هم دست خودت است.</span></div></div>
-        <div class="calendar-legend"><span><i class="legend-dot legend-dot-event"></i>رویداد</span><span><i class="legend-dot legend-dot-now"></i>امروز</span></div>
+        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><strong>هفته‌ات را یک‌جا ببین</strong><span>هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود.</span></div></div>
+        <div class="calendar-legend"><span><i class="legend-dot legend-dot-event"></i>رویداد</span><span><i class="legend-dot legend-dot-now"></i>امروز</span><span><i class="legend-dot legend-dot-night"></i>بامداد</span></div>
       </div>
       <div class="card calendar-card">
         <div id="weekGrid"></div>
@@ -1050,6 +1050,7 @@ try{
     <div class="field"><label>ساعت شروع</label><input type="time" id="eHourStart" value="09:00"></div>
     <div class="field"><label>ساعت پایان</label><input type="time" id="eHourEnd" value="12:00"></div>
   </div>
+  <div class="lp-night-hint">🌙 هر روزِ تقویم از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ ساعت‌های بعد از نیمه‌شب در انتهای ستونِ شبِ قبلش می‌نشینند.</div>
   <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="eReminder" onchange="requestEventReminderPermission(this)"><span>🔔 یادآوری این رویداد</span></label>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('eventModalBg')">انصراف</button><button class="btn" onclick="saveEvent()">ذخیره</button></div>
 </div></div>

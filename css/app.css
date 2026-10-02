@@ -990,16 +990,24 @@ textarea{resize:vertical; min-height:70px;}
 .bar-fill{height:100%; background:var(--grad); border-radius:20px; transition:width .4s;}
 
 /* kanban-ish calendar */
-.lp-cal-wrap{width:100%;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--line);}
+/* v17.1 — the grid is blocked out from 06:00 to 03:00 of the next morning,
+   so its height follows the row count renderCalendar() puts on the wrapper
+   (--lp-cal-rows) instead of being hard-coded. */
+.lp-cal-wrap{--lp-cal-rows:21;--lp-cal-px-hour:52px;width:100%;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--line);}
 .lp-cal-header{display:grid;grid-template-columns:42px repeat(7,minmax(0,1fr));height:38px;background:var(--bg2);}
 .lp-cal-head{display:flex;align-items:center;justify-content:center;min-width:0;padding:0 2px;border-left:1px solid var(--line);font-size:10px;font-weight:800;overflow:hidden;white-space:nowrap;}
 .lp-cal-head.today{color:var(--neon);}
-.lp-cal-body{display:grid;grid-template-columns:42px minmax(0,1fr);height:884px;overflow:hidden;}
+.lp-cal-body{display:grid;grid-template-columns:42px minmax(0,1fr);height:calc(var(--lp-cal-rows) * var(--lp-cal-px-hour));overflow:hidden;}
 .lp-cal-time-col{background:var(--bg2);}
-.lp-cal-time-row{height:52px;box-sizing:border-box;border-top:1px solid var(--line);display:flex;align-items:flex-start;justify-content:center;padding-top:3px;font:9px monospace;color:var(--txt-dim2);direction:ltr;}
+.lp-cal-time-row{height:var(--lp-cal-px-hour);box-sizing:border-box;border-top:1px solid var(--line);display:flex;align-items:flex-start;justify-content:center;padding-top:3px;font:9px monospace;color:var(--txt-dim2);direction:ltr;}
 .lp-cal-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:0;}
-.lp-cal-day{height:884px;position:relative;min-width:0;background:var(--panel);border-left:1px solid var(--line);overflow:hidden;}
-.lp-cal-hour{height:52px;box-sizing:border-box;border-top:1px solid var(--line);}
+.lp-cal-day{height:calc(var(--lp-cal-rows) * var(--lp-cal-px-hour));position:relative;min-width:0;background:var(--panel);border-left:1px solid var(--line);overflow:hidden;}
+.lp-cal-hour{height:var(--lp-cal-px-hour);box-sizing:border-box;border-top:1px solid var(--line);}
+/* after-midnight band (00:00 → 03:00) — same planner day, next calendar day */
+.lp-cal-time-row.next-day{color:#a99bff;}
+.lp-cal-hour.next-day{background:rgba(139,107,255,.055);}
+.lp-cal-time-row.midnight,.lp-cal-hour.midnight{border-top:1px dashed rgba(139,107,255,.55);}
+.lp-cal-offgrid{padding:8px 12px;background:var(--bg2);border-top:1px solid var(--line);font-size:10.5px;line-height:1.8;color:var(--txt-dim);}
 .ev-block{position:absolute;left:2px;right:2px;box-sizing:border-box;overflow:hidden;background:linear-gradient(160deg,rgba(0,229,255,.34),rgba(139,107,255,.34));border:1px solid rgba(0,229,255,.6);border-radius:8px;padding:3px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:5;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), 0 2px 10px rgba(0,229,255,.14);transition:filter .15s, box-shadow .15s;}
 .ev-block:hover{filter:brightness(1.12); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 3px 14px rgba(0,229,255,.26);}
 .ev-block .ev-title{font-size:12px;font-weight:900;line-height:1.15;word-break:break-word;text-shadow:0 1px 2px rgba(0,0,0,.45);max-width:100%;overflow:hidden;}
@@ -1324,6 +1332,7 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 .legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;}
 .legend-dot-event{background:var(--neon);box-shadow:0 0 8px rgba(0,229,255,.7);}
 .legend-dot-now{background:#ffcc66;box-shadow:0 0 8px rgba(255,204,102,.65);}
+.legend-dot-night{background:#a99bff;box-shadow:0 0 8px rgba(139,107,255,.65);}
 .calendar-card{padding:0!important;overflow:hidden;border-color:rgba(0,229,255,.18);box-shadow:0 16px 40px rgba(0,0,0,.13);}
 .lp-cal-wrap{border:0;border-radius:0;background:var(--line);}
 .lp-cal-header{height:48px;background:linear-gradient(180deg,var(--bg2),rgba(20,27,48,.92));}
@@ -1336,6 +1345,10 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 .lp-cal-time-row{border-top-color:rgba(255,255,255,.075);font-size:10px;}
 .lp-cal-time-row.current-hour{color:var(--neon);font-weight:900;background:rgba(0,229,255,.07);}
 .lp-cal-hour.current-hour{border-top:2px solid rgba(0,229,255,.65);background:linear-gradient(90deg,rgba(0,229,255,.08),transparent);}
+/* v17.1 — the 00:00–03:00 tail keeps the same column but reads as "night" */
+.lp-cal-time-row.next-day{background:rgba(139,107,255,.07);}
+.lp-cal-time-row.midnight,.lp-cal-hour.midnight{border-top-style:dashed;border-top-color:rgba(139,107,255,.6);}
+.lp-cal-time-row.next-day.current-hour{background:rgba(0,229,255,.07);}
 .ev-block{border-radius:9px;}
 @media(max-width:700px){
  .calendar-intro{align-items:flex-start;padding:12px;}
@@ -1364,6 +1377,9 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 .ev-block.lp-dragging-src{opacity:.25;filter:grayscale(.5);}
 .lp-drag-clone{position:fixed;z-index:99999;pointer-events:none;opacity:.95;margin:0;display:flex;align-items:center;justify-content:center;flex-direction:column;border-radius:9px;overflow:hidden;transform:rotate(1.5deg) scale(1.04);box-shadow:0 14px 34px rgba(0,0,0,.45);}
 .ev-ghost{position:absolute;left:2px;right:2px;border:2px dashed var(--neon);background:var(--neon-15);border-radius:9px;z-index:3;pointer-events:none;display:flex;align-items:flex-start;justify-content:center;box-sizing:border-box;}
+/* v17.1 — dropping past midnight: the ghost says which day it really lands on */
+.ev-ghost.ev-ghost-night{border-color:#a99bff;background:rgba(139,107,255,.16);}
+.ev-ghost.ev-ghost-night .ev-ghost-time{color:#c3b6ff;}
 .ev-ghost-time{font-size:10px;font-weight:800;color:var(--neon);background:rgba(6,10,22,.88);padding:1px 7px;border-radius:6px;margin-top:2px;white-space:nowrap;direction:rtl;}
 .lp-cal-day.lp-drop-target{background:var(--neon-15)!important;box-shadow:inset 0 0 0 1.5px var(--neon-55);}
 /* task color dot */
@@ -1371,6 +1387,8 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 /* clearly separated action groups in the event menu */
 .lp-action-sep{height:1px;background:var(--line);margin:14px 0 4px;width:100%;}
 .lp-act-group-lbl{font-size:10.5px;font-weight:800;color:var(--txt-dim2);margin:10px 2px 6px;width:100%;text-align:right;letter-spacing:.3px;}
+/* v17.1 — explains where after-midnight hours land on the weekly grid */
+.lp-night-hint{font-size:11px;line-height:1.85;color:var(--txt-dim);background:rgba(139,107,255,.09);border:1px solid rgba(139,107,255,.3);border-radius:10px;padding:8px 12px;margin:-4px 0 12px;}
 /* scope hint ("only this day") in the event modal */
 .lp-scope-hint{font-size:11.5px;line-height:1.8;color:var(--txt);background:rgba(255,181,69,.10);border:1px solid rgba(255,181,69,.38);border-radius:10px;padding:8px 12px;margin:-8px 0 14px;}
 

@@ -4172,7 +4172,40 @@ function saveCategoryFromManager(){
 }
 
 /* --- drag & drop: move an event to another day / time (touch + mouse) --- */
-const CAL_START_HOUR=7, CAL_END_HOUR=24, CAL_PX_HOUR=52, CAL_SNAP_MIN=15;
+/* v17.1 — the planner day no longer ends at midnight: every column of the
+   weekly grid is blocked out hour by hour from 06:00 up to 03:00 of the
+   following morning (21 slots). Hours 24..26 on the axis are 00:00..02:00 of
+   the next calendar day, so a "grid minute" (0 = midnight that opens the
+   column) can legitimately run up to 1620. calNormalizeSlot() converts such a
+   value back to the real {day, minute} pair that gets stored on the event. */
+const CAL_START_HOUR=6, CAL_END_HOUR=27, CAL_PX_HOUR=52, CAL_SNAP_MIN=15;
+const CAL_DAY_MIN=1440;
+const CAL_SPAN_MIN=(CAL_END_HOUR-CAL_START_HOUR)*60;
+/* 25:30 on the grid is really 01:30 of the next day — show it as such. */
+function calClockLabel(min){ return formatTimeMinutes(((Math.round(min)%CAL_DAY_MIN)+CAL_DAY_MIN)%CAL_DAY_MIN); }
+function calHourLabel(h){ return String(((h%24)+24)%24).padStart(2,'0')+':00'; }
+function calNormalizeSlot(dayIdx,min){
+  let d=dayIdx, m=min;
+  while(m>=CAL_DAY_MIN){ m-=CAL_DAY_MIN; d=(d+1)%7; }
+  while(m<0){ m+=CAL_DAY_MIN; d=(d+6)%7; }
+  return {day:((d%7)+7)%7, min:m};
+}
+/* Where an event shows up on the grid. A block lands in its own column, and
+   anything that happens before 06:00 is drawn in the night tail of the
+   PREVIOUS column — that tail is the same stretch of real time. */
+function calEventPlacements(e){
+  const out=[];
+  const s=eventStartMinutes(e), en=eventEndMinutes(e);
+  if(!Number.isFinite(s)||!Number.isFinite(en)||en<=s) return out;
+  const lo=CAL_START_HOUR*60, hi=CAL_END_HOUR*60;
+  eventDays(e).forEach(day=>{
+    [[day,0],[(day+6)%7,CAL_DAY_MIN]].forEach(([col,shift])=>{
+      const from=Math.max(s+shift,lo), to=Math.min(en+shift,hi);
+      if(to>from) out.push({col:((col%7)+7)%7, day, from, to, shift});
+    });
+  });
+  return out;
+}
 const lpDragState={ drag:null, holdTimer:null, suppressClickUntil:0 };
 function lpCandidateConflicts(candidate,events){
   const cSeg=eventSegments(candidate);
@@ -4188,7 +4221,8 @@ function lpCandidateConflicts(candidate,events){
 function lpCalColumns(){ return [...document.querySelectorAll('#weekGrid .lp-cal-day')]; }
 function lpCancelHold(){ if(lpDragState.holdTimer){ clearTimeout(lpDragState.holdTimer); lpDragState.holdTimer=null; } }
 function lpBlockScroll(e){ if(lpDragState.drag) e.preventDefault(); }
-function attachEventDrag(el, ev, dayIdx){
+function attachEventDrag(el, ev, dayIdx, shift){
+  shift=Number(shift)||0; // 1440 when the block is drawn in the previous column's night tail
   el.addEventListener('pointerdown', (e)=>{
     if(lpDragState.drag) return;
     if(e.button!==undefined && e.button!==0) return;
@@ -4196,7 +4230,7 @@ function attachEventDrag(el, ev, dayIdx){
     const sx=e.clientX, sy=e.clientY;
     lpDragState.holdTimer=setTimeout(()=>{ // long-press lifts the event (touch)
       lpDragState.holdTimer=null;
-      if(!lpDragState.drag) lpBeginDrag(e, el, ev, dayIdx);
+      if(!lpDragState.drag) lpBeginDrag(e, el, ev, dayIdx, shift);
     }, 340);
     const move=(m)=>{
       if(lpDragState.drag){ lpDragMove(m); return; }
@@ -4204,7 +4238,7 @@ function attachEventDrag(el, ev, dayIdx){
       if(Math.abs(dx)>8||Math.abs(dy)>8){
         // horizontal grab or any mouse movement picks the event up;
         // a plain vertical touch keeps scrolling the page instead
-        if((isMouse && (Math.abs(dx)>8||Math.abs(dy)>8)) || (Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy))) lpBeginDrag(m, el, ev, dayIdx);
+        if((isMouse && (Math.abs(dx)>8||Math.abs(dy)>8)) || (Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy))) lpBeginDrag(m, el, ev, dayIdx, shift);
         else lpCancelHold();
       }
     };
@@ -4221,7 +4255,8 @@ function attachEventDrag(el, ev, dayIdx){
     document.addEventListener('pointercancel',cancel);
   });
 }
-function lpBeginDrag(e, el, ev, dayIdx){
+function lpBeginDrag(e, el, ev, dayIdx, shift){
+  shift=Number(shift)||0;
   lpCancelHold();
   try{ if(navigator.vibrate) navigator.vibrate(12); }catch(_){}
   const rect=el.getBoundingClientRect();
@@ -4235,7 +4270,9 @@ function lpBeginDrag(e, el, ev, dayIdx){
   el.classList.add('lp-dragging-src');
   const ghost=document.createElement('div');
   ghost.className='ev-ghost';
-  lpDragState.drag={ evRef:ev, el, clone, ghost, grabY, dayIdx, curDay:dayIdx, curStart:eventStartMinutes(ev), moved:false, lastX:e.clientX, lastY:e.clientY };
+  lpDragState.drag={ evRef:ev, el, clone, ghost, grabY, dayIdx, shift,
+    curDay:((dayIdx-(shift?1:0))%7+7)%7, curStart:eventStartMinutes(ev)+shift,
+    moved:false, lastX:e.clientX, lastY:e.clientY };
   document.addEventListener('touchmove', lpBlockScroll, {passive:false});
   lpDragMove(e);
   lpAutoscrollStep();
@@ -4265,7 +4302,7 @@ function lpDragMove(e){
     }
   }
   const dur=Math.max(15, eventEndMinutes(d.evRef)-eventStartMinutes(d.evRef));
-  const maxStart=CAL_END_HOUR*60 - Math.min(dur,(CAL_END_HOUR-CAL_START_HOUR)*60);
+  const maxStart=CAL_END_HOUR*60 - Math.min(dur,CAL_SPAN_MIN);
   let min=Math.round(((d.lastY-daysRect.top-d.grabY)/CAL_PX_HOUR*60 + CAL_START_HOUR*60)/CAL_SNAP_MIN)*CAL_SNAP_MIN;
   min=Math.max(CAL_START_HOUR*60, Math.min(maxStart, min));
   d.curDay=target;
@@ -4281,8 +4318,11 @@ function lpDragMove(e){
       d.ghost.dataset.day=String(target);
       d.ghost.dataset.min=String(min);
       d.ghost.style.top=((min-CAL_START_HOUR*60)/60*CAL_PX_HOUR)+'px';
-      d.ghost.style.height=Math.max(12, Math.min(dur,(CAL_END_HOUR-CAL_START_HOUR)*60)/60*CAL_PX_HOUR-2)+'px';
-      d.ghost.innerHTML=`<span class="ev-ghost-time">${dayNames[target]} · ${formatTimeMinutes(min)}</span>`;
+      d.ghost.style.height=Math.max(12, Math.min(dur,CAL_SPAN_MIN)/60*CAL_PX_HOUR-2)+'px';
+      // past midnight the slot already belongs to the next day — say so
+      const slot=calNormalizeSlot(target,min);
+      d.ghost.classList.toggle('ev-ghost-night', min>=CAL_DAY_MIN);
+      d.ghost.innerHTML=`<span class="ev-ghost-time">${dayNames[slot.day]} · ${calClockLabel(min)}</span>`;
     }
     cols.forEach((c,i)=>c.classList.toggle('lp-drop-target', i===target));
   }
@@ -4319,10 +4359,14 @@ function lpDragEnd(){
   if(!d.moved || d.curDay==null) return;
   lpApplyEventDrag(d.evRef, d.dayIdx, d.curDay, d.curStart);
 }
-function lpApplyEventDrag(evRef, fromDay, toDay, newStart){
+function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
   const ev=DB.events.find(x=>x.id===evRef.id)||evRef;
   const dur=Math.max(15, eventEndMinutes(ev)-eventStartMinutes(ev));
-  const ns=Math.max(CAL_START_HOUR*60, Math.min(CAL_END_HOUR*60-Math.min(dur,(CAL_END_HOUR-CAL_START_HOUR)*60), newStart));
+  const gridStart=Math.max(CAL_START_HOUR*60, Math.min(CAL_END_HOUR*60-Math.min(dur,CAL_SPAN_MIN), newStart));
+  /* The grid column keeps running past midnight, so a drop at 25:00 of column
+     "Saturday" is really 01:00 on Sunday. Store the real day + clock time. */
+  const slot=calNormalizeSlot(toCol, gridStart);
+  const toDay=slot.day, ns=slot.min;
   const ne=ns+dur;
   const days=eventDays(ev);
   const sameDay=(toDay===fromDay);
@@ -4353,14 +4397,14 @@ function lpApplyEventDrag(evRef, fromDay, toDay, newStart){
       reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null,
       startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
-    toast(`📌 این روز از «${esc(ev.title)}» جدا شد و به ${dayNames[toDay]} ${formatTimeMinutes(ns)} رفت`);
+    toast(`📌 این روز از «${esc(ev.title)}» جدا شد و به ${dayNames[toDay]} ${calClockLabel(ns)} رفت`);
   }else{
     if(!sameDay){ ev.days=[toDay]; delete ev.day; }
     ev.startMin=ns; ev.endMin=ne;
     ev.startHour=Math.floor(ns/60); ev.endHour=Math.min(24,Math.floor(ne/60));
     toast(!sameDay
-      ? `📅 «${esc(ev.title)}» به ${dayNames[toDay]} منتقل شد — ${formatTimeMinutes(ns)} تا ${formatTimeMinutes(Math.min(ne,1439))}`
-      : `🕒 «${esc(ev.title)}» به ${formatTimeMinutes(ns)} تا ${formatTimeMinutes(Math.min(ne,1439))} منتقل شد`);
+      ? `📅 «${esc(ev.title)}» به ${dayNames[toDay]} منتقل شد — ${calClockLabel(ns)} تا ${calClockLabel(ne)}`
+      : `🕒 «${esc(ev.title)}» به ${calClockLabel(ns)} تا ${calClockLabel(ne)} منتقل شد`);
   }
   save();
   rescheduleAllEventReminders();
@@ -4377,41 +4421,50 @@ function renderCalendar(){
   const START=CAL_START_HOUR,END=CAL_END_HOUR,PX_HOUR=CAL_PX_HOUR;
   const now=new Date();
   const today=(now.getDay()+1)%7;
-  const currentHour=now.getHours();
+  /* Between midnight and 06:00 we are still inside the night tail of the
+     PREVIOUS column, so "now" is highlighted there (e.g. 01:00 Sunday lights
+     up the 01:00 slot at the bottom of the Saturday column). */
+  const nightTail=now.getHours()<START;
+  const activeDay=nightTail?(today+6)%7:today;
+  const activeHour=nightTail?now.getHours()+24:now.getHours();
 
   let head='<div class="lp-cal-head lp-cal-time"></div>';
   dayNames.forEach((d,i)=>head+=`<div class="lp-cal-head${i===today?' today current-day':''}">${d}</div>`);
 
+  const hourClasses=h=>(h>=24?' next-day':'')+(h===24?' midnight':'');
   let axis='';
   for(let h=START;h<END;h++){
-    axis+=`<div class="lp-cal-time-row${h===currentHour?' current-hour':''}">${String(h).padStart(2,'0')}:00</div>`;
+    axis+=`<div class="lp-cal-time-row${hourClasses(h)}${h===activeHour?' current-hour':''}">${calHourLabel(h)}</div>`;
   }
 
   let days='';
   for(let d=0;d<7;d++){
     days+=`<div class="lp-cal-day" data-day="${d}">`;
-    for(let h=START;h<END;h++)days+=`<div class="lp-cal-hour${d===today&&h===currentHour?' current-hour':''}"></div>`;
+    for(let h=START;h<END;h++)days+=`<div class="lp-cal-hour${hourClasses(h)}${d===activeDay&&h===activeHour?' current-hour':''}"></div>`;
     days+='</div>';
   }
 
   document.getElementById('weekGrid').innerHTML=
-    `<div class="lp-cal-wrap"><div class="lp-cal-header">${head}</div><div class="lp-cal-body"><div class="lp-cal-time-col">${axis}</div><div class="lp-cal-days">${days}</div></div></div>`;
+    `<div class="lp-cal-wrap" style="--lp-cal-rows:${END-START};--lp-cal-px-hour:${PX_HOUR}px"><div class="lp-cal-header">${head}</div><div class="lp-cal-body"><div class="lp-cal-time-col">${axis}</div><div class="lp-cal-days">${days}</div></div></div>`;
 
   const cols=document.querySelectorAll('.lp-cal-day');
+  const offGrid=[]; // blocks that fall in the 03:00–06:00 gap the grid does not draw
   DB.events.forEach(e=>{
     const s=eventStartMinutes(e),en=eventEndMinutes(e);
     if(!Number.isFinite(s)||!Number.isFinite(en)||en<=s)return;
-    eventDays(e).forEach(d=>{
-      const col=cols[d];if(!col)return;
-      const from=Math.max(s,START*60),to=Math.min(en,END*60);
-      if(from>=to)return;
+    const placements=calEventPlacements(e);
+    const drawnDays=new Set(placements.map(p=>p.day));
+    eventDays(e).forEach(d=>{ if(!drawnDays.has(d)) offGrid.push({title:e.title, day:d, start:s}); });
+    placements.forEach(({col:colIdx, day:d, from, to, shift})=>{
+      const col=cols[colIdx];if(!col)return;
       const el=document.createElement('button');
       el.type='button';
       const duration=to-from;
       const sizeClass=duration<15?' event-tiny':(duration<30?' event-short':'');
-      el.className='ev-block'+sizeClass;
+      el.className='ev-block'+sizeClass+(from>=CAL_DAY_MIN?' ev-night':'');
       el.style.top=((from-START*60)/60*PX_HOUR)+'px';
       el.style.height=Math.max(10,(to-from)/60*PX_HOUR-2)+'px';
+      el.title=`${e.title} — ${dayNames[d]} ${calClockLabel(s)} تا ${calClockLabel(en)}`;
       el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
       if(eventDesc(e)){
         // v16.6: small hint that tapping the block reveals a description
@@ -4430,11 +4483,24 @@ function renderCalendar(){
         el.style.borderColor=lpHexToRgba(ecol,.7);
         el.style.boxShadow=`inset 0 0 0 1px ${lpHexToRgba(ecol,.28)}, 0 2px 10px ${lpHexToRgba(ecol,.22)}`;
       }
-      attachEventDrag(el,e,d);
+      attachEventDrag(el,e,d,shift);
       el.onclick=()=>onEventBlockClick(e.id,d);
       col.appendChild(el);
     });
   });
+
+  /* 03:00–06:00 is intentionally not drawn. If something lives in there, say
+     so instead of letting the block quietly vanish from the week. */
+  const wrap=document.querySelector('#weekGrid .lp-cal-wrap');
+  if(wrap && offGrid.length){
+    const titles=[...new Set(offGrid.map(o=>o.title))];
+    const names=titles.slice(0,3).map(t=>`«${esc(t)}»`).join('، ');
+    const more=titles.length>3?' <span>و چند مورد دیگر</span>':'';
+    const note=document.createElement('div');
+    note.className='lp-cal-offgrid';
+    note.innerHTML=`🌙 <span>بیرون از بازهٔ نمایش تقویم</span> — ${names}${more}`;
+    wrap.appendChild(note);
+  }
 }
 /* ============ CHARTS (self-contained, no external library) ============ */
 function last7(){ const arr=[]; for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(dateToLocalISO(d)); } return arr; }
@@ -4802,7 +4868,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='17.0';
+const LP_APP_VERSION='17.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
