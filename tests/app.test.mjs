@@ -361,6 +361,95 @@ if (!useFallback) {
   check('v17.1 dropping past midnight stores the real next day + time', grid.dropOk, JSON.stringify(grid));
   check('v17.1 blocks in the undrawn 03:00–06:00 gap are announced, not lost', grid.offGridOk, JSON.stringify(grid));
 
+  // ---------- v17.2: live minute line, dated headers and quick-add slots ----------
+  const v172 = await page.evaluate(async () => {
+    DB.events = []; save(); renderCalendar();
+    const dateLabels = [...document.querySelectorAll('#weekGrid .lp-cal-head-date')].map(x => x.textContent.trim());
+    const fixed = new Date(); fixed.setHours(10,15,0,0);
+    const at15 = updateCalendarNowMarker(fixed);
+    const line15 = document.querySelector('#weekGrid .lp-cal-now-line');
+    const label15 = document.querySelector('#weekGrid .lp-cal-now-label');
+    const labelText15 = label15?.textContent.trim();
+    const marker15 = line15 ? { top:parseFloat(line15.style.top), time:line15.dataset.time, day:Number(line15.parentElement.dataset.day) } : null;
+    fixed.setHours(10,59,0,0);
+    const at59 = updateCalendarNowMarker(fixed);
+    fixed.setHours(11,0,0,0);
+    const at11 = updateCalendarNowMarker(fixed);
+    const nextHour = {
+      time:document.querySelector('#weekGrid .lp-cal-now-line')?.dataset.time,
+      row:document.querySelector('#weekGrid .lp-cal-time-row.current-hour')?.textContent.trim(),
+      top:parseFloat(document.querySelector('#weekGrid .lp-cal-now-line')?.style.top || '-1')
+    };
+    fixed.setHours(1,15,0,0);
+    const night = updateCalendarNowMarker(fixed);
+    const nightLine = document.querySelector('#weekGrid .lp-cal-now-line');
+    const nightOk = !!nightLine && nightLine.dataset.time === '01:15' &&
+      Number(nightLine.parentElement.dataset.day) === ( (fixed.getDay()+1)%7 + 6 )%7 &&
+      document.querySelector('#weekGrid .lp-cal-time-row.current-hour')?.textContent.trim() === '01:00';
+    updateCalendarNowMarker(new Date());
+
+    const oldLang = localStorage.getItem('lifePlannerLang_v1');
+    localStorage.setItem('lifePlannerLang_v1','en');
+    const english = {
+      now:lpTranslate('🕒 الان'),
+      currentTime:lpTranslate('زمان فعلی'),
+      shortDate:lpTranslate('۱۵ مهر'),
+      slotHint:lpTranslate('برای افزودن رویداد در 10:00'),
+      intro:lpTranslate('هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود. برای افزودن سریع رویداد، روی خانه‌ی خالی بزن.')
+    };
+    if(oldLang===null)localStorage.removeItem('lifePlannerLang_v1'); else localStorage.setItem('lifePlannerLang_v1',oldLang);
+
+    const slot = document.querySelector('#weekGrid .lp-cal-day[data-day="2"] .lp-cal-slot[data-grid-hour="10"]');
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientY:rect.top+rect.height*.67}));
+    const prefill = {
+      days:[...document.querySelectorAll('#eDays .chip-opt.sel')].map(x=>Number(x.dataset.v)),
+      start:document.getElementById('eHourStart').value,
+      end:document.getElementById('eHourEnd').value
+    };
+    document.getElementById('eTitle').value='v17.2 quick add test';
+    await saveEvent();
+    const saved = DB.events.find(e=>e.title==='v17.2 quick add test');
+    const quickAddOk = !!saved && saved.days[0]===2 && saved.startMin===630 && saved.endMin===690;
+
+    const lateSlot = document.querySelector('#weekGrid .lp-cal-day[data-day="6"] .lp-cal-slot[data-grid-hour="26"]');
+    const lateRect = lateSlot.getBoundingClientRect();
+    lateSlot.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientY:lateRect.top+lateRect.height*.95}));
+    const latePrefill = {
+      days:[...document.querySelectorAll('#eDays .chip-opt.sel')].map(x=>Number(x.dataset.v)),
+      start:document.getElementById('eHourStart').value,
+      end:document.getElementById('eHourEnd').value
+    };
+    closeModal('eventModalBg');
+    DB.events=[]; save(); renderCalendar();
+    return {
+      dateLabels, marker15, label15:labelText15, at15, at59, at11, nextHour, nightOk,
+      quickAddOk, prefill, latePrefill, english,
+      nowButton:!!document.querySelector('.calendar-now-btn[onclick*="scrollCalendarToNow"]'),
+      slotCount:document.querySelectorAll('#weekGrid .lp-cal-slot').length
+    };
+  });
+  check('v17.2 calendar shows dates under all seven weekdays', v172.dateLabels.length===7 && v172.dateLabels.every(Boolean), JSON.stringify(v172.dateLabels));
+  check('v17.2 current-time line matches the exact minute and pixel position',
+    v172.marker15?.time==='10:15' && v172.label15==='10:15' && Math.abs(v172.marker15.top-221)<.02,
+    JSON.stringify(v172.marker15));
+  check('v17.2 current-time line advances to the next hour exactly',
+    v172.at59.time==='10:59' && v172.at11.time==='11:00' && v172.nextHour.time==='11:00' &&
+    v172.nextHour.row==='11:00' && Math.abs(v172.nextHour.top-260)<.02,
+    JSON.stringify({at59:v172.at59,at11:v172.at11,next:v172.nextHour}));
+  check('v17.2 current-time line still maps after midnight to the previous day column', v172.nightOk);
+  check('v17.2 tapping an empty slot opens a prefilled one-hour event at the quarter-hour',
+    v172.quickAddOk && v172.prefill.days.join(',')==='2' && v172.prefill.start==='10:30' && v172.prefill.end==='11:30',
+    JSON.stringify(v172.prefill));
+  check('v17.2 quick-add clamps the last night slot at 03:00 on the next day',
+    v172.latePrefill.days.join(',')==='0' && v172.latePrefill.start==='02:45' && v172.latePrefill.end==='03:00',
+    JSON.stringify(v172.latePrefill));
+  check('v17.2 the Now button and all 147 quick-add slots are present', v172.nowButton && v172.slotCount===147);
+  check('v17.2 calendar labels and help are translated to English',
+    v172.english.now==='🕒 Now' && v172.english.currentTime==='Current time' &&
+    v172.english.shortDate==='15 Mehr' && v172.english.slotHint==='Tap to add an event at 10:00' &&
+    v172.english.intro.includes('tap an empty time slot'), JSON.stringify(v172.english));
+
   check('no fatal JS errors after quest flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
   await browser.close();
@@ -620,6 +709,23 @@ if (!useFallback) {
      'هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود.',
      '🌙 هر روزِ تقویم از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ ساعت‌های بعد از نیمه‌شب در انتهای ستونِ شبِ قبلش می‌نشینند.']
       .every(k => langJs.includes(k)) && langJs.includes('Hourly blocks from 6 AM to 3 AM'));
+
+  // ---------- v17.2: live calendar time, dated headers and quick-add ----------
+  check('v17.2 current-time line follows the minute and hour boundary',
+    coreJs.includes('function updateCalendarNowMarker(now=new Date())') &&
+    coreJs.includes('now.getMinutes()') && coreJs.includes('now.getSeconds()') &&
+    coreJs.includes('line.style.top=position.toFixed(3)+\'px\'') &&
+    coreJs.includes('function scheduleCalendarMinuteTick') && appCss.includes('.lp-cal-now-line') &&
+    appCss.includes('.lp-cal-now-label'));
+  check('v17.2 calendar dates, Now shortcut and quick-add slots are present',
+    coreJs.includes('function calendarHeaderDate') && coreJs.includes('lp-cal-head-date') &&
+    coreJs.includes('function openCalendarSlot') && coreJs.includes('data-grid-hour=') &&
+    coreJs.includes('function scrollCalendarToNow') &&
+    indexHtml.includes('onclick="scrollCalendarToNow()"') &&
+    indexHtml.includes('برای افزودن سریع رویداد، روی خانه‌ی خالی بزن'));
+  check('v17.2 English translations cover the new calendar labels, hints and short Jalali dates',
+    ['🕒 الان', 'زمان فعلی', 'Tap to add an event at $1', 'Every day is blocked out hour by hour from 6 AM to 3 AM; hold and drag an event to move it, or tap an empty time slot to quickly add one.']
+      .every(k => langJs.includes(k)) && langJs.includes('translateJalaliMonthDay'));
 
   // ---------- v17: «مرخصی» (time off) tick on the quest card ----------
   const questBoxBody = (coreJs.match(/function renderQuestBox\(\)\{[\s\S]*?\n\}/) || [''])[0];

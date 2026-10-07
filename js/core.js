@@ -4190,6 +4190,88 @@ function calNormalizeSlot(dayIdx,min){
   while(m<0){ m+=CAL_DAY_MIN; d=(d+6)%7; }
   return {day:((d%7)+7)%7, min:m};
 }
+function calendarHeaderDate(iso){
+  const parts=String(iso||'').split('-').map(Number);
+  if(parts.length!==3||parts.some(n=>!Number.isFinite(n)))return '';
+  return new Date(parts[0],parts[1]-1,parts[2],12).toLocaleDateString('fa-IR',{day:'numeric',month:'short'});
+}
+function updateCalendarNowMarker(now=new Date()){
+  const grid=document.getElementById('weekGrid');
+  if(!grid)return null;
+  const today=(now.getDay()+1)%7;
+  const nightTail=now.getHours()<CAL_START_HOUR;
+  const activeDay=nightTail?(today+6)%7:today;
+  const activeHour=nightTail?now.getHours()+24:now.getHours();
+  const gridMinute=activeHour*60+now.getMinutes()+now.getSeconds()/60+now.getMilliseconds()/60000;
+  const position=((gridMinute-CAL_START_HOUR*60)/60)*CAL_PX_HOUR;
+  const visible=gridMinute>=CAL_START_HOUR*60&&gridMinute<CAL_END_HOUR*60;
+  const timeLabel=formatTimeMinutes(now.getHours()*60+now.getMinutes());
+  const rows=grid.querySelectorAll('.lp-cal-time-row');
+  rows.forEach((row,i)=>row.classList.toggle('current-hour',CAL_START_HOUR+i===activeHour));
+  const columns=grid.querySelectorAll('.lp-cal-day');
+  columns.forEach((col,day)=>col.querySelectorAll('.lp-cal-hour').forEach((slot,i)=>{
+    slot.classList.toggle('current-hour',day===activeDay&&CAL_START_HOUR+i===activeHour);
+  }));
+
+  let line=grid.querySelector('.lp-cal-now-line');
+  let label=grid.querySelector('.lp-cal-now-label');
+  if(!visible||!columns[activeDay]){
+    line?.remove();
+    label?.remove();
+    return {day:activeDay,hour:activeHour,minute:gridMinute,position,visible:false,time:timeLabel};
+  }
+  const column=columns[activeDay];
+  if(!line){
+    line=document.createElement('div');
+    line.className='lp-cal-now-line';
+    line.setAttribute('aria-hidden','true');
+  }
+  if(line.parentElement!==column)column.appendChild(line);
+  line.style.top=position.toFixed(3)+'px';
+  line.dataset.time=timeLabel;
+  line.title=timeLabel;
+
+  const timeCol=grid.querySelector('.lp-cal-time-col');
+  if(timeCol){
+    if(!label){
+      label=document.createElement('div');
+      label.className='lp-cal-now-label';
+      label.setAttribute('aria-hidden','true');
+    }
+    if(label.parentElement!==timeCol)timeCol.appendChild(label);
+    label.style.top=position.toFixed(3)+'px';
+    label.textContent=timeLabel;
+  }
+  return {day:activeDay,hour:activeHour,minute:gridMinute,position,visible:true,time:timeLabel};
+}
+function openCalendarSlot(dayIdx,gridHour,clientY,slotEl){
+  if(!Number.isFinite(Number(dayIdx))||!Number.isFinite(Number(gridHour)))return;
+  let withinHour=0;
+  const rect=slotEl?.getBoundingClientRect?.();
+  if(rect&&rect.height>0&&Number.isFinite(clientY)){
+    const fraction=Math.max(0,Math.min(.9999,(clientY-rect.top)/rect.height));
+    withinHour=Math.min(45,Math.floor(fraction*4)*15);
+  }
+  const gridStart=Number(gridHour)*60+withinHour;
+  const slot=calNormalizeSlot(Number(dayIdx),gridStart);
+  const duration=Math.max(15,Math.min(60,CAL_END_HOUR*60-gridStart));
+  const end=calNormalizeSlot(Number(dayIdx),gridStart+duration);
+  openEventModal();
+  document.querySelectorAll('#eDays .chip-opt').forEach(chip=>chip.classList.toggle('sel',Number(chip.dataset.v)===slot.day));
+  document.getElementById('eHourStart').value=formatTimeMinutes(slot.min);
+  document.getElementById('eHourEnd').value=formatTimeMinutes(end.min);
+  document.getElementById('eTitle').focus();
+}
+function scrollCalendarToNow(){
+  if(!viewActive('calendar')){
+    showView('calendar');
+    setTimeout(scrollCalendarToNow,60);
+    return;
+  }
+  updateCalendarNowMarker();
+  const target=document.querySelector('#weekGrid .lp-cal-now-line')||document.querySelector('#weekGrid .lp-cal-wrap');
+  target?.scrollIntoView?.({behavior:'smooth',block:target.classList.contains('lp-cal-now-line')?'center':'start',inline:'nearest'});
+}
 /* Where an event shows up on the grid. A block lands in its own column, and
    anything that happens before 06:00 is drawn in the night tail of the
    PREVIOUS column — that tail is the same stretch of real time. */
@@ -4428,8 +4510,9 @@ function renderCalendar(){
   const activeDay=nightTail?(today+6)%7:today;
   const activeHour=nightTail?now.getHours()+24:now.getHours();
 
+  const dates=weekDates().map(calendarHeaderDate);
   let head='<div class="lp-cal-head lp-cal-time"></div>';
-  dayNames.forEach((d,i)=>head+=`<div class="lp-cal-head${i===today?' today current-day':''}">${d}</div>`);
+  dayNames.forEach((d,i)=>head+=`<div class="lp-cal-head${i===today?' today current-day':''}"><span class="lp-cal-day-name">${d}</span><span class="lp-cal-head-date" dir="auto">${dates[i]||''}</span></div>`);
 
   const hourClasses=h=>(h>=24?' next-day':'')+(h===24?' midnight':'');
   let axis='';
@@ -4440,14 +4523,18 @@ function renderCalendar(){
   let days='';
   for(let d=0;d<7;d++){
     days+=`<div class="lp-cal-day" data-day="${d}">`;
-    for(let h=START;h<END;h++)days+=`<div class="lp-cal-hour${hourClasses(h)}${d===activeDay&&h===activeHour?' current-hour':''}"></div>`;
+    for(let h=START;h<END;h++)days+=`<div class="lp-cal-hour lp-cal-slot${hourClasses(h)}${d===activeDay&&h===activeHour?' current-hour':''}" data-grid-hour="${h}" title="برای افزودن رویداد در ${calHourLabel(h)}"></div>`;
     days+='</div>';
   }
 
   document.getElementById('weekGrid').innerHTML=
     `<div class="lp-cal-wrap" style="--lp-cal-rows:${END-START};--lp-cal-px-hour:${PX_HOUR}px"><div class="lp-cal-header">${head}</div><div class="lp-cal-body"><div class="lp-cal-time-col">${axis}</div><div class="lp-cal-days">${days}</div></div></div>`;
 
-  const cols=document.querySelectorAll('.lp-cal-day');
+  const cols=document.querySelectorAll('#weekGrid .lp-cal-day');
+  cols.forEach(col=>col.querySelectorAll('.lp-cal-slot').forEach(slot=>{
+    slot.addEventListener('click',e=>openCalendarSlot(Number(col.dataset.day),Number(slot.dataset.gridHour),e.clientY,slot));
+  }));
+  updateCalendarNowMarker(now);
   const offGrid=[]; // blocks that fall in the 03:00–06:00 gap the grid does not draw
   DB.events.forEach(e=>{
     const s=eventStartMinutes(e),en=eventEndMinutes(e);
@@ -4845,6 +4932,20 @@ renderPinnedNav();
 renderAll();
 startEventReminderScheduler();
 setInterval(()=>{ const cv=document.getElementById('view-calendar'); if(cv&&cv.classList.contains('active')) renderCalendar(); },30000);
+function scheduleCalendarMinuteTick(){
+  const now=new Date();
+  const delay=60000-now.getSeconds()*1000-now.getMilliseconds()+20;
+  setTimeout(()=>{
+    const cv=document.getElementById('view-calendar');
+    if(cv&&cv.classList.contains('active'))updateCalendarNowMarker();
+    scheduleCalendarMinuteTick();
+  },Math.max(20,delay));
+}
+scheduleCalendarMinuteTick();
+document.addEventListener('visibilitychange',()=>{
+  const cv=document.getElementById('view-calendar');
+  if(!document.hidden&&cv&&cv.classList.contains('active'))updateCalendarNowMarker();
+});
 const DAY_MS = 24*60*60*1000;
 function autoLocalBackup(){
   if(Date.now() - (DB.lastAutoBackupAt||0) < DAY_MS) return;
@@ -4868,7 +4969,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='17.1';
+const LP_APP_VERSION='17.2';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
