@@ -28,6 +28,10 @@
   window.lpGetLang = getLang;
 
   var EXACT = {
+    /* ---- v17.2: minute-accurate calendar and quick-add slots ---- */
+    "🕒 الان": "🕒 Now",
+    "زمان فعلی": "Current time",
+    "هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود. برای افزودن سریع رویداد، روی خانه‌ی خالی بزن.": "Every day is blocked out hour by hour from 6 AM to 3 AM; hold and drag an event to move it, or tap an empty time slot to quickly add one.",
     /* ---- v17.1: the weekly grid runs 06:00 → 03:00 ---- */
     "🌙 هر روزِ تقویم از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ ساعت‌های بعد از نیمه‌شب در انتهای ستونِ شبِ قبلش می‌نشینند.": "🌙 Every calendar day is blocked out from 6 AM to 3 AM; hours after midnight sit at the bottom of the previous night's column.",
     "هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود.": "Every day is blocked out hour by hour from 6 AM to 3 AM; hold and drag an event to change its day or time.",
@@ -881,6 +885,8 @@
     "۸": "8",
     "۹": "9",
   };  var PATTERNS = [
+    /* v17.2: hover text on empty calendar slots */
+    [new RegExp("^برای\\ افزودن\\ رویداد\\ در\\ ([\\s\\S]*)$"), "Tap to add an event at $1"],
     /* v16.2: "۳ از ۱۰ یادداشت" (notes counter while a filter is on) */
     [new RegExp("^([\\s\\S]*?) از ([\\s\\S]*?) یادداشت$"), "$1 of $2 notes"],
     /* v16.2: "📄 ۱۲ کلمه · ۶۴ کاراکتر" (live counter under the note editor) */
@@ -1055,6 +1061,12 @@
     var core = latinDigits(m[3]) + ' ' + month + ' ' + latinDigits(m[1]);
     return wd ? (wd + ', ' + core) : core;
   }
+  function translateJalaliMonthDay(s){
+    var m=s.match(/^([\d۰-۹]{1,2})\s+([\u0600-\u06FF]+)$/);
+    if(!m)return null;
+    var month=JALALI_MONTHS_EN[m[2]];
+    return month ? latinDigits(m[1])+' '+month : null;
+  }
 
   /* ---------- core translate ---------- */
   var memo = Object.create(null);
@@ -1063,6 +1075,8 @@
     if(Object.prototype.hasOwnProperty.call(EXACT, s)) return EXACT[s];
     var d = translateJalaliDate(s);
     if(d !== null) return d;
+    var md = translateJalaliMonthDay(s);
+    if(md !== null) return md;
     var c = countUnit(s);
     if(c !== null) return c;
     for(var i = 0; i < PATTERNS.length; i++){
