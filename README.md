@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-17.2-00e5ff?style=for-the-badge&logoColor=white" alt="Version 17.2" />
+  <img src="https://img.shields.io/badge/نسخه-18.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 18.0" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -89,6 +89,7 @@ https://karoangus.github.io/Life-Planner/
 ## ⚡ خلاصه جامع امکانات و قابلیت‌ها
 
 ### 1. 📋 مدیریت پیشرفته تسک‌ها و وظایف
+- **شمارنده‌ی قرمز Inbox (جدید در v18):** کنار تب Inbox، تعداد زنده‌ی تسک‌های داخل صندوق با نشان قرمز دیده می‌شود و پس از افزودن، تبدیل یا حذف تسک به‌روز می‌ماند.
 - **تب‌های خلوت و کاربردی (جدید در v16):** نوار تب‌های بخش تسک‌ها به چهار تب *همه*، *شروع نشده*، *Inbox* و *تکمیل‌شده* کاهش پیدا کرده است؛ تب‌های *در حال انجام*، *در صف* و *متوقف* حذف شدند (وضعیت هر تسک همچنان از منوی جزئیات همان تسک قابل تغییر است).
 - **تکمیل‌شده‌ها به شکل تب (جدید در v16):** تسک‌های انجام‌شده به‌جای یک بلوک همیشه‌باز در بالای صفحه، داخل تب «✅ تکمیل‌شده» با شمارنده‌ی زنده قرار گرفته‌اند تا فضای کارهای باز بیشتر شود.
 - **چهار وضعیت کاری (Workflow States):** امکان دسته‌بندی تسک‌ها به وضعیت‌های *شروع‌نشده*، *در حال انجام*، *در صف* و *متوقف* از منوی جزئیات هر تسک.
@@ -153,6 +154,7 @@ https://karoangus.github.io/Life-Planner/
 
 ### 4. 📅 تقویم تعاملی و زمان‌بندی هوشمند
 - تقویم جلالی (شمسی) و میلادی کامل و دقیق.
+- **فهرست مستقل تسک‌های هر روز (جدید در v18):** با زدن روی سربرگ روز، فهرستی جداگانه با همان کارت‌های تسک، اولویت، وضعیت، زیرتسک، دسته‌بندی، تکمیل، ویرایش و حذف باز می‌شود؛ افزودن تسک هم ددلاین همان روز را از قبل انتخاب می‌کند.
 - **بلوک‌بندی ساعتی ۶ صبح تا ۳ بامداد (جدید در v17.1):** هر ستونِ روز ۲۱ بلوک یک‌ساعته دارد که از ۰۶:۰۰ شروع می‌شود و تا ۰۳:۰۰ بامدادِ روز بعد ادامه دارد؛ ساعت‌های بعد از نیمه‌شب با رنگ بنفش جدا شده‌اند و رویدادهای شبانه یک‌تکه کشیده می‌شوند.
 - **نشانگر دقیق زمان و افزودن سریع (جدید در v17.2):** خط زمانِ فعلی دقیقه‌به‌دقیقه و هم‌زمان با رفتن به ساعت بعد جابه‌جا می‌شود؛ تاریخ جلالی هر روز هم در سربرگ دیده می‌شود. روی بخش خالی هر ساعت بزن تا فرم «رویداد جدید» با روز و زمان همان بخش آماده شود.
 - **کشیدن و رها کردن رویدادها (Drag & Drop):** تغییر زمان یا روز رویدادها با نگه‌داشتن و کشیدن در شبکه هفتگی، همراه با اسنپ ۱۵ دقیقه‌ای و بررسی تداخل ساعت‌ها.
@@ -185,7 +187,7 @@ https://karoangus.github.io/Life-Planner/
   - 👑 طلایی افسانه‌ای (Legendary Gold)
 - **🌐 انتخاب زبان برنامه (جدید در v15):** زبان پیش‌فرض **فارسی (RTL)** است و از مسیر **تنظیمات ← «🌐 زبان برنامه»** می‌توان کل رابط را به **English (LTR)** تغییر داد. داده‌های نوشته‌شده توسط کاربر هرگز ترجمه نمی‌شوند.
 - **تنظیم مقیاس رابط کاربری و فونت:** امکان کوچک یا بزرگ کردن سایز متون و عناصر به تناسب ابعاد صفحه گوشی یا مانیتور.
-- **سفارشی‌سازی نوار پایین:** افزودن و چیدمان دلخواه دکمه‌های پرکاربرد به نوار دسترسی سریع.
+- **نوار پایین با حداقل دو دکمه (جدید در v18):** تعداد دکمه‌های ردیف اصلی را به انتخاب خودت از ۲ تا ۴ تنظیم کن؛ حالت دو دکمه یعنی دقیقاً دو میان‌بر به‌علاوه‌ی «بیشتر». دکمه‌های ردیف دوم اختیاری‌اند و تا ۵ مورد قابل افزودن هستند؛ چیدمان در پشتیبان هم ذخیره می‌شود.
 - **پشتیبان‌گیری خودکار و دستی:** تولید فایل خروجی JSON از تمامی داده‌ها، بازیابی آسان و سیستم یادآوری و بکاپ‌گیری خودکار روزانه.
 - **لودینگ اسکلتی و انیمیشن اسکرول (جدید در v16):** به‌جای اسپینر تمام‌صفحه، تا آماده شدن داده‌ها «اسکلت» خاکستری همان آیتم‌ها نمایش داده می‌شود و آیتم‌هایی که به سمتشان اسکرول می‌کنی با انیمیشن ملایم از پایین بالا می‌آیند.
 - **حالت سبک برای گوشی‌های ضعیف (جدید در v16):** روی دستگاه‌های کم‌قدرت، سایه و گرادیان تزئینی ردیف‌های تکراری و رندر ردیف‌های بیرون از صفحه بهینه می‌شود؛ چیدمان، رنگ‌ها و همه‌ی دکمه‌ها دقیقاً مثل قبل می‌مانند.
@@ -284,20 +286,26 @@ npm test
 
 هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **هر پنج جا با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"17.2"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '17.2';`
-3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"17.2.0"`).
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"18.0"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '18.0';`
+3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"18.0.0"`).
 4. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 5. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v72';
+   const CACHE_NAME = 'life-planner-cache-v73';
    ```
 
-> ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ هر ۱۲ تست باید سبز باشند.
+> ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ همه‌ی تست‌ها باید سبز باشند.
 
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 18.0
+- 🔴 **شمارنده‌ی زنده‌ی Inbox:** کنار تب Inbox در بخش تسک‌ها، تعداد تسک‌های داخل صندوق با نشان قرمز نمایش داده می‌شود و با افزودن، ویرایش یا حذف تسک بلافاصله به‌روز می‌شود.
+- 📅 **لیست مستقل کارهای هر روز تقویم:** زدن روی سربرگ هر روز، فهرست همان روز را در پنلی جدا از بخش تسک‌های اصلی باز می‌کند. کارت‌ها همان قالب و اولویت‌بندی تسک‌ها را دارند؛ فیلتر وضعیت و دسته، تکمیل و ویرایش، زیرتسک، حذف و انتخاب تصادفی هم در دسترس‌اند. افزودن از این پنل، ددلاین همان روز را خودکار تنظیم می‌کند.
+- 📱 **دو میان‌بر هم کافی است:** ردیف اصلی نوار پایین حالا واقعاً بین ۲ تا ۴ دکمه قابل انتخاب است؛ هر سه انتخاب ۲، ۳ و ۴ کار می‌کنند و در حالت ۲، دو میان‌بر کنار دکمه‌ی «بیشتر» باقی می‌ماند. انتخاب تعداد و میان‌برها در بکاپ هم حفظ می‌شود.
+- 🌐 **ترجمه و دسترس‌پذیری:** پنل روزانه و شمارنده‌ی تسک‌ها ترجمه می‌شوند؛ سربرگ روزها با لمس، کلیک و صفحه‌کلید باز می‌شود.
 
 ### ✨ نسخه 17.2
 - ⏱️ **خط زمانِ زنده و دقیق:** خط نشانگر «الان» جایگاه واقعی دقیقه را در ستون روز نشان می‌دهد، با هر دقیقه حرکت می‌کند و در شروع ساعت بعد به ردیف درست می‌رود؛ شب‌ها نیز در انتهای ستون روز قبل قرار می‌گیرد.
@@ -409,6 +417,9 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
+- **📅 Per-day calendar Tasks (new in v18):** Tap a weekday header to open a separate, date-scoped task list with the same task cards, priorities, status/category filters, quick-add, random pick, completion, editing and delete actions as the main Tasks view.
+- **🔴 Live Inbox count (new in v18):** The Tasks Inbox tab shows a red, immediately refreshed count of items waiting in the Inbox.
+- **📱 Two-button quick bar (new in v18):** Choose 2, 3 or 4 main shortcuts; the two-button setting keeps exactly two shortcuts plus More. Extra second-row links remain optional, and the choice is backed up.
 - **🌴 Time off for quests (new in v17):** A single tick named «🌴 مرخصی» (Time off) under the quest card pauses the random quests completely — no new quest, no timer, no notification and **no XP deducted**, not even for the quest you were holding. Untick it and the next quest arrives after the usual short 5-minute break. The choice is saved with your data and travels inside the backup file.
 - **🦴 Skeleton loading + scroll reveal (new in v16):** Lists show shimmering skeleton rows while they are being built instead of a full-screen spinner, and rows you scroll down to slide up into place. Rows already on screen never re-animate, so ticking a task cannot flicker.
 - **⚡ Low-end phone mode (new in v16):** Consecutive renders are coalesced into a single frame, off-screen rows are skipped with `content-visibility`, and on small devices the decorative gradients/shadows on repeated rows are flattened — same layout, same colors, same buttons.

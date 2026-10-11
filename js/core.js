@@ -305,14 +305,19 @@ function renderMoreViews(){
 }
 
 function inboxTaskCount(){
-  return (DB&&DB.tasks?DB.tasks:[]).filter(t=>!!t.inbox).length;
+  return Array.isArray(DB?.tasks) ? DB.tasks.filter(t=>!!t?.inbox).length : 0;
 }
 function renderInboxBadges(){
   const n=inboxTaskCount();
   const txt=n>99?'۹۹+':toFaDigits(String(n));
-  // Tasks-tab Inbox chip
+  const accessibleCount=toFaDigits(String(n));
+  // Keep the Tasks-tab Inbox chip accurate even when another view is open.
   const ic=document.getElementById('inboxCount');
-  if(ic) ic.textContent = txt;
+  if(ic){
+    ic.textContent = txt;
+    ic.title = `${accessibleCount} تسک در Inbox`;
+    ic.setAttribute('aria-label', `${accessibleCount} تسک در Inbox`);
+  }
   // Bottom-nav items (pinned main row + extras) that point to tasks view
   document.querySelectorAll('.bottom-nav .bnav-item[data-view="tasks"]').forEach(el=>{
     let b=el.querySelector('.bnav-badge');
@@ -360,6 +365,7 @@ function renderPinnedNav(){
     el.innerHTML=`<span class="bic">${item.icon}</span><span>${item.label}</span>`;
     el.onclick=()=>showView(viewId);
     el.setAttribute('aria-label',item.label);
+    el.classList.toggle('active', viewActive(viewId));
   });
   // hide slots beyond PINNED_VIEWS length
   for(let i=PINNED_VIEWS.length;i<PINNED_NAV_MAX;i++){
@@ -375,7 +381,8 @@ function renderPinnedNav(){
     }).join('');
     extrasBox.querySelectorAll('.bnav-item').forEach(el=>{
       el.onclick=()=>showView(el.dataset.view);
-      el.setAttribute('aria-label',el.dataset.view);
+      el.setAttribute('aria-label',getPinnedOption(el.dataset.view).label);
+      el.classList.toggle('active', viewActive(el.dataset.view));
     });
   }
   if(nav) nav.classList.toggle('extended', PINNED_VIEWS_EXTRA.length>0);
@@ -501,8 +508,10 @@ function renderPinnedNavMainRows(box){
       renderPinnedNavMainRows(box);
     });
   });
-  document.querySelectorAll('.pnav-count-opt').forEach(c=>{
-    c.classList.toggle('sel', Number(c.dataset.count)===__pinnedNavCountDraft);
+  document.querySelectorAll('#pinnedNavCountOptions .pnav-count-opt').forEach(c=>{
+    const selected=Number(c.dataset.count)===__pinnedNavCountDraft;
+    c.classList.toggle('sel', selected);
+    c.setAttribute('aria-pressed', String(selected));
   });
 }
 function openPinnedNavSettings(){
@@ -528,13 +537,16 @@ function openPinnedNavSettings(){
      <div class="pinned-nav-hint">با دکمه‌های اضافه، نوار پایین به دو ردیف تبدیل می‌شود و دکمه‌های اضافه وسط‌چین می‌مانند.</div>`;
   renderPinnedNavMainRows(box);
   renderPinnedNavExtraList();
-  document.querySelectorAll('.pnav-count-opt').forEach(c=>{
-    c.addEventListener('click',()=>{
+  document.querySelectorAll('#pinnedNavCountOptions .pnav-count-opt').forEach(c=>{
+    c.onclick=()=>{
       const n=Number(c.dataset.count);
-      if(n<PINNED_NAV_MIN||n>PINNED_NAV_MAX) return;
+      if(!Number.isInteger(n)||n<PINNED_NAV_MIN||n>PINNED_NAV_MAX) return;
       __pinnedNavCountDraft=n;
       renderPinnedNavMainRows(box);
-    });
+    };
+    c.onkeydown=e=>{
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); c.click(); }
+    };
   });
   document.getElementById('pinnedNavAddExtraBtn')?.addEventListener('click',()=>{
     if(!__pinnedNavExtraDraft) return;
@@ -631,6 +643,9 @@ setInterval(()=>{ if(document.getElementById('view-shop')?.classList.contains('a
 document.querySelectorAll('.chip-group').forEach(g=>{
   g.addEventListener('click', e=>{
     const opt = e.target.closest('.chip-opt'); if(!opt) return;
+    // These calendar filters re-render their own chips after selecting one;
+    // let their stateful handlers manage selection rather than the generic toggle below.
+    if(g.id==='calDayTaskFilters'||g.id==='calDayCategoryFilters') return;
     if(g.id==='taskFilters'){ g.querySelectorAll('.chip-opt').forEach(o=>o.classList.remove('sel')); opt.classList.add('sel'); renderTasks(opt.dataset.f); return; }
     if(g.id==='eDays'){ opt.classList.toggle('sel'); return; }
     if(g.id==='pomoTabs'){ g.querySelectorAll('.chip-opt').forEach(o=>o.classList.remove('sel')); opt.classList.add('sel'); showPomoTab(opt.dataset.pt); return; }
@@ -2950,7 +2965,7 @@ function saveTask(){
   } else {
     DB.tasks.push({id:uid(), done:false, created:todayISO(), ...data});
   }
-  closeModal('taskModalBg'); save(); toast('✅ تسک ذخیره شد');
+  closeModal('taskModalBg'); save(); renderInboxBadges(); toast('✅ تسک ذخیره شد');
   checkCriticalCrisis();
 }
 /* ============ INBOX QUICK CAPTURE (v10.1) ============ */
@@ -2981,6 +2996,7 @@ function saveInboxTask(){
   });
   closeModal('inboxQuickModalBg');
   save();
+  renderInboxBadges();
   toast('📥 به Inbox اضافه شد — بعداً از بخش تسک‌ها کاملش کن');
 }
 function openInboxTaskFromAction(){
@@ -3040,6 +3056,7 @@ function deleteTask(id){
   removeBossTaskRef(id);
   DB.tasks = DB.tasks.filter(x=>x.id!==id);
   save();
+  renderInboxBadges();
   checkCriticalCrisis();
   renderBossContent();
 }
@@ -4664,22 +4681,17 @@ function renderCalendar(){
 
   const dates=weekDates().map(calendarHeaderDate);
   const wISOs=weekDates();
-  // compute per-day task counts (non-inbox, matching that day's date or extraDeadlines, done or not)
-  const dayTaskCount=wISOs.map(iso=>{
-    return DB.tasks.filter(t=>{
-      if(t.inbox) return false;
-      if(t.date===iso) return true;
-      if(Array.isArray(t.extraDeadlines) && t.extraDeadlines.includes(iso)) return true;
-      return false;
-    }).length;
-  });
+  // Day counts use the same date/extra-deadline rule as the panel below.
+  const dayTaskCount=wISOs.map(iso=>tasksForDay(iso).length);
   let head='<div class="lp-cal-head lp-cal-time"></div>';
   const openDayIso = window.__calOpenDayISO || null;
   dayNames.forEach((d,i)=>{
     const cnt=dayTaskCount[i]||0;
     const cntHtml = cnt>0 ? `<span class="lp-cal-day-count">${toFaDigits(String(cnt))}</span>` : '';
-    const openCls = (openDayIso===wISOs[i]) ? ' lp-cal-head-open' : '';
-    head+=`<div class="lp-cal-head${i===today?' today current-day':''}${openCls}" data-cal-head-day="${i}" data-cal-head-iso="${wISOs[i]}" role="button" tabindex="0"><span class="lp-cal-day-name">${cntHtml}${d}</span><span class="lp-cal-head-date" dir="auto">${dates[i]||''}</span>${cnt>0?'<span class="lp-cal-day-taskdot" aria-hidden="true"></span>':''}</div>`;
+    const isOpen=openDayIso===wISOs[i];
+    const openCls = isOpen ? ' lp-cal-head-open' : '';
+    const ariaLabel=`${d} ${dates[i]||''} — ${toFaDigits(String(cnt))} تسک`;
+    head+=`<button type="button" class="lp-cal-head${i===today?' today current-day':''}${openCls}" data-cal-head-day="${i}" data-cal-head-iso="${wISOs[i]}" aria-expanded="${isOpen}" aria-controls="calDayTasksCard" aria-label="${esc(ariaLabel)}"><span class="lp-cal-day-name">${cntHtml}${d}</span><span class="lp-cal-head-date" dir="auto">${dates[i]||''}</span>${cnt>0?'<span class="lp-cal-day-taskdot" aria-hidden="true"></span>':''}</button>`;
   });
 
   const hourClasses=h=>(h>=24?' next-day':'')+(h===24?' midnight':'');
@@ -4702,13 +4714,9 @@ function renderCalendar(){
   cols.forEach(col=>col.querySelectorAll('.lp-cal-slot').forEach(slot=>{
     slot.addEventListener('click',e=>openCalendarSlot(Number(col.dataset.day),Number(slot.dataset.gridHour),e.clientY,slot));
   }));
-  // v16.3: clicking a day header opens that day's dedicated task list
-  document.querySelectorAll('.lp-cal-head[data-cal-head-day]').forEach(h=>{
-    h.addEventListener('click',()=>{
-      const iso=h.dataset.calHeadIso; const di=Number(h.dataset.calHeadDay);
-      if(!iso) return;
-      openCalDayTasks(iso, di);
-    });
+  // Day headers are real buttons: mouse, touch, Enter and Space all open the dedicated day list.
+  document.querySelectorAll('#weekGrid .lp-cal-head[data-cal-head-iso]').forEach(h=>{
+    h.addEventListener('click',()=>openCalDayTasks(h.dataset.calHeadIso, Number(h.dataset.calHeadDay)));
   });
   updateCalendarNowMarker(now);
   const offGrid=[]; // blocks that fall in the 03:00–06:00 gap the grid does not draw
@@ -4768,97 +4776,161 @@ function renderCalendar(){
   if(window.__calOpenDayISO) renderCalDayTasks();
 }
 
-/* ============ CALENDAR PER-DAY TASKS PANEL (v16.3) ============ */
+/* ============ CALENDAR PER-DAY TASKS PANEL (v18) ============ */
 let __calDayTaskFilter = 'all';
+let __calDayCategoryFilter = null;
+const CAL_DAY_TASK_FILTERS = ['all','notstarted','inprogress','queued','paused','done'];
 function tasksForDay(iso){
+  if(!iso || !Array.isArray(DB.tasks)) return [];
   return DB.tasks.filter(t=>{
-    if(t.inbox) return false;
-    if(t.date===iso) return true;
-    if(Array.isArray(t.extraDeadlines) && t.extraDeadlines.includes(iso)) return true;
-    return false;
+    if(!t || t.inbox) return false;
+    return t.date===iso || (Array.isArray(t.extraDeadlines) && t.extraDeadlines.includes(iso));
   });
 }
 function isoToCalDayTitle(iso){
   try{
     const parts=String(iso||'').split('-').map(Number);
-    if(parts.length!==3||parts.some(n=>!Number.isFinite(n))) return iso||'';
+    if(parts.length!==3||parts.some(n=>!Number.isFinite(n))) return {weekday:'',long:iso||''};
     const d=new Date(parts[0],parts[1]-1,parts[2],12);
+    if(Number.isNaN(d.getTime())) return {weekday:'',long:iso||''};
     const wd=(d.getDay()+1)%7;
     const txt=d.toLocaleDateString('fa-IR',{day:'numeric',month:'long',year:'numeric'});
-    return {weekday:dayNames[wd], long:txt};
-  }catch(_){ return {weekday:'', long:iso||''}; }
+    return {weekday:dayNames[wd],long:txt};
+  }catch(_){ return {weekday:'',long:iso||''}; }
 }
 function openCalDayTasks(iso, dayIdx){
-  window.__calOpenDayISO = iso;
-  __calDayTaskFilter = 'all';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(iso||''))) return;
+  if(window.__calOpenDayISO!==iso){
+    __calDayTaskFilter='all';
+    __calDayCategoryFilter=null;
+  }
+  window.__calOpenDayISO=iso;
   const card=document.getElementById('calDayTasksCard');
   if(card) card.style.display='';
-  renderCalDayTasks();
-  // re-render calendar so the header gets the "open" highlight + counts stay correct
-  // (header classes are already set above; but we still want smooth scroll to panel)
-  setTimeout(()=>{
-    card?.scrollIntoView?.({behavior:'smooth',block:'start'});
-  },60);
+  // Rebuild the headers as well as the list; this keeps the selected day highlight,
+  // task dots/counts and aria-expanded state in sync with the open panel.
+  if(viewActive('calendar')) renderCalendar();
+  else renderCalDayTasks();
+  setTimeout(()=>card?.scrollIntoView?.({behavior:'smooth',block:'start'}),60);
 }
 function closeCalDayTasks(){
-  window.__calOpenDayISO = null;
+  window.__calOpenDayISO=null;
   const card=document.getElementById('calDayTasksCard');
   if(card) card.style.display='none';
-  // refresh calendar header open states
   if(viewActive('calendar')) renderCalendar();
 }
 function openTaskForDayFromCal(){
   const iso=window.__calOpenDayISO;
   if(!iso) return;
-  // pre-set the date before opening the modal so the "new task" form picks it up
+  // The ordinary task editor is reused, with only its first deadline pre-filled.
   const dateIn=document.getElementById('tDate');
-  const dateDisp=document.getElementById('tDateDisplay');
-  if(dateIn) dateIn.value = iso;
-  if(dateDisp) dateDisp.value = isoToJalaliText(iso);
-  // add a flag so openTaskModal (new-task path) does not wipe our pre-set date
-  window.__taskPrefillDate = iso;
+  const dateDisplay=document.getElementById('tDateDisplay');
+  if(dateIn) dateIn.value=iso;
+  if(dateDisplay) dateDisplay.value=isoToJalaliText(iso);
+  window.__taskPrefillDate=iso;
   openTaskModal();
-  window.__taskPrefillDate = null;
+  window.__taskPrefillDate=null;
+}
+function filterCalDayTasks(tasks){
+  let list=sortTasks(tasks);
+  if(__calDayTaskFilter==='done') list=list.filter(t=>t.done);
+  else{
+    list=list.filter(t=>!t.done);
+    if(__calDayTaskFilter!=='all') list=list.filter(t=>(t.status||'notstarted')===__calDayTaskFilter);
+  }
+  if(__calDayCategoryFilter) list=list.filter(t=>(t.cat||'').trim()===__calDayCategoryFilter);
+  return list;
+}
+function renderCalDayCategories(tasks){
+  const el=document.getElementById('calDayCategoryFilters');
+  if(!el) return;
+  const cats=[...new Set(tasks.filter(t=>!t.done && t.cat && t.cat.trim()).map(t=>t.cat.trim()))];
+  if(__calDayCategoryFilter && !cats.includes(__calDayCategoryFilter)) __calDayCategoryFilter=null;
+  const allHtml=`<div class="chip-opt cat-folder ${!__calDayCategoryFilter?'sel':''}" data-cat-index="" role="button" tabindex="0">📁 همه پوشه‌ها</div>`;
+  const catHtml=cats.map((cat,i)=>{
+    const col=colorForCategory(cat);
+    const selected=__calDayCategoryFilter===cat;
+    return `<div class="chip-opt cat-folder ${selected?'sel':''}" data-cat-index="${i}" role="button" tabindex="0" style="${selected?`border-color:${col};color:${col};background:${col}18;`:''}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};margin-left:6px;"></span>${esc(cat)}</div>`;
+  }).join('');
+  el.innerHTML=allHtml+catHtml;
+  el.querySelectorAll('.cat-folder').forEach(opt=>{
+    const choose=()=>{
+      const i=opt.dataset.catIndex;
+      __calDayCategoryFilter=i===''?null:(cats[Number(i)]||null);
+      renderCalDayTasks();
+    };
+    opt.onclick=choose;
+    opt.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); choose(); } };
+  });
+}
+function pickRandomCalDayTask(){
+  const iso=window.__calOpenDayISO;
+  if(!iso) return;
+  const pool=filterCalDayTasks(tasksForDay(iso)).filter(t=>!t.done);
+  if(!pool.length){ toast('🎲 برای این روز تسک بازی پیدا نشد — فیلتر را عوض کن'); return; }
+  const chosen=pool[Math.floor(Math.random()*pool.length)];
+  toast(`🎲 تسک تصادفی: «${chosen.title}»`);
+  openTaskDetails(chosen.id);
 }
 function renderCalDayTasks(){
   const iso=window.__calOpenDayISO;
   const card=document.getElementById('calDayTasksCard');
   if(!card || !iso) return;
-  if(card.style.display==='none') card.style.display='';
+  card.style.display='';
+  const all=tasksForDay(iso);
+  const active=all.filter(t=>!t.done);
+  const done=all.filter(t=>t.done);
+  const counts={
+    all:active.length,
+    notstarted:active.filter(t=>(t.status||'notstarted')==='notstarted').length,
+    inprogress:active.filter(t=>(t.status||'notstarted')==='inprogress').length,
+    queued:active.filter(t=>(t.status||'notstarted')==='queued').length,
+    paused:active.filter(t=>(t.status||'notstarted')==='paused').length,
+    done:done.length
+  };
+
   const info=isoToCalDayTitle(iso);
   const titleEl=document.getElementById('calDayTasksTitle');
   const dateEl=document.getElementById('calDayTasksDate');
-  const subEl=document.getElementById('calDayTasksSub');
-  if(titleEl) titleEl.textContent = `${info.weekday} — لیست کارها`;
-  if(dateEl){
-    const dObj=new Date(iso+'T12:00:00');
-    const wd=(dObj.getDay()+1)%7;
-    dateEl.textContent = ['ش','ی','د','س','چ','پ','ج'][wd]||'';
-  }
-  const all=tasksForDay(iso);
-  const done=all.filter(t=>t.done).length;
-  if(subEl) subEl.textContent = `${info.long} · ${toFaDigits(String(all.length))} تسک (${toFaDigits(String(done))} انجام‌شده)`;
+  if(titleEl) titleEl.textContent='کارهای این روز';
+  if(dateEl) dateEl.textContent=info.weekday ? ({'شنبه':'ش','یکشنبه':'ی','دوشنبه':'د','سه‌شنبه':'س','چهارشنبه':'چ','پنجشنبه':'پ','جمعه':'ج'}[info.weekday]||'📅') : '📅';
+  const subDate=document.getElementById('calDayTasksSubDate');
+  const subOpen=document.getElementById('calDayTasksSubOpen');
+  if(subDate) subDate.textContent=info.long;
+  if(subOpen) subOpen.textContent=`${toFaDigits(String(active.length))} تسک`;
 
-  // wire filter chips
-  document.querySelectorAll('#calDayTaskFilters .chip-opt').forEach(c=>{
-    c.classList.toggle('sel', c.dataset.cf===__calDayTaskFilter);
-    c.onclick=()=>{ __calDayTaskFilter=c.dataset.cf||'all'; renderCalDayTasks(); };
+  document.querySelectorAll('#calDayTaskFilters .chip-opt[data-cf]').forEach(chip=>{
+    const filter=chip.dataset.cf;
+    const selected=filter===__calDayTaskFilter;
+    chip.classList.toggle('sel',selected);
+    chip.setAttribute('aria-pressed',String(selected));
+    const countEl=filter==='all'?document.getElementById('calDayAllCount'):(filter==='done'?document.getElementById('calDayDoneCount'):null);
+    if(countEl) countEl.textContent=toFaDigits(String(counts[filter]||0));
+    chip.onclick=()=>{
+      if(!CAL_DAY_TASK_FILTERS.includes(filter)) return;
+      __calDayTaskFilter=filter;
+      renderCalDayTasks();
+    };
+    chip.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); chip.click(); } };
   });
-  const doneCountEl=document.getElementById('calDayDoneCount');
-  if(doneCountEl) doneCountEl.textContent = toFaDigits(String(done))+' تسک';
 
-  // filter
-  let list=sortTasks(all);
-  if(__calDayTaskFilter==='done') list=list.filter(t=>t.done);
-  else if(__calDayTaskFilter==='notstarted') list=list.filter(t=>!t.done && (t.status||'notstarted')==='notstarted');
-  else if(__calDayTaskFilter==='inprogress') list=list.filter(t=>!t.done && (t.status||'notstarted')==='inprogress');
-  // 'all' shows all
-
+  renderCalDayCategories(all);
+  const list=filterCalDayTasks(all);
   const listEl=document.getElementById('calDayTasksList');
   if(!listEl) return;
-  listEl.innerHTML = list.length
-    ? list.map(taskRow).join('')
-    : `<div class="empty"><div class="ic">${__calDayTaskFilter==='done'?'✅':'📭'}</div>${__calDayTaskFilter==='done'?'هنوز تسکی کامل نکردی':'برای این روز تسکی نیست — از دکمه‌ی «تسک جدید» اضافه کن'}</div>`;
+  const randomBtn=document.getElementById('calDayTasksRandomBtn');
+  if(randomBtn) randomBtn.disabled=!filterCalDayTasks(all).some(t=>!t.done);
+  if(list.length){
+    // Use exactly the same task row renderer and handlers as the main Tasks view.
+    listEl.innerHTML=list.map(taskRow).join('');
+  }else{
+    const message=__calDayTaskFilter==='done'
+      ? 'برای این روز هنوز تسک تکمیل‌شده‌ای نیست'
+      : (__calDayTaskFilter==='all'
+        ? 'برای این روز تسکی نیست — از دکمه‌ی «تسک جدید» اضافه کن'
+        : 'در این فیلتر برای این روز تسکی نیست');
+    listEl.innerHTML=`<div class="empty"><div class="ic">${__calDayTaskFilter==='done'?'✅':'📭'}</div>${message}</div>`;
+  }
 }
 
 /* ============ CHARTS (self-contained, no external library) ============ */
@@ -5009,8 +5081,9 @@ function buildBackupPayload(){
     fontSize:localStorage.getItem('lifePlannerFontSize_v2')||localStorage.getItem('lifePlannerFontSize_v1')||'medium',
     activeTheme:localStorage.getItem(THEME_KEY)||'dark',
     uiScale:localStorage.getItem('lifePlannerUIScale_v1')||'medium',
-    pinnedNav:(()=>{try{return JSON.parse(localStorage.getItem(PINNED_NAV_KEY)||'null')}catch(_){return null}})(),
-    pinnedNavExtra:(()=>{try{return JSON.parse(localStorage.getItem(PINNED_NAV_EXTRA_KEY)||'null')}catch(_){return null}})(),
+    pinnedNav:[...PINNED_VIEWS],
+    pinnedNavCount:PINNED_VIEW_COUNT,
+    pinnedNavExtra:[...PINNED_VIEWS_EXTRA],
     /* v16.2: the Performance switch travels with the backup like the other UI settings */
     perfMode:localStorage.getItem('lifePlannerPerfMode_v1')||''
   };
@@ -5058,9 +5131,26 @@ document.getElementById('importFile').onchange = (e)=>{
         if(restoredUI.fontSize) localStorage.setItem('lifePlannerFontSize_v2',restoredUI.fontSize);
         if(restoredUI.uiScale) localStorage.setItem('lifePlannerUIScale_v1',restoredUI.uiScale);
         if(restoredUI.activeTheme && THEME_META[restoredUI.activeTheme]) useTheme(restoredUI.activeTheme);
-        if(Array.isArray(restoredUI.pinnedNav) && restoredUI.pinnedNav.length===4) localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(restoredUI.pinnedNav));
-        if(Array.isArray(restoredUI.pinnedNavExtra) && restoredUI.pinnedNavExtra.length<=PINNED_NAV_EXTRA_MAX) localStorage.setItem(PINNED_NAV_EXTRA_KEY,JSON.stringify(restoredUI.pinnedNavExtra));
+        if(Array.isArray(restoredUI.pinnedNav)){
+          const restoredNav=restoredUI.pinnedNav;
+          const validNav=restoredNav.length>=PINNED_NAV_MIN && restoredNav.length<=PINNED_NAV_MAX &&
+            restoredNav.every(id=>PINNED_NAV_OPTIONS.some(o=>o.id===id)) &&
+            new Set(restoredNav).size===restoredNav.length;
+          if(validNav){
+            const requestedCount=Number(restoredUI.pinnedNavCount);
+            const count=Number.isInteger(requestedCount) && requestedCount>=PINNED_NAV_MIN && requestedCount<=PINNED_NAV_MAX
+              ? Math.min(requestedCount,restoredNav.length) : restoredNav.length;
+            const selected=restoredNav.slice(0,count);
+            localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(selected));
+            localStorage.setItem(PINNED_NAV_COUNT_KEY,String(selected.length));
+          }
+        }
+        if(Array.isArray(restoredUI.pinnedNavExtra) && restoredUI.pinnedNavExtra.length<=PINNED_NAV_EXTRA_MAX){
+          localStorage.setItem(PINNED_NAV_EXTRA_KEY,JSON.stringify(restoredUI.pinnedNavExtra));
+        }
         PINNED_VIEWS=getPinnedNav();
+        PINNED_VIEW_COUNT=PINNED_VIEWS.length;
+        localStorage.setItem(PINNED_NAV_COUNT_KEY,String(PINNED_VIEW_COUNT));
         PINNED_VIEWS_EXTRA=getPinnedNavExtra();
         /* v16.2: restore the Performance switch (js/v162.js applies the class) */
         if(restoredUI.perfMode) localStorage.setItem('lifePlannerPerfMode_v1',restoredUI.perfMode);
@@ -5243,7 +5333,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='17.2';
+const LP_APP_VERSION='18.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

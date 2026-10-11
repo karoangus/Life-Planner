@@ -1714,10 +1714,33 @@ html[data-lang="en"] .ev-block.has-desc::after{left:auto;right:3px;}
 }
 .pinned-nav-count-row .chip-opt{padding:6px 14px; font-size:12px;}
 
-/* ============ v16.3: calendar day tasks panel & clickable headers ============ */
-.lp-cal-head{cursor:pointer; user-select:none; position:relative; transition:background .15s, color .15s;}
-.lp-cal-head:hover{background:rgba(0,229,255,.08);}
-.lp-cal-head.lp-cal-head-open{background:rgba(0,229,255,.14); color:var(--neon);}
+/* ============ v18: interactive calendar day task panel ============ */
+.lp-cal-header > .lp-cal-head:not(.lp-cal-time){
+  appearance:none; -webkit-appearance:none; display:flex; width:100%; height:100%;
+  margin:0; padding:3px 2px; border:0; border-left:1px solid var(--line); border-radius:0;
+  background:transparent; color:var(--txt-dim); font-family:inherit; font-size:11px; font-weight:800; line-height:normal; letter-spacing:.1px; text-align:center;
+  cursor:pointer; user-select:none; position:relative; transition:background .15s, color .15s;
+}
+.lp-cal-header > .lp-cal-head:hover{background:rgba(0,229,255,.08);}
+.lp-cal-header > .lp-cal-head.today{color:var(--neon);}
+.lp-cal-header > .lp-cal-head.lp-cal-head-open{background:rgba(0,229,255,.14);color:var(--neon);}
+.lp-cal-head:focus-visible{outline:2px solid var(--neon);outline-offset:-2px;z-index:2;}
+.cal-day-tasks-head{flex-wrap:wrap;}
+.cal-day-tasks-heading{display:flex;align-items:center;gap:10px;min-width:0;}
+.cal-day-tasks-heading-copy{min-width:0;}
+.cal-day-tasks-heading-copy h3{margin:0;font-size:15px;}
+.cal-day-tasks-summary{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;margin-top:2px;}
+.cal-day-tasks-summary span+span::before{content:"·";margin-inline-end:6px;color:var(--txt-dim2);}
+.cal-day-tasks-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.cal-day-task-filters{margin-bottom:10px;margin-top:12px;}
+.cal-day-task-filters .chip-count{font-size:9.5px;padding:1px 6px;}
+.cal-day-category-filters{margin-bottom:14px;}
+#calDayTasksRandomBtn:disabled{opacity:.45;cursor:not-allowed;filter:saturate(.6);}
+@media(max-width:480px){
+  .cal-day-tasks-actions{margin-inline-start:auto;}
+  .cal-day-tasks-actions .btn{padding:7px 9px;font-size:11px;}
+  .cal-day-tasks-date{width:36px;height:36px;}
+}
 .lp-cal-head .lp-cal-day-taskdot{
   position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
   width:4px; height:4px; border-radius:50%; background:var(--neon); opacity:.7;
