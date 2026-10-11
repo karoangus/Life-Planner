@@ -1671,3 +1671,71 @@ html[data-lang="en"] .ev-block.has-desc::after{left:auto;right:3px;}
 /* description shown inside the block's action sheet */
 .lp-ev-desc{margin:10px 0 4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);color:var(--txt);
   font-size:13px;line-height:1.9;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;max-height:38vh;overflow:auto;text-align:start;}
+
+/* ============ NEW v16.3: Inbox red badge ============ */
+.chip-count-red{
+  background:#ff4d5e !important;
+  color:#fff !important;
+  border-color:#ff4d5e !important;
+  box-shadow:0 0 0 0 rgba(255,77,94,.5);
+  animation: lp-inbox-pulse 1.8s infinite;
+}
+.chip-opt.sel .chip-count-red{
+  background:#ff4d5e !important;
+  color:#fff !important;
+  border-color:#ff4d5e !important;
+}
+@keyframes lp-inbox-pulse{
+  0%{ box-shadow:0 0 0 0 rgba(255,77,94,.45); }
+  70%{ box-shadow:0 0 0 8px rgba(255,77,94,0); }
+  100%{ box-shadow:0 0 0 0 rgba(255,77,94,0); }
+}
+.bnav-badge{
+  position:absolute; top:-2px; right:4px;
+  min-width:16px; height:16px; padding:0 4px; border-radius:8px;
+  background:#ff4d5e; color:#fff; font-size:9px; font-weight:900;
+  display:inline-flex; align-items:center; justify-content:center;
+  box-shadow:0 0 0 2px var(--bg2);
+  line-height:1; z-index:2;
+}
+.bnav-item{position:relative;}
+.dash-q{position:relative;}
+.icon-btn{position:relative;}
+.icon-btn .bnav-badge{top:-4px; right:-4px; box-shadow:0 0 0 2px var(--bg);}
+
+/* ============ v16.3: bottom-nav slot count (2/3/4) ============ */
+.bottom-nav[data-slot-count="2"] .bnav-item{flex:0 1 auto; min-width:72px;}
+.bottom-nav[data-slot-count="2"] #bnav-slot2, .bottom-nav[data-slot-count="2"] #bnav-slot3{display:none;}
+.bottom-nav[data-slot-count="3"] #bnav-slot3{display:none;}
+.pinned-nav-count-row{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:8px; padding:8px 10px; margin-bottom:10px;
+  border:1px solid var(--line2); border-radius:12px; background:var(--panel2);
+}
+.pinned-nav-count-row .chip-opt{padding:6px 14px; font-size:12px;}
+
+/* ============ v16.3: calendar day tasks panel & clickable headers ============ */
+.lp-cal-head{cursor:pointer; user-select:none; position:relative; transition:background .15s, color .15s;}
+.lp-cal-head:hover{background:rgba(0,229,255,.08);}
+.lp-cal-head.lp-cal-head-open{background:rgba(0,229,255,.14); color:var(--neon);}
+.lp-cal-head .lp-cal-day-taskdot{
+  position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
+  width:4px; height:4px; border-radius:50%; background:var(--neon); opacity:.7;
+}
+.lp-cal-head .lp-cal-day-count{
+  display:inline-block; min-width:16px; height:14px; padding:0 4px; border-radius:7px;
+  background:var(--neon-15,rgba(0,229,255,.15)); color:var(--neon);
+  font-size:8.5px; font-weight:900; line-height:14px; margin-right:2px;
+}
+.cal-day-tasks-card{margin-top:14px;}
+.cal-day-tasks-head{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.cal-day-tasks-date{
+  width:40px; height:40px; border-radius:12px;
+  background:rgba(0,229,255,.1); color:var(--neon);
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:16px; font-weight:900; flex-shrink:0;
+}
+.pinned-nav-main-head{
+  font-size:12px; font-weight:800; color:var(--txt-dim);
+  padding:6px 2px 8px;
+}

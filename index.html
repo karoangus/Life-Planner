@@ -188,7 +188,7 @@ try{
         <div class="chip-group lp-task-tabs" style="margin-bottom:12px;" id="taskFilters">
           <div class="chip-opt sel" data-f="all">📁 همه</div>
           <div class="chip-opt" data-f="notstarted">⬜ شروع نشده</div>
-          <div class="chip-opt" data-f="inbox">📥 Inbox</div>
+          <div class="chip-opt" data-f="inbox">📥 Inbox <span class="chip-count chip-count-red num" id="inboxCount">۰</span></div>
           <div class="chip-opt" data-f="done">✅ تکمیل‌شده <span class="chip-count num" id="completedCount">۰ تسک</span></div>
         </div>
         <div class="chip-group" style="margin-bottom:16px;" id="categoryFilters"></div>
@@ -208,6 +208,28 @@ try{
       </div>
       <div class="card calendar-card">
         <div id="weekGrid"></div>
+      </div>
+      <div class="card cal-day-tasks-card" id="calDayTasksCard" style="display:none;">
+        <div class="cal-day-tasks-head">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <div class="cal-day-tasks-date" id="calDayTasksDate">📅</div>
+            <div style="min-width:0;">
+              <h3 id="calDayTasksTitle" style="margin:0;font-size:15px;">تسک‌های روز</h3>
+              <div class="muted" id="calDayTasksSub" style="font-size:11.5px;margin-top:2px;"></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <button class="btn ghost sm" type="button" id="calDayTasksAddBtn" onclick="openTaskForDayFromCal()">➕ تسک جدید</button>
+            <button class="btn ghost sm" type="button" id="calDayTasksClose" onclick="closeCalDayTasks()">✕</button>
+          </div>
+        </div>
+        <div class="chip-group lp-task-tabs" style="margin-bottom:12px;margin-top:10px;" id="calDayTaskFilters">
+          <div class="chip-opt sel" data-cf="all">📁 همه</div>
+          <div class="chip-opt" data-cf="notstarted">⬜ شروع نشده</div>
+          <div class="chip-opt" data-cf="inprogress">▶️ در حال انجام</div>
+          <div class="chip-opt" data-cf="done">✅ انجام شده <span class="chip-count num" id="calDayDoneCount">۰</span></div>
+        </div>
+        <div id="calDayTasksList"></div>
       </div>
     </div>
 
@@ -895,7 +917,7 @@ try{
 
       <div class="card settings-card">
         <div class="card-head"><h3>📱 نوار پایین</h3></div>
-        <p class="muted settings-help">چهار میانبر پایین برنامه را هر طور که می‌خواهی بچین.</p>
+        <p class="muted settings-help">تعداد دکمه‌های نوار پایین را از ۲ تا ۴ انتخاب کن و به دلخواه بچین. می‌توانی تا ۵ دکمه اضافه هم بزنی.</p>
         <button class="btn" style="width:100%;justify-content:center;" onclick="openSettingsNav()">🛠️ شخصی‌سازی نوار پایین</button>
       </div>
 
@@ -1194,10 +1216,18 @@ try{
 <div class="modal-bg" id="pinnedNavModalBg">
   <div class="modal" style="max-width:430px;">
     <h2 style="text-align:center;">📌 نوار دسترسی سریع</h2>
-    <p style="text-align:center;color:var(--txt-dim);font-size:12px;line-height:1.8;margin:6px 0 14px;">
-      چهار دکمه پایین برنامه رو خودت انتخاب کن؛ چیزهایی که بیشتر استفاده می‌کنی همیشه دم دستت باشن.
-      می‌تونی تا ۵ دکمه اضافه هم اضافه کنی تا نوار پایین به دو ردیف وسط‌چین تبدیل بشه.
+    <p style="text-align:center;color:var(--txt-dim);font-size:12px;line-height:1.8;margin:6px 0 10px;">
+      تعداد دکمه‌های ردیف اصلی نوار پایین را از ۲ تا ۴ انتخاب کن و هر دکمه را به دلخواه تنظیم کن.
+      می‌توانی تا ۵ دکمه اضافه هم بزنی تا نوار پایین به دو ردیف وسط‌چین تبدیل شود.
     </p>
+    <div class="pinned-nav-count-row">
+      <span style="font-size:12px;font-weight:700;">تعداد دکمه‌های ردیف اصلی:</span>
+      <div class="chip-group" style="display:inline-flex;">
+        <div class="chip-opt pnav-count-opt" data-count="2">۲</div>
+        <div class="chip-opt" data-count="3">۳</div>
+        <div class="chip-opt sel" data-count="4">۴</div>
+      </div>
+    </div>
 
     <div id="pinnedNavEditor" class="pinned-nav-editor"></div>
 
