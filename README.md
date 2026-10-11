@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-18.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 18.0" />
+  <img src="https://img.shields.io/badge/نسخه-18.1-00e5ff?style=for-the-badge&logoColor=white" alt="Version 18.1" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -154,7 +154,7 @@ https://karoangus.github.io/Life-Planner/
 
 ### 4. 📅 تقویم تعاملی و زمان‌بندی هوشمند
 - تقویم جلالی (شمسی) و میلادی کامل و دقیق.
-- **فهرست مستقل تسک‌های هر روز (جدید در v18):** با زدن روی سربرگ روز، فهرستی جداگانه با همان کارت‌های تسک، اولویت، وضعیت، زیرتسک، دسته‌بندی، تکمیل، ویرایش و حذف باز می‌شود؛ افزودن تسک هم ددلاین همان روز را از قبل انتخاب می‌کند.
+- **«برنامه روز» — دفترچه‌ی مستقل هر روزِ تقویم (بازطراحی‌شده در v18.1):** با زدن روی سربرگ هر روز، یک چک‌لیست سبکِ مخصوص همان روز باز می‌شود که **کاملاً جدا از بخش تسک‌های اصلی** است و در `DB.dayPlans` ذخیره می‌شود: خبری از Inbox، وضعیت‌های کاری، دسته‌بندی، زیرتسک و XP نیست. افزودن سریع با تشخیص خودکارِ ساعت (`۱۴:۳۰ تمرین پیانو`) و علامتِ مهم (`!خرید نان`)، نوار پیشرفتِ روز، نشانِ تعدادِ کارهای مانده روی سربرگِ روز، مرتب‌سازی با کشیدن، انتقال به فردا، انتقالِ مانده‌های دیروز، کپیِ برنامه‌ی دیروز، ویرایشِ درجا، یادداشتِ روز، حذفِ انجام‌شده‌ها با امکانِ برگرداندن، و پنجره‌ی اختیاریِ «ددلاین‌های تسک‌های اصلی» (فقط نمایش).
 - **بلوک‌بندی ساعتی ۶ صبح تا ۳ بامداد (جدید در v17.1):** هر ستونِ روز ۲۱ بلوک یک‌ساعته دارد که از ۰۶:۰۰ شروع می‌شود و تا ۰۳:۰۰ بامدادِ روز بعد ادامه دارد؛ ساعت‌های بعد از نیمه‌شب با رنگ بنفش جدا شده‌اند و رویدادهای شبانه یک‌تکه کشیده می‌شوند.
 - **نشانگر دقیق زمان و افزودن سریع (جدید در v17.2):** خط زمانِ فعلی دقیقه‌به‌دقیقه و هم‌زمان با رفتن به ساعت بعد جابه‌جا می‌شود؛ تاریخ جلالی هر روز هم در سربرگ دیده می‌شود. روی بخش خالی هر ساعت بزن تا فرم «رویداد جدید» با روز و زمان همان بخش آماده شود.
 - **کشیدن و رها کردن رویدادها (Drag & Drop):** تغییر زمان یا روز رویدادها با نگه‌داشتن و کشیدن در شبکه هفتگی، همراه با اسنپ ۱۵ دقیقه‌ای و بررسی تداخل ساعت‌ها.
@@ -286,13 +286,13 @@ npm test
 
 هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **هر پنج جا با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"18.0"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '18.0';`
-3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"18.0.0"`).
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"18.1"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '18.1';`
+3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"18.1.0"`).
 4. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 5. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v73';
+   const CACHE_NAME = 'life-planner-cache-v74';
    ```
 
 > ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ همه‌ی تست‌ها باید سبز باشند.
@@ -300,6 +300,18 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 18.1 — «برنامه روز»: دفترچه‌ی مستقل هر روزِ تقویم
+- 🗒️ **کاملاً جدا از بخش تسک‌ها:** پنلی که با زدن روی نام هر روز باز می‌شود دیگر هیچ ارتباطی با تسک‌های اصلی ندارد. داده‌هایش در `DB.dayPlans` و جداگانه برای هر تاریخ ذخیره می‌شوند؛ تیک زدن اینجا نه XP می‌دهد، نه استریک را تغییر می‌دهد و نه روی بخش تسک‌ها اثری می‌گذارد.
+- 🧹 **حذفِ چیزهای اضافی:** Inbox، وضعیت‌های کاری (در حال انجام / در صف / متوقف)، فیلتر دسته‌بندی، انتخاب تصادفی و فرمِ سنگینِ ویرایش تسک از این پنل حذف شدند. اینجا فقط «این روز چه کارهایی دارم؟» است — نه چیز دیگر.
+- ⚡ **افزودن سریع با تشخیص هوشمند:** یک خط بنویس و Enter بزن. ساعت را اول بنویس (`۱۴:۳۰ تمرین پیانو` یا `ساعت ۸ ورزش`) تا خودش در زمان درستِ لیست بنشیند؛ علامت `!` هم کار را «مهم» می‌کند (`!خرید نان`). اعداد فارسی و انگلیسی هر دو پذیرفته می‌شوند.
+- 📊 **پیشرفتِ روز:** نوار و درصدِ انجام‌شده بالای لیست، و روی سربرگِ هر روز در تقویم تعدادِ کارهای مانده دیده می‌شود؛ وقتی همه انجام شوند، نشانِ روز به یک تیک سبز تبدیل می‌شود.
+- 🤏 **مرتب‌سازی با کشیدن:** دستگیره‌ی هر ردیف را نگه‌دار و بکش (یا با فلش‌های بالا/پایینِ صفحه‌کلید) تا ترتیبِ روزت را خودت بچینی.
+- ➡️ **انتقال به فردا و انتقال مانده‌های دیروز:** هر کاری را با یک لمس به روز بعد بفرست، یا مانده‌های دیروز را یک‌جا به امروز بیاور؛ «کپی برنامه‌ی دیروز» هم برای روزهای تکراری هست.
+- ✏️ **ویرایش درجا، یادداشت روز و undo:** روی عنوان بزن تا همان‌جا ویرایش شود، برای هر روز یک یادداشت بنویس، انجام‌شده‌ها را یک‌جا پاک کن و اگر پشیمان شدی با دکمه‌ی «برگرداندنِ» پیام، همه را برگردان.
+- 👀 **ددلاین تسک‌های اصلی، فقط در صورت نیاز:** اگر تسکِ اصلی‌ای برای آن روز ددلاین داشته باشد، یک دکمه‌ی کوچک تعدادش را نشان می‌دهد؛ با زدنش فقط «نمایش» داده می‌شود (خواندنی) و همچنان تسکِ اصلی باقی می‌ماند.
+- 🐞 **رفع باگ‌ها:** زدنِ دوباره روی همان روز پنل را می‌بندد (قبلاً فقط باز می‌کرد)، روزِ انتخاب‌شده از هفته‌ی قبل دیگر یک پنلِ خالی و بی‌ربط باز نمی‌گذارد، تعدادِ روزها دیگر با هر ذخیره دوبار محاسبه نمی‌شود، و افزودن کار باعث پرشِ صفحه نمی‌شود.
+- 🌐 **ترجمه‌ی انگلیسی کامل:** همه‌ی متن‌های جدیدِ این بخش در حالت English ترجمه شده‌اند.
 
 ### ✨ نسخه 18.0
 - 🔴 **شمارنده‌ی زنده‌ی Inbox:** کنار تب Inbox در بخش تسک‌ها، تعداد تسک‌های داخل صندوق با نشان قرمز نمایش داده می‌شود و با افزودن، ویرایش یا حذف تسک بلافاصله به‌روز می‌شود.
@@ -417,7 +429,7 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
-- **📅 Per-day calendar Tasks (new in v18):** Tap a weekday header to open a separate, date-scoped task list with the same task cards, priorities, status/category filters, quick-add, random pick, completion, editing and delete actions as the main Tasks view.
+- **🗒️ “Day plan” — the calendar's own per-day notebook (redesigned in v18.1):** Tap a weekday header to open a lightweight checklist for that day which is **completely separate from the main Tasks section** and stored in `DB.dayPlans`: no Inbox, no workflow statuses, no categories, no subtasks and no XP. Quick-add with automatic time parsing (`14:30 piano practice`) and an importance marker (`!buy bread`), a per-day progress bar, a remaining-count badge on every day header, drag-to-reorder, move to tomorrow, carry over yesterday's leftovers, copy yesterday's plan, inline editing, a per-day note, clear-completed with undo, and an optional read-only strip for main-task deadlines.
 - **🔴 Live Inbox count (new in v18):** The Tasks Inbox tab shows a red, immediately refreshed count of items waiting in the Inbox.
 - **📱 Two-button quick bar (new in v18):** Choose 2, 3 or 4 main shortcuts; the two-button setting keeps exactly two shortcuts plus More. Extra second-row links remain optional, and the choice is backed up.
 - **🌴 Time off for quests (new in v17):** A single tick named «🌴 مرخصی» (Time off) under the quest card pauses the random quests completely — no new quest, no timer, no notification and **no XP deducted**, not even for the quest you were holding. Untick it and the next quest arrives after the usual short 5-minute break. The choice is saved with your data and travels inside the backup file.

@@ -205,40 +205,65 @@ try{
         <div class="top-actions"><button class="btn ghost calendar-now-btn" type="button" onclick="scrollCalendarToNow()">🕒 الان</button><button class="btn ghost" onclick="openCatManager()">🏷️ دسته‌ها</button><button class="btn" onclick="openEventModal()">➕ رویداد جدید</button></div>
       </div>
       <div class="calendar-intro" aria-label="راهنمای تقویم">
-        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><strong>هفته‌ات را یک‌جا ببین</strong><span>هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود. برای افزودن سریع رویداد، روی خانه‌ی خالی بزن.</span></div></div>
+        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><strong>هفته‌ات را یک‌جا ببین</strong><span>هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود. برای افزودن سریع رویداد، روی خانه‌ی خالی بزن.</span><span class="calendar-intro-plan">برای نوشتن کارهای هر روز، روی نام آن روز بزن — «برنامه روز» جدا از تسک‌های اصلی است.</span></div></div>
         <div class="calendar-legend"><span><i class="legend-dot legend-dot-event"></i>رویداد</span><span><i class="legend-dot legend-dot-today"></i>امروز</span><span><i class="legend-dot legend-dot-now"></i>زمان فعلی</span><span><i class="legend-dot legend-dot-night"></i>بامداد</span></div>
       </div>
       <div class="card calendar-card">
         <div id="weekGrid"></div>
       </div>
-      <section class="card cal-day-tasks-card" id="calDayTasksCard" style="display:none;" aria-labelledby="calDayTasksTitle">
-        <div class="cal-day-tasks-head">
-          <div class="cal-day-tasks-heading">
-            <div class="cal-day-tasks-date" id="calDayTasksDate" aria-hidden="true">📅</div>
-            <div class="cal-day-tasks-heading-copy">
-              <h3 id="calDayTasksTitle">کارهای این روز</h3>
-              <div class="muted cal-day-tasks-summary" id="calDayTasksSub">
+      <!-- v18.1 «برنامه روز»: a day plan of its own. It is stored per date in
+           DB.dayPlans and is deliberately separate from the main Tasks section
+           (no Inbox, no statuses, no categories, no XP). -->
+      <section class="card cal-day-tasks-card dplan-card" id="calDayTasksCard" style="display:none;" aria-labelledby="calDayTasksTitle">
+        <div class="dplan-head">
+          <div class="dplan-head-main">
+            <div class="dplan-date" id="calDayTasksDate" aria-hidden="true">📅</div>
+            <div class="dplan-head-copy">
+              <h3 id="calDayTasksTitle">برنامه این روز</h3>
+              <div class="muted dplan-summary" id="calDayTasksSub">
+                <span id="calDayTasksSubRel" class="dplan-rel" style="display:none;"></span>
+                <span id="calDayTasksSubDay"></span>
                 <span id="calDayTasksSubDate"></span>
                 <span id="calDayTasksSubOpen"></span>
               </div>
             </div>
           </div>
-          <div class="cal-day-tasks-actions">
-            <button class="btn ghost sm" type="button" id="calDayTasksRandomBtn" onclick="pickRandomCalDayTask()">🎲 رندوم</button>
-            <button class="btn ghost sm" type="button" id="calDayTasksAddBtn" onclick="openTaskForDayFromCal()">➕ تسک جدید</button>
-            <button class="btn ghost sm" type="button" id="calDayTasksClose" onclick="closeCalDayTasks()" aria-label="بستن فهرست روز">✕</button>
+          <div class="dplan-head-actions">
+            <button class="dplan-icon-btn" type="button" id="calDayTasksToggleDone" onclick="toggleDayPlanDone()" aria-pressed="true" title="نمایش یا پنهان کردن انجام‌شده‌ها" aria-label="نمایش یا پنهان کردن انجام‌شده‌ها">👁️</button>
+            <button class="dplan-icon-btn" type="button" id="calDayTasksClose" onclick="closeCalDayTasks()" aria-label="بستن برنامه این روز">✕</button>
           </div>
         </div>
-        <div class="chip-group lp-task-tabs cal-day-task-filters" style="margin-bottom:10px;margin-top:12px;" id="calDayTaskFilters" role="group" aria-label="فیلتر تسک‌های روز">
-          <div class="chip-opt sel" data-cf="all" role="button" tabindex="0">📁 همه <span class="chip-count num" id="calDayAllCount">۰</span></div>
-          <div class="chip-opt" data-cf="notstarted" role="button" tabindex="0">⬜ شروع نشده</div>
-          <div class="chip-opt" data-cf="inprogress" role="button" tabindex="0">▶️ در حال انجام</div>
-          <div class="chip-opt" data-cf="queued" role="button" tabindex="0">📥 در صف</div>
-          <div class="chip-opt" data-cf="paused" role="button" tabindex="0">⏸️ متوقف</div>
-          <div class="chip-opt" data-cf="done" role="button" tabindex="0">✅ تکمیل‌شده <span class="chip-count num" id="calDayDoneCount">۰</span></div>
+
+        <div class="dplan-progress" id="calDayProgressWrap">
+          <div class="dplan-progress-top">
+            <span class="dplan-progress-txt" id="calDayTasksProgressTxt">هنوز کاری ننوشتی</span>
+            <span class="dplan-progress-pct num" id="calDayTasksProgressPct"></span>
+          </div>
+          <div class="dplan-bar"><div class="dplan-bar-fill" id="calDayTasksBar" style="width:0%"></div></div>
         </div>
-        <div class="chip-group cal-day-category-filters" style="margin-bottom:14px;" id="calDayCategoryFilters"></div>
-        <div id="calDayTasksList" aria-live="polite"></div>
+
+        <div class="dplan-add">
+          <input type="text" id="calDayAddInput" class="dplan-add-input" maxlength="120" autocomplete="off"
+                 placeholder="چه کاری برای این روز؟ (مثال: ۱۴:۳۰ تمرین پیانو)"
+                 aria-label="افزودن کار به برنامه این روز">
+          <button class="dplan-add-btn" type="button" id="calDayAddBtn" aria-label="افزودن به برنامه این روز">＋</button>
+        </div>
+        <div class="dplan-hint muted" id="calDayAddHint">زمان را اول بنویس و «!» بگذار برای مهم‌ها — بعد Enter بزن.</div>
+
+        <div class="dplan-quick" id="calDayQuickActions" style="display:none;"></div>
+
+        <div class="dplan-list" id="calDayTasksList" aria-live="polite"></div>
+
+        <div class="dplan-foot">
+          <button class="dplan-foot-btn" type="button" id="calDayClearDoneBtn" onclick="dpClearDone(window.__calOpenDayISO)">🧹 حذف انجام‌شده‌ها</button>
+          <button class="dplan-foot-btn" type="button" id="calDayLinkBtn" onclick="toggleDayPlanLinked()" aria-expanded="false">👀 <span>ددلاین‌های تسک‌های اصلی</span> <span class="num" id="calDayLinkCount">۰</span></button>
+        </div>
+        <div class="dplan-linked" id="calDayLinkedWrap" style="display:none;"></div>
+
+        <details class="dplan-note-wrap" id="calDayNoteWrap">
+          <summary class="dplan-note-sum">📝 یادداشت این روز</summary>
+          <textarea class="dplan-note" id="calDayNoteInput" rows="2" maxlength="600" placeholder="هر چیزی که باید درباره‌ی این روز به خاطر بسپری..."></textarea>
+        </details>
       </section>
     </div>
 
@@ -948,7 +973,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">18.0</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">18.1</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
