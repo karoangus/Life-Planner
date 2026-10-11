@@ -450,7 +450,245 @@ if (!useFallback) {
     v172.english.shortDate==='15 Mehr' && v172.english.slotHint==='Tap to add an event at 10:00' &&
     v172.english.intro.includes('tap an empty time slot'), JSON.stringify(v172.english));
 
+  // ---------- v18: inbox count, reliable two-button quick bar and day task lists ----------
+  const v18 = await page.evaluate(async () => {
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Inbox count updates immediately when quick-capturing and deleting items.
+    const inboxStart = inboxTaskCount();
+    document.getElementById('inboxTitle').value = 'v18 inbox counter one';
+    saveInboxTask();
+    const afterOne = inboxTaskCount();
+    document.getElementById('inboxTitle').value = 'v18 inbox counter two';
+    saveInboxTask();
+    const afterTwo = inboxTaskCount();
+    const inboxChip = document.getElementById('inboxCount');
+    const inboxBadgeOk = afterOne === inboxStart + 1 && afterTwo === inboxStart + 2 &&
+      inboxChip.textContent === toFaDigits(String(afterTwo)) && inboxChip.classList.contains('chip-count-red');
+    DB.tasks.filter(t => t.title === 'v18 inbox counter one' || t.title === 'v18 inbox counter two')
+      .forEach(t => deleteTask(t.id));
+    const inboxCleanupOk = inboxTaskCount() === inboxStart;
+
+    const oldLang=localStorage.getItem('lifePlannerLang_v1');
+    localStorage.setItem('lifePlannerLang_v1','en');
+    const englishDayStrings=lpTranslate('کارهای این روز')==='Tasks for this day' &&
+      lpTranslate('برای این روز تسکی نیست — از دکمه‌ی «تسک جدید» اضافه کن')===
+        'No tasks for this day — add one with “New task”' &&
+      lpTranslate('ردیف اصلی را از ۲ تا ۴ دکمه بچین؛ «۲» یعنی دو میان‌بر به‌علاوه‌ی «بیشتر». دکمه‌های اضافی اختیاری‌اند (حداکثر ۵ تا).')===
+        'Choose 2–4 buttons for the main row; “2” means two shortcuts plus More. Extra buttons are optional (up to 5).';
+    if(oldLang===null) localStorage.removeItem('lifePlannerLang_v1');
+    else localStorage.setItem('lifePlannerLang_v1',oldLang);
+
+    // The count choices are all interactive; saving 2 leaves exactly two main
+    // quick links and the More button, and that choice is included in backups.
+    const savedNav = [...PINNED_VIEWS];
+    const savedNavCount = PINNED_VIEW_COUNT;
+    const savedExtras = [...PINNED_VIEWS_EXTRA];
+    openPinnedNavSettings();
+    document.querySelector('#pinnedNavCountOptions [data-count="2"]').click();
+    const twoDraftOk = __pinnedNavCountDraft === 2 &&
+      document.querySelectorAll('#pinnedNavMainList .pinned-nav-row').length === 2;
+    savePinnedNav();
+    const visibleMainLinks = [...document.querySelectorAll('#bottomNav > .bnav-item[data-view]')]
+      .filter(el => getComputedStyle(el).display !== 'none').length;
+    const navTwoOk = twoDraftOk && PINNED_VIEWS.length === 2 && PINNED_VIEW_COUNT === 2 &&
+      visibleMainLinks === 2 && getComputedStyle(document.getElementById('bnavMoreBtn')).display !== 'none' &&
+      buildBackupPayload().uiSettings.pinnedNavCount === 2 && buildBackupPayload().uiSettings.pinnedNav.length === 2;
+    openPinnedNavSettings();
+    const countOptionsOk = [3,4].every(n => {
+      document.querySelector(`#pinnedNavCountOptions [data-count="${n}"]`).click();
+      return __pinnedNavCountDraft === n &&
+        document.querySelectorAll('#pinnedNavMainList .pinned-nav-row').length === n &&
+        document.querySelector(`#pinnedNavCountOptions [data-count="${n}"]`).classList.contains('sel');
+    });
+    closeModal('pinnedNavModalBg');
+    PINNED_VIEWS = savedNav;
+    PINNED_VIEW_COUNT = savedNavCount;
+    PINNED_VIEWS_EXTRA = savedExtras;
+    localStorage.setItem(PINNED_NAV_KEY, JSON.stringify(savedNav));
+    localStorage.setItem(PINNED_NAV_COUNT_KEY, String(savedNavCount));
+    localStorage.setItem(PINNED_NAV_EXTRA_KEY, JSON.stringify(savedExtras));
+    renderPinnedNav();
+
+    // Isolate the day's list from the main Tasks page while reusing its exact
+    // task rows, priorities, categories, completion, status and detail actions.
+    const originalTasks = DB.tasks;
+    const dayISO = weekDates()[3];
+    const adjacentISO = weekDates()[2];
+    const otherISO = weekDates()[4];
+    const makeTask = (id,title,date,priority,status,cat,extra={}) => ({
+      id,title,date,priority,status,cat,done:false,inbox:false,est:'25',note:'',
+      extraDeadlines:[],subtasks:[],created:todayISO(),...extra
+    });
+    DB.tasks = [
+      makeTask('v18-day-critical','v18 critical task',dayISO,'critical','inprogress','Work',
+        {subtasks:[{id:'v18-sub-1',title:'Step one',done:false},{id:'v18-sub-2',title:'Step two',done:false}]}),
+      makeTask('v18-day-extra','v18 extra-deadline task',adjacentISO,'high','queued','Work',{extraDeadlines:[dayISO]}),
+      makeTask('v18-day-paused','v18 paused task',dayISO,'low','paused','Personal'),
+      makeTask('v18-day-done','v18 completed task',dayISO,'medium','notstarted','Work',{done:true}),
+      makeTask('v18-day-other','v18 other-day task',otherISO,'medium','notstarted','Work'),
+      makeTask('v18-day-inbox','v18 inbox is not scheduled',dayISO,'medium','notstarted','Inbox',{inbox:true})
+    ];
+    // Exercise the real bottom-nav route into Calendar (not just showView()).
+    PINNED_VIEWS=['calendar','tasks'];
+    PINNED_VIEW_COUNT=2;
+    PINNED_VIEWS_EXTRA=[];
+    localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(PINNED_VIEWS));
+    localStorage.setItem(PINNED_NAV_COUNT_KEY,'2');
+    localStorage.setItem(PINNED_NAV_EXTRA_KEY,'[]');
+    renderPinnedNav();
+    document.getElementById('bnav-slot0').click();
+    const bottomNavCalendarActive=document.getElementById('view-calendar').classList.contains('active');
+    renderCalendar();
+    document.querySelector(`#weekGrid [data-cal-head-iso="${dayISO}"]`).click();
+    const initialTitles = [...document.querySelectorAll('#calDayTasksList .task-title')].map(el=>el.textContent.trim());
+    const criticalRow = [...document.querySelectorAll('#calDayTasksList .task-row')]
+      .find(row=>row.textContent.includes('v18 critical task'));
+    const opened = window.__calOpenDayISO===dayISO &&
+      document.getElementById('calDayTasksCard').style.display!=='none' &&
+      document.querySelector(`#weekGrid [data-cal-head-iso="${dayISO}"]`)?.getAttribute('aria-expanded')==='true';
+    document.getElementById('bnav-slot1').click();
+    const calendarLeftViaBottomNav=!document.getElementById('view-calendar').classList.contains('active');
+    document.getElementById('bnav-slot0').click();
+    await wait(100);
+    const bottomNavReturnOk=calendarLeftViaBottomNav &&
+      document.getElementById('view-calendar').classList.contains('active') &&
+      window.__calOpenDayISO===dayISO && document.getElementById('calDayTasksCard').style.display!=='none' &&
+      [...document.querySelectorAll('#calDayTasksList .task-title')].some(el=>el.textContent.includes('v18 critical task'));
+    const sharedTaskRow = !!criticalRow && !!criticalRow.querySelector('.pill.critical') &&
+      !!criticalRow.querySelector('.pill.st-inprogress') && criticalRow.textContent.includes('Work') &&
+      !!criticalRow.querySelector('.subtask-progress') && !!criticalRow.querySelector('.chk');
+    const dayScopeOk = initialTitles.includes('v18 critical task') &&
+      initialTitles.includes('v18 extra-deadline task') && initialTitles.includes('v18 paused task') &&
+      !initialTitles.includes('v18 completed task') && !initialTitles.includes('v18 other-day task') &&
+      !initialTitles.includes('v18 inbox is not scheduled') &&
+      document.getElementById('calDayDoneCount').textContent==='۱';
+
+    document.querySelector('#calDayTaskFilters [data-cf="queued"]').click();
+    const queuedFilterOk = document.querySelectorAll('#calDayTasksList .task-row').length===1 &&
+      document.querySelector('#calDayTasksList .task-title')?.textContent.trim()==='v18 extra-deadline task' &&
+      document.querySelector('#calDayTaskFilters [data-cf="queued"]').classList.contains('sel');
+    document.querySelector('#calDayTaskFilters [data-cf="all"]').click();
+    document.querySelector('#calDayCategoryFilters [data-cat-index="0"]').click();
+    const categoryFilterOk = [...document.querySelectorAll('#calDayTasksList .task-title')]
+      .every(el=>!el.textContent.includes('v18 paused task')) &&
+      document.querySelector('#calDayCategoryFilters [data-cat-index="0"]').classList.contains('sel');
+
+    // The same row's details menu must open the ordinary task editor and save
+    // edits without losing the date-scoped membership.
+    openTaskDetails('v18-day-extra');
+    startEditTaskFromAction();
+    document.getElementById('tTitle').value='v18 edited from calendar';
+    saveTask();
+    await wait(350);
+    const editedTaskOk=DB.tasks.find(t=>t.id==='v18-day-extra')?.title==='v18 edited from calendar' &&
+      [...document.querySelectorAll('#calDayTasksList .task-title')]
+        .some(el=>el.textContent.includes('v18 edited from calendar'));
+
+    // Calendar quick-add must always prefill the selected day (not the last
+    // date the task editor happened to contain).
+    openTaskForDayFromCal();
+    const prefilledDate = document.getElementById('tDate').value;
+    const prefilledDisplay = document.getElementById('tDateDisplay').value;
+    document.getElementById('tTitle').value='v18 added from calendar';
+    document.getElementById('tCat').value='Work';
+    document.querySelector('#tPriority [data-v="critical"]').click();
+    document.querySelector('#tStatus [data-v="queued"]').click();
+    saveTask();
+    await wait(350);
+    const added = DB.tasks.find(t=>t.title==='v18 added from calendar');
+    const addedRow = [...document.querySelectorAll('#calDayTasksList .task-row')]
+      .find(row=>row.textContent.includes('v18 added from calendar'));
+    const quickAddOk = prefilledDate===dayISO && !!prefilledDisplay && added?.date===dayISO &&
+      !!addedRow?.querySelector('.pill.critical') && !!addedRow?.querySelector('.pill.st-queued');
+
+    // Completion, the completed tab, task-detail status changes, and delete all
+    // keep the day panel live without touching another date's list.
+    addedRow?.querySelector('.chk')?.click();
+    await wait(350);
+    const completionOk = !!added?.done &&
+      ![...document.querySelectorAll('#calDayTasksList .task-title')].some(el=>el.textContent.includes('v18 added from calendar'));
+    document.querySelector('#calDayTaskFilters [data-cf="done"]').click();
+    const completedFilterOk = [...document.querySelectorAll('#calDayTasksList .task-title')]
+      .some(el=>el.textContent.includes('v18 added from calendar'));
+    document.querySelector('#calDayTaskFilters [data-cf="all"]').click();
+    openTaskDetails('v18-day-critical');
+    setTaskStatus('v18-day-critical','paused');
+    closeModal('taskActionModalBg');
+    await wait(350);
+    const statusActionOk = DB.tasks.find(t=>t.id==='v18-day-critical')?.status==='paused' &&
+      [...document.querySelectorAll('#calDayTasksList .task-row')]
+        .find(row=>row.textContent.includes('v18 critical task'))?.querySelector('.pill.st-paused');
+    const deleteRow = [...document.querySelectorAll('#calDayTasksList .task-row')]
+      .find(row=>row.textContent.includes('v18 critical task'));
+    deleteRow?.querySelector('.task-del')?.click();
+    await wait(350);
+    const deleteActionOk = !DB.tasks.some(t=>t.id==='v18-day-critical') &&
+      ![...document.querySelectorAll('#calDayTasksList .task-title')].some(el=>el.textContent.includes('v18 critical task'));
+    document.querySelector(`#weekGrid [data-cal-head-iso="${otherISO}"]`).click();
+    const switchedDayOk = window.__calOpenDayISO===otherISO &&
+      [...document.querySelectorAll('#calDayTasksList .task-title')].map(el=>el.textContent.trim()).join(',')==='v18 other-day task';
+
+    DB.tasks = originalTasks;
+    window.__calOpenDayISO=null;
+    document.getElementById('calDayTasksCard').style.display='none';
+    save();
+    PINNED_VIEWS=savedNav;
+    PINNED_VIEW_COUNT=savedNavCount;
+    PINNED_VIEWS_EXTRA=savedExtras;
+    localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(savedNav));
+    localStorage.setItem(PINNED_NAV_COUNT_KEY,String(savedNavCount));
+    localStorage.setItem(PINNED_NAV_EXTRA_KEY,JSON.stringify(savedExtras));
+    renderPinnedNav();
+    renderCalendar();
+    return {inboxStart,afterOne,afterTwo,inboxBadgeOk,inboxCleanupOk,englishDayStrings,navTwoOk,countOptionsOk,
+      bottomNavCalendarActive,bottomNavReturnOk,opened,sharedTaskRow,dayScopeOk,queuedFilterOk,categoryFilterOk,
+      editedTaskOk,prefilledDate,prefilledDisplay,quickAddOk,completionOk,completedFilterOk,statusActionOk,deleteActionOk,switchedDayOk};
+  });
+  check('v18 Inbox badge counts live Inbox tasks in red', v18.inboxBadgeOk && v18.inboxCleanupOk,
+    JSON.stringify({start:v18.inboxStart,one:v18.afterOne,two:v18.afterTwo}));
+  check('v18 day-list and quick-nav copy translates to English', v18.englishDayStrings);
+  check('v18 quick bar supports exactly 2 main buttons + More and can still grow to 4',
+    v18.navTwoOk && v18.countOptionsOk, JSON.stringify({two:v18.navTwoOk,options:v18.countOptionsOk}));
+  check('v18 calendar day list works from a real bottom-nav Calendar shortcut',
+    v18.bottomNavCalendarActive && v18.opened);
+  check('v18 day selection survives leaving Calendar and returning via the bottom nav', v18.bottomNavReturnOk);
+  check('v18 clicking a calendar day opens a highlighted dedicated task list', v18.opened);
+  check('v18 day list shares priority, category, status, subtask and checkbox task formatting', v18.sharedTaskRow);
+  check('v18 day scope includes extra deadlines and excludes Inbox, other days and completed tasks', v18.dayScopeOk,
+    JSON.stringify(v18));
+  check('v18 day status and category filters stay selected and filter only that day',
+    v18.queuedFilterOk && v18.categoryFilterOk);
+  check('v18 day-scoped rows open the shared editor and retain their date membership', v18.editedTaskOk);
+  check('v18 calendar quick-add pre-fills and saves the selected day with priority/status', v18.quickAddOk,
+    JSON.stringify({date:v18.prefilledDate,display:v18.prefilledDisplay,ok:v18.quickAddOk}));
+  check('v18 calendar list supports completion and completed-task filtering', v18.completionOk && v18.completedFilterOk);
+  check('v18 calendar list supports task-detail status changes and delete', v18.statusActionOk && v18.deleteActionOk);
+  check('v18 switching the calendar header switches to a separately scoped day list', v18.switchedDayOk);
+
   check('no fatal JS errors after quest flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
+
+  // Prove the two-button selection survives an actual page restart.
+  await page.evaluate(() => {
+    PINNED_VIEWS=['dashboard','calendar'];
+    PINNED_VIEW_COUNT=2;
+    PINNED_VIEWS_EXTRA=[];
+    localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(PINNED_VIEWS));
+    localStorage.setItem(PINNED_NAV_COUNT_KEY,'2');
+    localStorage.setItem(PINNED_NAV_EXTRA_KEY,'[]');
+    renderPinnedNav();
+  });
+  await page.reload({waitUntil:'load',timeout:30000});
+  await new Promise(resolve=>setTimeout(resolve,350));
+  const navReloadOk=await page.evaluate(() => {
+    const visible=[...document.querySelectorAll('#bottomNav > .bnav-item[data-view]')]
+      .filter(el=>getComputedStyle(el).display!=='none').length;
+    return PINNED_VIEW_COUNT===2 && PINNED_VIEWS.length===2 && visible===2 &&
+      getComputedStyle(document.getElementById('bnavMoreBtn')).display!=='none' &&
+      localStorage.getItem(PINNED_NAV_COUNT_KEY)==='2';
+  });
+  check('v18 selected two-button quick bar is restored after reopening the app', navReloadOk);
+  check('no fatal JS errors after quick-bar reload', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
   await browser.close();
 } else {
@@ -726,6 +964,43 @@ if (!useFallback) {
   check('v17.2 English translations cover the new calendar labels, hints and short Jalali dates',
     ['🕒 الان', 'زمان فعلی', 'Tap to add an event at $1', 'Every day is blocked out hour by hour from 6 AM to 3 AM; hold and drag an event to move it, or tap an empty time slot to quickly add one.']
       .every(k => langJs.includes(k)) && langJs.includes('translateJalaliMonthDay'));
+
+  // ---------- v18: day-scoped Tasks view, inbox badge and 2-button navigation ----------
+  check('v18 Inbox chip has a live red count and updates after task mutations',
+    indexHtml.includes('id="inboxCount"') && indexHtml.includes('chip-count-red') &&
+    coreJs.includes('function inboxTaskCount()') && coreJs.includes('renderInboxBadges();') &&
+    indexHtml.includes('aria-live="polite"') && coreJs.includes("ic.setAttribute('aria-label'"));
+  check('v18 quick bar count options 2, 3 and 4 are all selectable',
+    ['2','3','4'].every(n => indexHtml.includes(`class="chip-opt pnav-count-opt" data-count="${n}"`)) &&
+    coreJs.includes("#pinnedNavCountOptions .pnav-count-opt") &&
+    coreJs.includes('if(!Number.isInteger(n)||n<PINNED_NAV_MIN||n>PINNED_NAV_MAX) return;') &&
+    coreJs.includes('pinnedNavCount:PINNED_VIEW_COUNT') &&
+    coreJs.includes('localStorage.setItem(PINNED_NAV_COUNT_KEY,String(selected.length))'));
+  check('v18 quick bar enforces the 2–4 range and keeps More when only 2 are pinned',
+    coreJs.includes('const PINNED_NAV_MIN = 2;') && coreJs.includes('const PINNED_NAV_MAX = 4;') &&
+    indexHtml.includes('۲» یعنی دو میان‌بر') && indexHtml.includes('id="bnavMoreBtn"'));
+  check('v18 quick-bar count restores from local storage after reopening',
+    coreJs.includes('function getPinnedNavCount()') &&
+    coreJs.includes("localStorage.getItem(PINNED_NAV_COUNT_KEY)||'0'") &&
+    coreJs.includes('let PINNED_VIEW_COUNT=getPinnedNavCount();'));
+  check('v18 calendar day headers are accessible buttons that open a dedicated panel',
+    coreJs.includes('<button type="button" class="lp-cal-head') &&
+    coreJs.includes('aria-expanded="${isOpen}"') && coreJs.includes('function openCalDayTasks(iso, dayIdx)') &&
+    coreJs.includes('if(viewActive(\'calendar\')) renderCalendar();') &&
+    indexHtml.includes('id="calDayTasksCard"') && indexHtml.includes('id="calDayTasksList"'));
+  check('v18 day task list reuses task rows and supports all statuses, priorities and categories',
+    coreJs.includes("const CAL_DAY_TASK_FILTERS = ['all','notstarted','inprogress','queued','paused','done']") &&
+    coreJs.includes('function filterCalDayTasks(tasks)') && coreJs.includes('renderCalDayCategories(all)') &&
+    coreJs.includes('list.map(taskRow).join(\'\')') && coreJs.includes('function pickRandomCalDayTask()'));
+  check('v18 day task list quick-add is date-prefilled and supports extra deadlines',
+    coreJs.includes('function openTaskForDayFromCal()') && coreJs.includes('window.__taskPrefillDate=iso') &&
+    coreJs.includes('t.extraDeadlines.includes(iso)') &&
+    indexHtml.includes('id="calDayTasksRandomBtn"') && indexHtml.includes('id="calDayTasksAddBtn"'));
+  check('v18 English strings cover the day list and quick-nav options',
+    ['کارهای این روز','برای این روز تسکی نیست — از دکمه‌ی «تسک جدید» اضافه کن',
+     '🎲 برای این روز تسک بازی پیدا نشد — فیلتر را عوض کن',
+     'ردیف اصلی را از ۲ تا ۴ دکمه بچین؛ «۲» یعنی دو میان‌بر به‌علاوه‌ی «بیشتر». دکمه‌های اضافی اختیاری‌اند (حداکثر ۵ تا).']
+      .every(k => langJs.includes(k)));
 
   // ---------- v17: «مرخصی» (time off) tick on the quest card ----------
   const questBoxBody = (coreJs.match(/function renderQuestBox\(\)\{[\s\S]*?\n\}/) || [''])[0];

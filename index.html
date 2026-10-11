@@ -29,7 +29,7 @@ try{
   🚨 وضعیت بحرانیه! <span id="crisisCountdown" class="num">۶۰:۰۰</span> تا از دست دادن فرصت
 </div>
 <div class="app">
-  <!-- BOTTOM NAV (always visible, 5 pinned items + More button) -->
+  <!-- BOTTOM NAV (2–4 customizable quick links + More button) -->
   <nav class="bottom-nav" id="bottomNav">
     <div class="bnav-item active" id="bnav-slot0" data-slot="0"></div>
     <div class="bnav-item" id="bnav-slot1" data-slot="1"></div>
@@ -188,7 +188,9 @@ try{
         <div class="chip-group lp-task-tabs" style="margin-bottom:12px;" id="taskFilters">
           <div class="chip-opt sel" data-f="all">📁 همه</div>
           <div class="chip-opt" data-f="notstarted">⬜ شروع نشده</div>
-          <div class="chip-opt" data-f="inbox">📥 Inbox <span class="chip-count chip-count-red num" id="inboxCount">۰</span></div>
+          <div class="chip-opt" data-f="inbox" aria-label="Inbox">
+            📥 Inbox <span class="chip-count chip-count-red num" id="inboxCount" aria-live="polite" aria-atomic="true" title="تعداد تسک‌های Inbox">۰</span>
+          </div>
           <div class="chip-opt" data-f="done">✅ تکمیل‌شده <span class="chip-count num" id="completedCount">۰ تسک</span></div>
         </div>
         <div class="chip-group" style="margin-bottom:16px;" id="categoryFilters"></div>
@@ -209,28 +211,35 @@ try{
       <div class="card calendar-card">
         <div id="weekGrid"></div>
       </div>
-      <div class="card cal-day-tasks-card" id="calDayTasksCard" style="display:none;">
+      <section class="card cal-day-tasks-card" id="calDayTasksCard" style="display:none;" aria-labelledby="calDayTasksTitle">
         <div class="cal-day-tasks-head">
-          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-            <div class="cal-day-tasks-date" id="calDayTasksDate">📅</div>
-            <div style="min-width:0;">
-              <h3 id="calDayTasksTitle" style="margin:0;font-size:15px;">تسک‌های روز</h3>
-              <div class="muted" id="calDayTasksSub" style="font-size:11.5px;margin-top:2px;"></div>
+          <div class="cal-day-tasks-heading">
+            <div class="cal-day-tasks-date" id="calDayTasksDate" aria-hidden="true">📅</div>
+            <div class="cal-day-tasks-heading-copy">
+              <h3 id="calDayTasksTitle">کارهای این روز</h3>
+              <div class="muted cal-day-tasks-summary" id="calDayTasksSub">
+                <span id="calDayTasksSubDate"></span>
+                <span id="calDayTasksSubOpen"></span>
+              </div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <div class="cal-day-tasks-actions">
+            <button class="btn ghost sm" type="button" id="calDayTasksRandomBtn" onclick="pickRandomCalDayTask()">🎲 رندوم</button>
             <button class="btn ghost sm" type="button" id="calDayTasksAddBtn" onclick="openTaskForDayFromCal()">➕ تسک جدید</button>
-            <button class="btn ghost sm" type="button" id="calDayTasksClose" onclick="closeCalDayTasks()">✕</button>
+            <button class="btn ghost sm" type="button" id="calDayTasksClose" onclick="closeCalDayTasks()" aria-label="بستن فهرست روز">✕</button>
           </div>
         </div>
-        <div class="chip-group lp-task-tabs" style="margin-bottom:12px;margin-top:10px;" id="calDayTaskFilters">
-          <div class="chip-opt sel" data-cf="all">📁 همه</div>
-          <div class="chip-opt" data-cf="notstarted">⬜ شروع نشده</div>
-          <div class="chip-opt" data-cf="inprogress">▶️ در حال انجام</div>
-          <div class="chip-opt" data-cf="done">✅ انجام شده <span class="chip-count num" id="calDayDoneCount">۰</span></div>
+        <div class="chip-group lp-task-tabs cal-day-task-filters" style="margin-bottom:10px;margin-top:12px;" id="calDayTaskFilters" role="group" aria-label="فیلتر تسک‌های روز">
+          <div class="chip-opt sel" data-cf="all" role="button" tabindex="0">📁 همه <span class="chip-count num" id="calDayAllCount">۰</span></div>
+          <div class="chip-opt" data-cf="notstarted" role="button" tabindex="0">⬜ شروع نشده</div>
+          <div class="chip-opt" data-cf="inprogress" role="button" tabindex="0">▶️ در حال انجام</div>
+          <div class="chip-opt" data-cf="queued" role="button" tabindex="0">📥 در صف</div>
+          <div class="chip-opt" data-cf="paused" role="button" tabindex="0">⏸️ متوقف</div>
+          <div class="chip-opt" data-cf="done" role="button" tabindex="0">✅ تکمیل‌شده <span class="chip-count num" id="calDayDoneCount">۰</span></div>
         </div>
-        <div id="calDayTasksList"></div>
-      </div>
+        <div class="chip-group cal-day-category-filters" style="margin-bottom:14px;" id="calDayCategoryFilters"></div>
+        <div id="calDayTasksList" aria-live="polite"></div>
+      </section>
     </div>
 
     <!-- HABITS -->
@@ -917,7 +926,7 @@ try{
 
       <div class="card settings-card">
         <div class="card-head"><h3>📱 نوار پایین</h3></div>
-        <p class="muted settings-help">تعداد دکمه‌های نوار پایین را از ۲ تا ۴ انتخاب کن و به دلخواه بچین. می‌توانی تا ۵ دکمه اضافه هم بزنی.</p>
+        <p class="muted settings-help">ردیف اصلی نوار پایین را از حداقل ۲ تا حداکثر ۴ دکمه انتخاب و مرتب کن؛ حتی می‌توانی فقط ۲ میان‌بر کنار «بیشتر» داشته باشی. دکمه‌های اضافی اختیاری‌اند و تا ۵ مورد می‌توانی اضافه کنی.</p>
         <button class="btn" style="width:100%;justify-content:center;" onclick="openSettingsNav()">🛠️ شخصی‌سازی نوار پایین</button>
       </div>
 
@@ -939,7 +948,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">7.2</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">18.0</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1217,15 +1226,14 @@ try{
   <div class="modal" style="max-width:430px;">
     <h2 style="text-align:center;">📌 نوار دسترسی سریع</h2>
     <p style="text-align:center;color:var(--txt-dim);font-size:12px;line-height:1.8;margin:6px 0 10px;">
-      تعداد دکمه‌های ردیف اصلی نوار پایین را از ۲ تا ۴ انتخاب کن و هر دکمه را به دلخواه تنظیم کن.
-      می‌توانی تا ۵ دکمه اضافه هم بزنی تا نوار پایین به دو ردیف وسط‌چین تبدیل شود.
+      ردیف اصلی را از ۲ تا ۴ دکمه بچین؛ «۲» یعنی دو میان‌بر به‌علاوه‌ی «بیشتر». دکمه‌های اضافی اختیاری‌اند (حداکثر ۵ تا).
     </p>
     <div class="pinned-nav-count-row">
       <span style="font-size:12px;font-weight:700;">تعداد دکمه‌های ردیف اصلی:</span>
-      <div class="chip-group" style="display:inline-flex;">
-        <div class="chip-opt pnav-count-opt" data-count="2">۲</div>
-        <div class="chip-opt" data-count="3">۳</div>
-        <div class="chip-opt sel" data-count="4">۴</div>
+      <div class="chip-group" id="pinnedNavCountOptions" style="display:inline-flex;" role="group" aria-label="تعداد دکمه‌های نوار پایین">
+        <div class="chip-opt pnav-count-opt" data-count="2" role="button" tabindex="0">۲</div>
+        <div class="chip-opt pnav-count-opt" data-count="3" role="button" tabindex="0">۳</div>
+        <div class="chip-opt pnav-count-opt" data-count="4" role="button" tabindex="0">۴</div>
       </div>
     </div>
 

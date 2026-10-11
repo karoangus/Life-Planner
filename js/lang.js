@@ -28,6 +28,17 @@
   window.lpGetLang = getLang;
 
   var EXACT = {
+    /* ---- v18: isolated day task lists and quick-nav sizing ---- */
+    "کارهای این روز": "Tasks for this day",
+    "برای این روز تسکی نیست — از دکمه‌ی «تسک جدید» اضافه کن": "No tasks for this day — add one with “New task”",
+    "برای این روز هنوز تسک تکمیل‌شده‌ای نیست": "No completed tasks for this day yet",
+    "در این فیلتر برای این روز تسکی نیست": "No tasks for this day match this filter",
+    "🎲 برای این روز تسک بازی پیدا نشد — فیلتر را عوض کن": "🎲 No open task found for this day — change the filter",
+    "بستن فهرست روز": "Close this day's task list",
+    "ردیف اصلی را از ۲ تا ۴ دکمه بچین؛ «۲» یعنی دو میان‌بر به‌علاوه‌ی «بیشتر». دکمه‌های اضافی اختیاری‌اند (حداکثر ۵ تا).": "Choose 2–4 buttons for the main row; “2” means two shortcuts plus More. Extra buttons are optional (up to 5).",
+    "ردیف اصلی نوار پایین را از حداقل ۲ تا حداکثر ۴ دکمه انتخاب و مرتب کن؛ حتی می‌توانی فقط ۲ میان‌بر کنار «بیشتر» داشته باشی. دکمه‌های اضافی اختیاری‌اند و تا ۵ مورد می‌توانی اضافه کنی.": "Choose and arrange 2–4 buttons in the bottom bar's main row; you can keep just 2 shortcuts beside More. Extra buttons are optional, with up to 5 available.",
+    "تعداد دکمه‌های ردیف اصلی:": "Main row button count:",
+    "تعداد دکمه‌های نوار پایین": "Bottom bar button count",
     /* ---- v17.2: minute-accurate calendar and quick-add slots ---- */
     "🕒 الان": "🕒 Now",
     "زمان فعلی": "Current time",
