@@ -1725,22 +1725,6 @@ html[data-lang="en"] .ev-block.has-desc::after{left:auto;right:3px;}
 .lp-cal-header > .lp-cal-head.today{color:var(--neon);}
 .lp-cal-header > .lp-cal-head.lp-cal-head-open{background:rgba(0,229,255,.14);color:var(--neon);}
 .lp-cal-head:focus-visible{outline:2px solid var(--neon);outline-offset:-2px;z-index:2;}
-.cal-day-tasks-head{flex-wrap:wrap;}
-.cal-day-tasks-heading{display:flex;align-items:center;gap:10px;min-width:0;}
-.cal-day-tasks-heading-copy{min-width:0;}
-.cal-day-tasks-heading-copy h3{margin:0;font-size:15px;}
-.cal-day-tasks-summary{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;margin-top:2px;}
-.cal-day-tasks-summary span+span::before{content:"·";margin-inline-end:6px;color:var(--txt-dim2);}
-.cal-day-tasks-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.cal-day-task-filters{margin-bottom:10px;margin-top:12px;}
-.cal-day-task-filters .chip-count{font-size:9.5px;padding:1px 6px;}
-.cal-day-category-filters{margin-bottom:14px;}
-#calDayTasksRandomBtn:disabled{opacity:.45;cursor:not-allowed;filter:saturate(.6);}
-@media(max-width:480px){
-  .cal-day-tasks-actions{margin-inline-start:auto;}
-  .cal-day-tasks-actions .btn{padding:7px 9px;font-size:11px;}
-  .cal-day-tasks-date{width:36px;height:36px;}
-}
 .lp-cal-head .lp-cal-day-taskdot{
   position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
   width:4px; height:4px; border-radius:50%; background:var(--neon); opacity:.7;
@@ -1750,14 +1734,179 @@ html[data-lang="en"] .ev-block.has-desc::after{left:auto;right:3px;}
   background:var(--neon-15,rgba(0,229,255,.15)); color:var(--neon);
   font-size:8.5px; font-weight:900; line-height:14px; margin-right:2px;
 }
-.cal-day-tasks-card{margin-top:14px;}
-.cal-day-tasks-head{display:flex; align-items:center; justify-content:space-between; gap:8px;}
-.cal-day-tasks-date{
-  width:40px; height:40px; border-radius:12px;
-  background:rgba(0,229,255,.1); color:var(--neon);
-  display:inline-flex; align-items:center; justify-content:center;
-  font-size:16px; font-weight:900; flex-shrink:0;
+/* v18.1: everything on that day is done — the badge turns into a green tick */
+.lp-cal-head .lp-cal-day-count.is-done{
+  background:rgba(46,230,166,.18); color:var(--ok);
 }
+/* ============================================================
+   v18.1 «برنامه روز» — the calendar's own per-day plan panel.
+   Separate from the Tasks view: no Inbox, no statuses, no
+   folders, no XP — just the day, a checkbox and a quick add.
+   ============================================================ */
+.dplan-card{margin-top:14px; padding:14px 14px 12px;}
+.dplan-card::before{
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  border-radius:16px 16px 0 0; background:var(--grad); opacity:.85;
+}
+.dplan-card.is-today{border-color:var(--neon-35); box-shadow:var(--shadow), 0 0 0 1px var(--neon-35), 0 0 26px -18px var(--neon-55);}
+.dplan-enter{animation:dplanIn .32s cubic-bezier(.2,.8,.25,1);}
+@keyframes dplanIn{from{opacity:0; transform:translateY(-8px) scale(.99);} to{opacity:1; transform:none;}}
+
+.dplan-head{display:flex; align-items:flex-start; justify-content:space-between; gap:8px;}
+.dplan-head-main{display:flex; align-items:center; gap:10px; min-width:0;}
+.dplan-head-copy{min-width:0;}
+.dplan-head-copy h3{margin:0; font-size:15px;}
+.dplan-date{
+  width:42px; height:42px; flex:0 0 42px; border-radius:13px;
+  display:grid; place-items:center; font-size:17px; font-weight:900;
+  background:linear-gradient(160deg, var(--neon-15), transparent 80%);
+  border:1px solid var(--neon-35); color:var(--neon);
+}
+.dplan-card.is-today .dplan-date{box-shadow:0 0 18px -6px var(--neon-55);}
+.dplan-summary{display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:11.5px; margin-top:2px;}
+.dplan-summary span+span::before{content:"·"; margin-inline-end:6px; color:var(--txt-dim2);}
+.dplan-summary span:first-child::before,
+.dplan-summary span[hidden]+span::before{content:none;}
+.dplan-rel{color:var(--neon); font-weight:800;}
+.dplan-head-actions{display:flex; align-items:center; gap:6px; flex:0 0 auto;}
+.dplan-icon-btn{
+  width:32px; height:32px; border-radius:10px; border:1px solid var(--line2);
+  background:var(--panel2); color:var(--txt-dim); font-size:13px; line-height:1;
+  display:grid; place-items:center; cursor:pointer; transition:color .15s, border-color .15s, background .15s;
+}
+.dplan-icon-btn:hover{color:var(--txt); border-color:var(--neon-35);}
+.dplan-icon-btn.sel{color:var(--neon); border-color:var(--neon-55); background:var(--neon-15);}
+.dplan-icon-btn:focus-visible{outline:2px solid var(--neon); outline-offset:2px;}
+
+.dplan-progress{margin:12px 0 0;}
+.dplan-progress-top{display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:11.5px; color:var(--txt-dim);}
+.dplan-progress-pct{font-weight:900; color:var(--neon);}
+.dplan-bar{height:7px; border-radius:99px; background:var(--track); overflow:hidden; margin-top:6px;}
+.dplan-bar-fill{height:100%; width:0; border-radius:99px; background:var(--grad); box-shadow:0 0 12px -4px var(--neon-55); transition:width .3s cubic-bezier(.2,.8,.25,1);}
+.dplan-progress.is-complete .dplan-bar-fill{background:linear-gradient(135deg,var(--ok),#7CFFCB);}
+.dplan-progress.is-complete .dplan-progress-pct{color:var(--ok);}
+
+.dplan-add{display:flex; gap:8px; margin-top:12px;}
+.dplan-add-input{
+  flex:1; min-width:0; padding:11px 12px; border-radius:12px; border:1px solid var(--line2);
+  background:var(--bg2); color:var(--txt); font-family:inherit; font-size:13px; font-weight:600;
+  outline:none; transition:border-color .15s, box-shadow .15s;
+}
+.dplan-add-input:focus{border-color:var(--neon); box-shadow:0 0 0 3px var(--neon-15);}
+.dplan-add-btn{
+  width:44px; flex:0 0 44px; border-radius:12px; border:0; background:var(--grad);
+  color:#04121a; font-size:20px; font-weight:900; line-height:1; cursor:pointer; transition:transform .15s;
+}
+.dplan-add-btn:active{transform:scale(.94);}
+.dplan-hint{font-size:10.5px; line-height:1.7; margin-top:6px;}
+
+.dplan-quick{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;}
+.dplan-quick-btn{
+  display:inline-flex; align-items:center; gap:6px; padding:7px 11px; border-radius:10px;
+  border:1px solid var(--neon-35); background:var(--neon-15); color:var(--txt);
+  font-family:inherit; font-size:11.5px; font-weight:700; cursor:pointer; transition:transform .15s, border-color .15s;
+}
+.dplan-quick-btn.ghost{background:transparent; border-color:var(--line2); color:var(--txt-dim);}
+.dplan-quick-btn:active{transform:scale(.97);}
+
+.dplan-list{margin-top:12px; display:flex; flex-direction:column; gap:6px;}
+.dplan-row{
+  display:flex; align-items:center; gap:8px; padding:8px; border-radius:12px;
+  border:1px solid var(--line); background:var(--bg2);
+  transition:background .15s, border-color .15s, opacity .15s;
+}
+@media(hover:hover){ .dplan-row:hover{background:var(--hover); border-color:var(--line2);} }
+.dplan-row.is-done{opacity:.55;}
+.dplan-row.is-done .dplan-title{text-decoration:line-through; color:var(--txt-dim);}
+.dplan-row.dragging{opacity:.96; border-color:var(--neon-55); box-shadow:0 14px 30px -14px rgba(0,0,0,.65); position:relative; z-index:5;}
+.dplan-grip{
+  flex:0 0 20px; width:20px; height:28px; border:0; padding:0; background:transparent;
+  color:var(--txt-dim2); font-size:14px; line-height:1; cursor:grab; touch-action:none;
+}
+.dplan-grip:focus-visible{outline:2px solid var(--neon); outline-offset:1px; border-radius:6px;}
+.dplan-chk{
+  flex:0 0 24px; width:24px; height:24px; border-radius:8px; border:1.5px solid var(--line2);
+  background:transparent; color:#04121a; font-size:13px; font-weight:900; line-height:1;
+  display:grid; place-items:center; cursor:pointer; transition:background .15s, border-color .15s;
+}
+.dplan-chk.done{background:var(--grad); border-color:transparent; box-shadow:0 0 14px -6px var(--neon-55);}
+.dplan-main{flex:1; min-width:0;}
+.dplan-title{font-size:13px; font-weight:700; cursor:text; word-break:break-word;}
+.dplan-title:focus-visible{outline:2px solid var(--neon); outline-offset:2px; border-radius:6px;}
+.dplan-edit-input{
+  width:100%; padding:6px 8px; border-radius:9px; border:1px solid var(--neon);
+  background:var(--panel2); color:var(--txt); font-family:inherit; font-size:13px; font-weight:700; outline:none;
+}
+.dplan-meta{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:3px;}
+.dplan-time{font-size:10px; color:var(--neon); background:var(--neon-15); border-radius:6px; padding:2px 6px;}
+.dplan-star{border:0; background:transparent; color:var(--warn); font-size:10px; font-weight:800; cursor:pointer; padding:0;}
+.dplan-row-actions{display:flex; align-items:center; gap:2px; flex:0 0 auto; opacity:.5; transition:opacity .15s;}
+.dplan-row:hover .dplan-row-actions, .dplan-row:focus-within .dplan-row-actions{opacity:1;}
+@media(hover:none){ .dplan-row-actions{opacity:1;} }
+.dplan-icon{
+  width:28px; height:28px; border-radius:8px; border:0; background:transparent;
+  color:var(--txt-dim); font-size:12px; line-height:1; display:grid; place-items:center; cursor:pointer;
+}
+.dplan-icon:hover{background:var(--hover); color:var(--txt);}
+.dplan-icon.danger:hover{color:var(--danger);}
+
+.dplan-empty{padding:26px 14px;}
+.dplan-empty .ic{font-size:30px;}
+.dplan-empty-title{font-weight:800; font-size:13px; color:var(--txt); margin-top:6px;}
+.dplan-empty-hint{font-size:11px; line-height:1.8; margin-top:6px;}
+.dplan-all-done .dplan-empty-title{color:var(--ok);}
+.dplan-all-done .btn{margin-top:10px;}
+
+.dplan-foot{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; padding-top:10px; border-top:1px dashed var(--line2);}
+.dplan-foot-btn{
+  display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border-radius:10px;
+  border:1px solid var(--line2); background:transparent; color:var(--txt-dim);
+  font-family:inherit; font-size:11.5px; font-weight:700; cursor:pointer; transition:color .15s, border-color .15s, background .15s;
+}
+.dplan-foot-btn:hover{color:var(--txt); border-color:var(--neon-35);}
+.dplan-foot-btn:disabled{opacity:.4; cursor:not-allowed;}
+.dplan-foot-btn.sel{color:var(--neon); border-color:var(--neon-55); background:var(--neon-15);}
+.dplan-linked{margin-top:10px; display:flex; flex-direction:column; gap:6px;}
+.dplan-linked-head{font-size:10.5px; color:var(--txt-dim2); line-height:1.7;}
+.dplan-linked-row{
+  display:flex; align-items:center; gap:8px; width:100%; padding:8px 10px; border-radius:10px;
+  border:1px solid var(--line); background:var(--bg2); color:var(--txt);
+  font-family:inherit; font-size:12px; font-weight:700; text-align:start; cursor:pointer;
+}
+.dplan-linked-row.is-done{opacity:.5; text-decoration:line-through;}
+.dplan-linked-dot{width:8px; height:8px; border-radius:50%; flex:0 0 8px;}
+.dplan-linked-title{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.dplan-linked-pr{font-size:10px; color:var(--txt-dim2);}
+.dplan-note-wrap{margin-top:12px; padding-top:10px; border-top:1px dashed var(--line2);}
+.dplan-note-sum{font-size:11.5px; font-weight:800; color:var(--txt-dim); cursor:pointer; list-style:none;}
+.dplan-note-sum::-webkit-details-marker{display:none;}
+.dplan-note-sum.has-note{color:var(--neon);}
+.dplan-note{
+  width:100%; margin-top:8px; padding:10px; border-radius:12px; border:1px solid var(--line2);
+  background:var(--bg2); color:var(--txt); font-family:inherit; font-size:12.5px; line-height:1.9;
+  resize:vertical; outline:none; transition:border-color .15s;
+}
+.dplan-note:focus{border-color:var(--neon);}
+body.dplan-dragging{cursor:grabbing; user-select:none;}
+.toast .dp-undo-btn{
+  border:0; background:transparent; color:var(--neon); font-family:inherit; font-weight:900;
+  font-size:12px; cursor:pointer; text-decoration:underline; padding:0;
+}
+.calendar-intro-copy span.calendar-intro-plan{
+  white-space:normal; overflow:visible; text-overflow:clip;
+  color:var(--neon); font-size:10.5px; line-height:1.6; margin-top:3px;
+}
+@media(max-width:480px){
+  .dplan-card{padding:12px 11px 10px;}
+  .dplan-head-actions .dplan-icon-btn{width:30px; height:30px; font-size:12px;}
+  .dplan-row{gap:6px; padding:8px 6px;}
+  .dplan-icon{width:26px; height:26px; font-size:11px;}
+  .dplan-add-btn{width:40px; flex:0 0 40px;}
+}
+@media (prefers-reduced-motion: reduce){
+  .dplan-card, .dplan-bar-fill, .dplan-row, .dplan-add-btn{animation:none; transition:none;}
+}
+
 .pinned-nav-main-head{
   font-size:12px; font-weight:800; color:var(--txt-dim);
   padding:6px 2px 8px;
