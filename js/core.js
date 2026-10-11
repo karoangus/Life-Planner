@@ -219,6 +219,9 @@ function toast(msg){
 /* ============ NAV ============ */
 const DEFAULT_PINNED_VIEWS = ['dashboard','tasks','habits','goals'];
 const PINNED_NAV_KEY = 'lifePlannerAI_pinnedNav_v1';
+const PINNED_NAV_COUNT_KEY = 'lifePlannerAI_pinnedNavCount_v1';
+const PINNED_NAV_MIN = 2;
+const PINNED_NAV_MAX = 4;
 const PINNED_NAV_EXTRA_KEY = 'lifePlannerAI_pinnedNavExtra_v1';
 const PINNED_NAV_EXTRA_MAX = 5;
 
@@ -242,16 +245,37 @@ const PINNED_NAV_OPTIONS = [
 function getPinnedNav(){
   try{
     const saved=JSON.parse(localStorage.getItem(PINNED_NAV_KEY)||'null');
-    if(Array.isArray(saved)&&saved.length===4){
+    if(Array.isArray(saved) && saved.length>=PINNED_NAV_MIN && saved.length<=PINNED_NAV_MAX){
       const valid=saved.every(id=>PINNED_NAV_OPTIONS.some(x=>x.id===id));
-      const unique=new Set(saved).size===4;
+      const unique=new Set(saved).size===saved.length;
       if(valid&&unique)return saved;
     }
   }catch(_){}
   return [...DEFAULT_PINNED_VIEWS];
 }
+function getPinnedNavCount(){
+  try{
+    const n=parseInt(localStorage.getItem(PINNED_NAV_COUNT_KEY)||'0',10);
+    if(n>=PINNED_NAV_MIN && n<=PINNED_NAV_MAX){
+      // ensure PINNED_VIEWS actually has this many entries; fall back to its length
+      const cur=getPinnedNav();
+      if(n<=cur.length) return n;
+    }
+  }catch(_){}
+  return getPinnedNav().length || PINNED_NAV_MAX;
+}
 
 let PINNED_VIEWS=getPinnedNav();
+let PINNED_VIEW_COUNT=getPinnedNavCount();
+// reconcile length with count (trim extra slots or fill from defaults)
+if(PINNED_VIEWS.length>PINNED_VIEW_COUNT){
+  PINNED_VIEWS.length=PINNED_VIEW_COUNT;
+} else if(PINNED_VIEWS.length<PINNED_VIEW_COUNT){
+  for(const o of PINNED_NAV_OPTIONS){
+    if(PINNED_VIEWS.length>=PINNED_VIEW_COUNT) break;
+    if(!PINNED_VIEWS.includes(o.id)) PINNED_VIEWS.push(o.id);
+  }
+}
 
 function getPinnedNavExtra(){
   try{
@@ -280,16 +304,68 @@ function renderMoreViews(){
     .join('');
 }
 
+function inboxTaskCount(){
+  return (DB&&DB.tasks?DB.tasks:[]).filter(t=>!!t.inbox).length;
+}
+function renderInboxBadges(){
+  const n=inboxTaskCount();
+  const txt=n>99?'۹۹+':toFaDigits(String(n));
+  // Tasks-tab Inbox chip
+  const ic=document.getElementById('inboxCount');
+  if(ic) ic.textContent = txt;
+  // Bottom-nav items (pinned main row + extras) that point to tasks view
+  document.querySelectorAll('.bottom-nav .bnav-item[data-view="tasks"]').forEach(el=>{
+    let b=el.querySelector('.bnav-badge');
+    if(n>0){
+      if(!b){
+        b=document.createElement('span');
+        b.className='bnav-badge';
+        el.appendChild(b);
+      }
+      b.textContent=txt;
+    } else if(b){
+      b.remove();
+    }
+  });
+  // Dashboard inbox quick button & top icon-btn
+  document.querySelectorAll('.dash-q').forEach(btn=>{
+    if(/Inbox/i.test(btn.textContent||'')){
+      let b=btn.querySelector('.bnav-badge');
+      if(n>0){
+        if(!b){ b=document.createElement('span'); b.className='bnav-badge'; btn.appendChild(b); }
+        b.textContent=txt;
+      } else if(b){ b.remove(); }
+    }
+  });
+  const topIc=document.querySelector('.top-actions .icon-btn');
+  if(topIc){
+    let b=topIc.querySelector('.bnav-badge');
+    if(n>0){
+      if(!b){ b=document.createElement('span'); b.className='bnav-badge'; topIc.appendChild(b); }
+      b.textContent=txt;
+    } else if(b){ b.remove(); }
+  }
+}
 function renderPinnedNav(){
+  // mark slot count on nav so CSS can hide unused slots
+  const nav=document.getElementById('bottomNav');
+  if(nav) nav.setAttribute('data-slot-count', String(PINNED_VIEWS.length));
+
   PINNED_VIEWS.forEach((viewId,i)=>{
     const el=document.getElementById('bnav-slot'+i);
     if(!el)return;
+    el.style.display='';
     const item=getPinnedOption(viewId);
     el.dataset.view=viewId;
     el.innerHTML=`<span class="bic">${item.icon}</span><span>${item.label}</span>`;
     el.onclick=()=>showView(viewId);
     el.setAttribute('aria-label',item.label);
   });
+  // hide slots beyond PINNED_VIEWS length
+  for(let i=PINNED_VIEWS.length;i<PINNED_NAV_MAX;i++){
+    const el=document.getElementById('bnav-slot'+i);
+    if(el){ el.style.display='none'; el.dataset.view=''; el.innerHTML=''; el.onclick=null; }
+  }
   // v13: extra buttons (added in Settings) render as a centered second row
   const extrasBox=document.getElementById('bnavExtrasRow');
   if(extrasBox){
@@ -302,9 +378,9 @@ function renderPinnedNav(){
       el.setAttribute('aria-label',el.dataset.view);
     });
   }
-  const nav=document.getElementById('bottomNav');
   if(nav) nav.classList.toggle('extended', PINNED_VIEWS_EXTRA.length>0);
   renderMoreViews();
+  renderInboxBadges();
 }
 
 window.__citySunMoonInited = false;
@@ -339,7 +415,8 @@ let __pinnedNavExtraDraft = null;
 function renderPinnedNavExtraList(){
   const list=document.getElementById('pinnedNavExtraList');
   if(!list) return;
-  const options=PINNED_NAV_OPTIONS.filter(o=>!PINNED_VIEWS.includes(o.id));
+  const mainUsed=new Set(__pinnedNavMainDraft||PINNED_VIEWS);
+  const options=PINNED_NAV_OPTIONS.filter(o=>!mainUsed.has(o.id));
   list.innerHTML = (__pinnedNavExtraDraft && __pinnedNavExtraDraft.length)
     ? __pinnedNavExtraDraft.map((id,i)=>{
         const current=getPinnedOption(id);
@@ -354,6 +431,7 @@ function renderPinnedNavExtraList(){
         </div>`;
       }).join('')
     : '<div class="pinned-nav-hint" style="padding:6px 2px;">هنوز دکمه‌ای اضافه نکرده‌ای — نوار پایین یک ردیفه می‌ماند.</div>';
+  const box=list.closest('.pinned-nav-editor');
   list.querySelectorAll('.pinned-nav-select').forEach(sel=>{
     sel.addEventListener('change',()=>{
       const i=+sel.dataset.pinnedExtra;
@@ -361,6 +439,7 @@ function renderPinnedNavExtraList(){
       const row=sel.closest('.pinned-nav-row');
       const slot=row?.querySelector('.pinned-nav-slot');
       if(slot) slot.textContent=getPinnedOption(sel.value).icon;
+      if(box){ renderPinnedNavMainRows(box); }
     });
   });
   list.querySelectorAll('[data-remove-extra]').forEach(btn=>{
@@ -368,79 +447,145 @@ function renderPinnedNavExtraList(){
       const i=+btn.dataset.removeExtra;
       if(Number.isFinite(i) && __pinnedNavExtraDraft) __pinnedNavExtraDraft.splice(i,1);
       renderPinnedNavExtraList();
+      if(box){ renderPinnedNavMainRows(box); }
     });
   });
 }
 
-function openPinnedNavSettings(){
-  const box=document.getElementById('pinnedNavEditor');
-  if(!box)return;
+let __pinnedNavCountDraft = PINNED_VIEW_COUNT;
+let __pinnedNavMainDraft = null; // always stores up-to-PINNED_NAV_MAX selections
+function renderPinnedNavMainRows(box){
   const options=PINNED_NAV_OPTIONS;
-  __pinnedNavExtraDraft=[...PINNED_VIEWS_EXTRA];
-  box.innerHTML=PINNED_VIEWS.map((selected,i)=>{
-    const current=getPinnedOption(selected);
+  if(!__pinnedNavMainDraft){
+    __pinnedNavMainDraft=[...PINNED_VIEWS];
+    while(__pinnedNavMainDraft.length<PINNED_NAV_MAX){
+      const used=new Set([...__pinnedNavMainDraft, ...(__pinnedNavExtraDraft||[])]);
+      const free=PINNED_NAV_OPTIONS.find(o=>!used.has(o.id));
+      if(!free) break;
+      __pinnedNavMainDraft.push(free.id);
+    }
+  }
+  // ensure no duplicates in main draft
+  const seen=new Set();
+  __pinnedNavMainDraft = __pinnedNavMainDraft.map(id=>{
+    if(seen.has(id) || !options.some(o=>o.id===id)){
+      const used=new Set([...__pinnedNavMainDraft.filter(x=>x && !seen.has(x)), ...(__pinnedNavExtraDraft||[])]);
+      const free=options.find(o=>!used.has(o.id));
+      id=free?free.id:options[0].id;
+    }
+    seen.add(id); return id;
+  });
+  const chosen=__pinnedNavMainDraft.slice(0,__pinnedNavCountDraft);
+  const container=box.querySelector('#pinnedNavMainList');
+  if(!container) return;
+  container.innerHTML=chosen.map((sel,i)=>{
+    const current=getPinnedOption(sel);
     return `<div class="pinned-nav-row">
       <div class="pinned-nav-slot">${current.icon}</div>
       <div>
         <select class="pinned-nav-select" data-pinned-slot="${i}">
-          ${options.map(o=>`<option value="${o.id}" ${o.id===selected?'selected':''}>${o.icon}  ${o.label}</option>`).join('')}
+          ${options.map(o=>`<option value="${o.id}" ${o.id===sel?'selected':''}>${o.icon}  ${o.label}</option>`).join('')}
         </select>
       </div>
     </div>`;
-  }).join('') +
-    `<div class="pinned-nav-extra-head">➕ دکمه‌های اضافی (تا ${PINNED_NAV_EXTRA_MAX} عدد)</div>
+  }).join('');
+  container.querySelectorAll('.pinned-nav-select').forEach((sel)=>{
+    sel.addEventListener('change',()=>{
+      const i=Number(sel.dataset.pinnedSlot);
+      const val=sel.value;
+      // if another slot in main draft already uses this value, swap
+      __pinnedNavMainDraft.forEach((other,oidx)=>{
+        if(oidx!==i && other===val) __pinnedNavMainDraft[oidx]=__pinnedNavMainDraft[i];
+      });
+      __pinnedNavMainDraft[i]=val;
+      renderPinnedNavMainRows(box);
+    });
+  });
+  document.querySelectorAll('.pnav-count-opt').forEach(c=>{
+    c.classList.toggle('sel', Number(c.dataset.count)===__pinnedNavCountDraft);
+  });
+}
+function openPinnedNavSettings(){
+  const box=document.getElementById('pinnedNavEditor');
+  if(!box)return;
+  __pinnedNavExtraDraft=[...PINNED_VIEWS_EXTRA];
+  __pinnedNavCountDraft = PINNED_VIEWS.length || PINNED_VIEW_COUNT;
+  if(__pinnedNavCountDraft<PINNED_NAV_MIN) __pinnedNavCountDraft=PINNED_NAV_MIN;
+  // seed main draft with saved + fill remaining slots for when count is later increased
+  __pinnedNavMainDraft=[...PINNED_VIEWS];
+  while(__pinnedNavMainDraft.length<PINNED_NAV_MAX){
+    const used=new Set([...__pinnedNavMainDraft, ...__pinnedNavExtraDraft]);
+    const free=PINNED_NAV_OPTIONS.find(o=>!used.has(o.id));
+    if(!free) break;
+    __pinnedNavMainDraft.push(free.id);
+  }
+  box.innerHTML=
+    `<div class="pinned-nav-main-head">📱 ردیف اصلی (${PINNED_NAV_MIN} تا ${PINNED_NAV_MAX} دکمه)</div>
+     <div id="pinnedNavMainList"></div>
+     <div class="pinned-nav-extra-head">➕ دکمه‌های اضافی (تا ${PINNED_NAV_EXTRA_MAX} عدد)</div>
      <div id="pinnedNavExtraList" class="pinned-nav-extra-list"></div>
      <button type="button" class="btn ghost sm" id="pinnedNavAddExtraBtn" style="width:100%;justify-content:center;margin-top:4px;">➕ افزودن دکمه اضافی</button>
      <div class="pinned-nav-hint">با دکمه‌های اضافه، نوار پایین به دو ردیف تبدیل می‌شود و دکمه‌های اضافه وسط‌چین می‌مانند.</div>`;
-
-  box.querySelectorAll('.pinned-nav-select:not([data-pinned-extra])').forEach(sel=>{
-    sel.addEventListener('change',()=>{
-      const item=getPinnedOption(sel.value);
-      const slot=sel.closest('.pinned-nav-row')?.querySelector('.pinned-nav-slot');
-      if(slot)slot.textContent=item.icon;
+  renderPinnedNavMainRows(box);
+  renderPinnedNavExtraList();
+  document.querySelectorAll('.pnav-count-opt').forEach(c=>{
+    c.addEventListener('click',()=>{
+      const n=Number(c.dataset.count);
+      if(n<PINNED_NAV_MIN||n>PINNED_NAV_MAX) return;
+      __pinnedNavCountDraft=n;
+      renderPinnedNavMainRows(box);
     });
   });
-  renderPinnedNavExtraList();
   document.getElementById('pinnedNavAddExtraBtn')?.addEventListener('click',()=>{
     if(!__pinnedNavExtraDraft) return;
     if(__pinnedNavExtraDraft.length>=PINNED_NAV_EXTRA_MAX){
       toast(`⚠️ حداکثر ${PINNED_NAV_EXTRA_MAX} دکمه اضافی مجاز است`);
       return;
     }
-    const used=new Set([...PINNED_VIEWS, ...__pinnedNavExtraDraft]);
+    const used=new Set([...(__pinnedNavMainDraft||[]), ...__pinnedNavExtraDraft]);
     const free=PINNED_NAV_OPTIONS.find(o=>!used.has(o.id));
     if(!free){ toast('⚠️ همه بخش‌ها همین پایین هستند'); return; }
     __pinnedNavExtraDraft.push(free.id);
     renderPinnedNavExtraList();
+    renderPinnedNavMainRows(box); // refresh to reflect unavailability in dropdowns
   });
   openModal('pinnedNavModalBg');
 }
 
 function savePinnedNav(){
-  const selects=[...document.querySelectorAll('#pinnedNavEditor .pinned-nav-select:not([data-pinned-extra])')];
-  const chosen=selects.map(x=>x.value);
-  if(chosen.length!==4||new Set(chosen).size!==4){
-    toast('⚠️ هر چهار دکمه باید بخش متفاوتی داشته باشن');
+  const count=__pinnedNavCountDraft;
+  const chosen=(__pinnedNavMainDraft||[]).slice(0,count);
+  if(chosen.length!==count){
+    toast(`⚠️ باید دقیقاً ${count} دکمه برای ردیف اصلی انتخاب کنی`);
+    return;
+  }
+  if(chosen.length<PINNED_NAV_MIN||chosen.length>PINNED_NAV_MAX||new Set(chosen).size!==chosen.length){
+    toast(`⚠️ دکمه‌های ردیف اصلی باید متفاوت باشند (حداقل ${PINNED_NAV_MIN}، حداکثر ${PINNED_NAV_MAX})`);
     return;
   }
   const extras=(__pinnedNavExtraDraft||[]).filter(id=>PINNED_NAV_OPTIONS.some(x=>x.id===id));
   if(extras.length>PINNED_NAV_EXTRA_MAX || new Set(extras).size!==extras.length || extras.some(id=>chosen.includes(id))){
-    toast(`⚠️ دکمه‌های اضافی باید متفاوت باشن و با چهار دکمهٔ اصلی تکرار نشون (حداکثر ${PINNED_NAV_EXTRA_MAX} عدد)`);
+    toast(`⚠️ دکمه‌های اضافی باید متفاوت باشن و با دکمه‌های اصلی تکرار نشون (حداکثر ${PINNED_NAV_EXTRA_MAX} عدد)`);
     return;
   }
   PINNED_VIEWS=chosen;
+  PINNED_VIEW_COUNT=count;
   PINNED_VIEWS_EXTRA=extras;
   localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(PINNED_VIEWS));
+  localStorage.setItem(PINNED_NAV_COUNT_KEY,String(PINNED_VIEW_COUNT));
   localStorage.setItem(PINNED_NAV_EXTRA_KEY,JSON.stringify(PINNED_VIEWS_EXTRA));
+  __pinnedNavMainDraft=null;
   renderPinnedNav();
   closeModal('pinnedNavModalBg');
-  toast(PINNED_VIEWS_EXTRA.length ? `✅ نوار پایین با ${PINNED_VIEWS_EXTRA.length} دکمه اضافه ذخیره شد` : '✅ نوار دسترسی سریع ذخیره شد');
+  toast(PINNED_VIEWS_EXTRA.length ? `✅ نوار پایین با ${PINNED_VIEWS.length} دکمه اصلی و ${PINNED_VIEWS_EXTRA.length} دکمه اضافه ذخیره شد` : `✅ نوار دسترسی سریع با ${PINNED_VIEWS.length} دکمه ذخیره شد`);
 }
 
 function resetPinnedNav(){
   PINNED_VIEWS=[...DEFAULT_PINNED_VIEWS];
+  PINNED_VIEW_COUNT=PINNED_NAV_MAX;
   PINNED_VIEWS_EXTRA=[];
   localStorage.setItem(PINNED_NAV_KEY,JSON.stringify(PINNED_VIEWS));
+  localStorage.setItem(PINNED_NAV_COUNT_KEY,String(PINNED_VIEW_COUNT));
   localStorage.setItem(PINNED_NAV_EXTRA_KEY,JSON.stringify(PINNED_VIEWS_EXTRA));
   renderPinnedNav();
   openPinnedNavSettings();
@@ -2717,7 +2862,12 @@ function openTaskModal(id){
       stWrap.appendChild(row);
     });
   } else {
-    ['tTitle','tCat','tDate','tDateDisplay','tEst','tNote'].forEach(i=>document.getElementById(i).value='');
+    const prefillDate = window.__taskPrefillDate || null;
+    ['tTitle','tCat','tEst','tNote'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
+    if(!prefillDate){
+      const da=document.getElementById('tDate'); if(da) da.value='';
+      const dd=document.getElementById('tDateDisplay'); if(dd) dd.value='';
+    }
     document.getElementById('extraDeadlinesWrap').innerHTML='';
     document.getElementById('subtaskWrap').innerHTML='';
     const nt = document.getElementById('newSubtaskTitle'); if(nt) nt.value='';
@@ -3175,6 +3325,8 @@ function renderTasks(filter='all'){
   // v16: the completed counter now lives on the "✅ تکمیل‌شده" tab itself.
   const completedCountEl = document.getElementById('completedCount');
   if(completedCountEl) completedCountEl.textContent = DB.tasks.filter(t=>!t.inbox && t.done).length + ' تسک';
+  // v16.3: red inbox counter
+  renderInboxBadges();
 
   const el = document.getElementById('allTasks');
   let list;
@@ -4511,8 +4663,24 @@ function renderCalendar(){
   const activeHour=nightTail?now.getHours()+24:now.getHours();
 
   const dates=weekDates().map(calendarHeaderDate);
+  const wISOs=weekDates();
+  // compute per-day task counts (non-inbox, matching that day's date or extraDeadlines, done or not)
+  const dayTaskCount=wISOs.map(iso=>{
+    return DB.tasks.filter(t=>{
+      if(t.inbox) return false;
+      if(t.date===iso) return true;
+      if(Array.isArray(t.extraDeadlines) && t.extraDeadlines.includes(iso)) return true;
+      return false;
+    }).length;
+  });
   let head='<div class="lp-cal-head lp-cal-time"></div>';
-  dayNames.forEach((d,i)=>head+=`<div class="lp-cal-head${i===today?' today current-day':''}"><span class="lp-cal-day-name">${d}</span><span class="lp-cal-head-date" dir="auto">${dates[i]||''}</span></div>`);
+  const openDayIso = window.__calOpenDayISO || null;
+  dayNames.forEach((d,i)=>{
+    const cnt=dayTaskCount[i]||0;
+    const cntHtml = cnt>0 ? `<span class="lp-cal-day-count">${toFaDigits(String(cnt))}</span>` : '';
+    const openCls = (openDayIso===wISOs[i]) ? ' lp-cal-head-open' : '';
+    head+=`<div class="lp-cal-head${i===today?' today current-day':''}${openCls}" data-cal-head-day="${i}" data-cal-head-iso="${wISOs[i]}" role="button" tabindex="0"><span class="lp-cal-day-name">${cntHtml}${d}</span><span class="lp-cal-head-date" dir="auto">${dates[i]||''}</span>${cnt>0?'<span class="lp-cal-day-taskdot" aria-hidden="true"></span>':''}</div>`;
+  });
 
   const hourClasses=h=>(h>=24?' next-day':'')+(h===24?' midnight':'');
   let axis='';
@@ -4534,6 +4702,14 @@ function renderCalendar(){
   cols.forEach(col=>col.querySelectorAll('.lp-cal-slot').forEach(slot=>{
     slot.addEventListener('click',e=>openCalendarSlot(Number(col.dataset.day),Number(slot.dataset.gridHour),e.clientY,slot));
   }));
+  // v16.3: clicking a day header opens that day's dedicated task list
+  document.querySelectorAll('.lp-cal-head[data-cal-head-day]').forEach(h=>{
+    h.addEventListener('click',()=>{
+      const iso=h.dataset.calHeadIso; const di=Number(h.dataset.calHeadDay);
+      if(!iso) return;
+      openCalDayTasks(iso, di);
+    });
+  });
   updateCalendarNowMarker(now);
   const offGrid=[]; // blocks that fall in the 03:00–06:00 gap the grid does not draw
   DB.events.forEach(e=>{
@@ -4588,7 +4764,103 @@ function renderCalendar(){
     note.innerHTML=`🌙 <span>بیرون از بازهٔ نمایش تقویم</span> — ${names}${more}`;
     wrap.appendChild(note);
   }
+  // v16.3: refresh per-day tasks panel if open
+  if(window.__calOpenDayISO) renderCalDayTasks();
 }
+
+/* ============ CALENDAR PER-DAY TASKS PANEL (v16.3) ============ */
+let __calDayTaskFilter = 'all';
+function tasksForDay(iso){
+  return DB.tasks.filter(t=>{
+    if(t.inbox) return false;
+    if(t.date===iso) return true;
+    if(Array.isArray(t.extraDeadlines) && t.extraDeadlines.includes(iso)) return true;
+    return false;
+  });
+}
+function isoToCalDayTitle(iso){
+  try{
+    const parts=String(iso||'').split('-').map(Number);
+    if(parts.length!==3||parts.some(n=>!Number.isFinite(n))) return iso||'';
+    const d=new Date(parts[0],parts[1]-1,parts[2],12);
+    const wd=(d.getDay()+1)%7;
+    const txt=d.toLocaleDateString('fa-IR',{day:'numeric',month:'long',year:'numeric'});
+    return {weekday:dayNames[wd], long:txt};
+  }catch(_){ return {weekday:'', long:iso||''}; }
+}
+function openCalDayTasks(iso, dayIdx){
+  window.__calOpenDayISO = iso;
+  __calDayTaskFilter = 'all';
+  const card=document.getElementById('calDayTasksCard');
+  if(card) card.style.display='';
+  renderCalDayTasks();
+  // re-render calendar so the header gets the "open" highlight + counts stay correct
+  // (header classes are already set above; but we still want smooth scroll to panel)
+  setTimeout(()=>{
+    card?.scrollIntoView?.({behavior:'smooth',block:'start'});
+  },60);
+}
+function closeCalDayTasks(){
+  window.__calOpenDayISO = null;
+  const card=document.getElementById('calDayTasksCard');
+  if(card) card.style.display='none';
+  // refresh calendar header open states
+  if(viewActive('calendar')) renderCalendar();
+}
+function openTaskForDayFromCal(){
+  const iso=window.__calOpenDayISO;
+  if(!iso) return;
+  // pre-set the date before opening the modal so the "new task" form picks it up
+  const dateIn=document.getElementById('tDate');
+  const dateDisp=document.getElementById('tDateDisplay');
+  if(dateIn) dateIn.value = iso;
+  if(dateDisp) dateDisp.value = isoToJalaliText(iso);
+  // add a flag so openTaskModal (new-task path) does not wipe our pre-set date
+  window.__taskPrefillDate = iso;
+  openTaskModal();
+  window.__taskPrefillDate = null;
+}
+function renderCalDayTasks(){
+  const iso=window.__calOpenDayISO;
+  const card=document.getElementById('calDayTasksCard');
+  if(!card || !iso) return;
+  if(card.style.display==='none') card.style.display='';
+  const info=isoToCalDayTitle(iso);
+  const titleEl=document.getElementById('calDayTasksTitle');
+  const dateEl=document.getElementById('calDayTasksDate');
+  const subEl=document.getElementById('calDayTasksSub');
+  if(titleEl) titleEl.textContent = `${info.weekday} — لیست کارها`;
+  if(dateEl){
+    const dObj=new Date(iso+'T12:00:00');
+    const wd=(dObj.getDay()+1)%7;
+    dateEl.textContent = ['ش','ی','د','س','چ','پ','ج'][wd]||'';
+  }
+  const all=tasksForDay(iso);
+  const done=all.filter(t=>t.done).length;
+  if(subEl) subEl.textContent = `${info.long} · ${toFaDigits(String(all.length))} تسک (${toFaDigits(String(done))} انجام‌شده)`;
+
+  // wire filter chips
+  document.querySelectorAll('#calDayTaskFilters .chip-opt').forEach(c=>{
+    c.classList.toggle('sel', c.dataset.cf===__calDayTaskFilter);
+    c.onclick=()=>{ __calDayTaskFilter=c.dataset.cf||'all'; renderCalDayTasks(); };
+  });
+  const doneCountEl=document.getElementById('calDayDoneCount');
+  if(doneCountEl) doneCountEl.textContent = toFaDigits(String(done))+' تسک';
+
+  // filter
+  let list=sortTasks(all);
+  if(__calDayTaskFilter==='done') list=list.filter(t=>t.done);
+  else if(__calDayTaskFilter==='notstarted') list=list.filter(t=>!t.done && (t.status||'notstarted')==='notstarted');
+  else if(__calDayTaskFilter==='inprogress') list=list.filter(t=>!t.done && (t.status||'notstarted')==='inprogress');
+  // 'all' shows all
+
+  const listEl=document.getElementById('calDayTasksList');
+  if(!listEl) return;
+  listEl.innerHTML = list.length
+    ? list.map(taskRow).join('')
+    : `<div class="empty"><div class="ic">${__calDayTaskFilter==='done'?'✅':'📭'}</div>${__calDayTaskFilter==='done'?'هنوز تسکی کامل نکردی':'برای این روز تسکی نیست — از دکمه‌ی «تسک جدید» اضافه کن'}</div>`;
+}
+
 /* ============ CHARTS (self-contained, no external library) ============ */
 function last7(){ const arr=[]; for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(dateToLocalISO(d)); } return arr; }
 function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
@@ -4926,6 +5198,8 @@ function renderAll(){
       console.error('[Life Planner render error]', name, err);
     }
   }
+  // v16.3: keep inbox red badge fresh across every view
+  try{ renderInboxBadges(); }catch(_){}
 }
 checkStreakShields();
 renderPinnedNav();
