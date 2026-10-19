@@ -1405,6 +1405,19 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 .ev-ghost.ev-ghost-night .ev-ghost-time{color:#c3b6ff;}
 .ev-ghost-time{font-size:10px;font-weight:800;color:var(--neon);background:rgba(6,10,22,.88);padding:1px 7px;border-radius:6px;margin-top:2px;white-space:nowrap;direction:rtl;}
 .lp-cal-day.lp-drop-target{background:var(--neon-15)!important;box-shadow:inset 0 0 0 1.5px var(--neon-55);}
+/* v18.2 — drag an event's edge to resize it right on the grid */
+.ev-resize-handle{position:absolute;left:0;right:0;height:16px;z-index:12;cursor:ns-resize;touch-action:none;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;}
+.ev-resize-handle-top{top:0;}
+.ev-resize-handle-bottom{bottom:0;}
+.ev-resize-grip{width:26px;height:4px;border-radius:99px;background:rgba(255,255,255,.85);box-shadow:0 1px 4px rgba(0,0,0,.5);opacity:0;transform:scaleX(.6);transition:opacity .15s,transform .15s;pointer-events:none;}
+.ev-block:hover .ev-resize-grip,.ev-block:focus-visible .ev-resize-grip,.ev-block.lp-resizing .ev-resize-grip{opacity:1;transform:scaleX(1);}
+@media(hover:none){.ev-resize-grip{opacity:.55;transform:scaleX(1);}}
+.ev-block.lp-resizing{filter:brightness(1.18);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35), 0 6px 22px rgba(0,229,255,.35);z-index:9;cursor:ns-resize;}
+.ev-block.lp-resize-blocked{box-shadow:inset 0 0 0 2px rgba(255,70,70,.85), 0 6px 22px rgba(255,70,70,.3);}
+.ev-resize-guide{position:absolute;left:0;right:0;height:2px;z-index:4;pointer-events:none;background:var(--neon);box-shadow:0 0 8px var(--neon);transform:translateY(-1px);}
+.ev-resize-tip{position:fixed;z-index:99999;pointer-events:none;direction:rtl;background:rgba(6,10,22,.94);border:1.5px solid var(--neon);color:var(--txt);font-size:11px;font-weight:800;line-height:1.5;padding:3px 10px;border-radius:9px;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.45);}
+.ev-resize-tip.is-blocked{border-color:rgba(255,70,70,.9);color:#ff9a9a;}
+html[data-lang="en"] .ev-resize-tip{direction:ltr;}
 /* task color dot */
 .lp-tdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:6px;vertical-align:baseline;box-shadow:0 0 6px rgba(255,255,255,.16);}
 /* clearly separated action groups in the event menu */

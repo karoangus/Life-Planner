@@ -79,6 +79,11 @@
     "ردیف اصلی نوار پایین را از حداقل ۲ تا حداکثر ۴ دکمه انتخاب و مرتب کن؛ حتی می‌توانی فقط ۲ میان‌بر کنار «بیشتر» داشته باشی. دکمه‌های اضافی اختیاری‌اند و تا ۵ مورد می‌توانی اضافه کنی.": "Choose and arrange 2–4 buttons in the bottom bar's main row; you can keep just 2 shortcuts beside More. Extra buttons are optional, with up to 5 available.",
     "تعداد دکمه‌های ردیف اصلی:": "Main row button count:",
     "تعداد دکمه‌های نوار پایین": "Bottom bar button count",
+    /* ---- v18.2: drag an event's edge to resize it on the grid ---- */
+    "هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود، لبه‌ی بالا یا پایینش را بکش تا ساعتش کم‌وزیاد شود — بدون رفتن توی تنظیمات. برای افزودن سریع رویداد، روی خانه‌ی خالی بزن.": "Every day is blocked out hour by hour from 6 AM to 3 AM; hold and drag an event to move it, drag its top or bottom edge to make it shorter or longer — no settings needed, or tap an empty time slot to quickly add one.",
+    "لبه بالا را بکش تا ساعت شروع عوض شود": "Drag the top edge to change the start time",
+    "لبه پایین را بکش تا ساعت پایان عوض شود": "Drag the bottom edge to change the end time",
+    "· لبه بالا یا پایین را بکش تا ساعت شروع یا پایان عوض شود": "· drag the top or bottom edge to change the start or end time",
     /* ---- v17.2: minute-accurate calendar and quick-add slots ---- */
     "🕒 الان": "🕒 Now",
     "زمان فعلی": "Current time",
@@ -944,6 +949,20 @@
     [new RegExp("^📥\\ ([\\s\\S]*)\\ کارِ\\ ناتمامِ\\ دیروز\\ به\\ این\\ روز\\ اومد$"), "📥 $1 unfinished items from yesterday moved to this day"],
     [new RegExp("^📋\\ ([\\s\\S]*)\\ کار\\ کپی شد$"), "📋 $1 items copied"],
     [new RegExp("^برنامه\\ روز:\\ ([\\s\\S]*)\\ از\\ ([\\s\\S]*)\\ انجام‌شده$"), "Day plan: $1 of $2 done"],
+    /* v18.2: live resize bubble, resize result and resize conflict */
+    [new RegExp("^⚠️\\ «([\\s\\S]*?)»\\ مانع\\ این\\ تغییر\\ است؛\\ ساعت‌ها\\ تداخل\\ دارند$"), "⚠️ “$1” blocks this change; the times overlap"],
+    [new RegExp("^📌\\ این\\ روز\\ جدا\\ شد\\ —\\ ⏱️\\ «([\\s\\S]*?)»\\ شد\\ ([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ \\((\\d+)\\ ساعت\\ و\\ (\\d+)\\ دقیقه\\)\\s*$"), "📌 This day was split off — ⏱️ “$1” is now $2 to $3 ($4 h $5 min)"],
+    [new RegExp("^📌\\ این\\ روز\\ جدا\\ شد\\ —\\ ⏱️\\ «([\\s\\S]*?)»\\ شد\\ ([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ \\((\\d+)\\ ساعت\\)\\s*$"), "📌 This day was split off — ⏱️ “$1” is now $2 to $3 ($4 h)"],
+    [new RegExp("^📌\\ این\\ روز\\ جدا\\ شد\\ —\\ ⏱️\\ «([\\s\\S]*?)»\\ شد\\ ([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ \\((\\d+)\\ دقیقه\\)\\s*$"), "📌 This day was split off — ⏱️ “$1” is now $2 to $3 ($4 min)"],
+    [new RegExp("^⏱️\\ «([\\s\\S]*?)»\\ شد\\ ([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ \\((\\d+)\\ ساعت\\ و\\ (\\d+)\\ دقیقه\\)\\s*$"), "⏱️ “$1” is now $2 to $3 ($4 h $5 min)"],
+    [new RegExp("^⏱️\\ «([\\s\\S]*?)»\\ شد\\ ([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ \\((\\d+)\\ ساعت\\)\\s*$"), "⏱️ “$1” is now $2 to $3 ($4 h)"],
+    [new RegExp("^⏱️\\ «([\\s\\S]*?)»\\ شد\\ ([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ \\((\\d+)\\ دقیقه\\)\\s*$"), "⏱️ “$1” is now $2 to $3 ($4 min)"],
+    [new RegExp("^([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ ·\\ (\\d+)\\ ساعت\\ و\\ (\\d+)\\ دقیقه\\ ·\\ ⚠️\\ تداخل\\ دارد$"), "$1 to $2 · $3 h $4 min · ⚠️ overlaps another event"],
+    [new RegExp("^([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ ·\\ (\\d+)\\ ساعت\\ ·\\ ⚠️\\ تداخل\\ دارد$"), "$1 to $2 · $3 h · ⚠️ overlaps another event"],
+    [new RegExp("^([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ ·\\ (\\d+)\\ دقیقه\\ ·\\ ⚠️\\ تداخل\\ دارد$"), "$1 to $2 · $3 min · ⚠️ overlaps another event"],
+    [new RegExp("^([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ ·\\ (\\d+)\\ ساعت\\ و\\ (\\d+)\\ دقیقه$"), "$1 to $2 · $3 h $4 min"],
+    [new RegExp("^([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ ·\\ (\\d+)\\ ساعت$"), "$1 to $2 · $3 h"],
+    [new RegExp("^([\\s\\S]*?)\\ تا\\ ([\\s\\S]*?)\\ ·\\ (\\d+)\\ دقیقه$"), "$1 to $2 · $3 min"],
     /* v17.2: hover text on empty calendar slots */
     [new RegExp("^برای\\ افزودن\\ رویداد\\ در\\ ([\\s\\S]*)$"), "Tap to add an event at $1"],
     /* v16.2: "۳ از ۱۰ یادداشت" (notes counter while a filter is on) */

@@ -4482,7 +4482,7 @@ function calEventPlacements(e){
   });
   return out;
 }
-const lpDragState={ drag:null, holdTimer:null, suppressClickUntil:0 };
+const lpDragState={ drag:null, resize:null, holdTimer:null, suppressClickUntil:0 };
 function lpCandidateConflicts(candidate,events){
   const cSeg=eventSegments(candidate);
   for(const other of events){
@@ -4496,11 +4496,12 @@ function lpCandidateConflicts(candidate,events){
 }
 function lpCalColumns(){ return [...document.querySelectorAll('#weekGrid .lp-cal-day')]; }
 function lpCancelHold(){ if(lpDragState.holdTimer){ clearTimeout(lpDragState.holdTimer); lpDragState.holdTimer=null; } }
-function lpBlockScroll(e){ if(lpDragState.drag) e.preventDefault(); }
+function lpBlockScroll(e){ if(lpDragState.drag||lpDragState.resize) e.preventDefault(); }
 function attachEventDrag(el, ev, dayIdx, shift){
   shift=Number(shift)||0; // 1440 when the block is drawn in the previous column's night tail
   el.addEventListener('pointerdown', (e)=>{
-    if(lpDragState.drag) return;
+    if(e.target?.closest?.('.ev-resize-handle')) return; // an edge grab resizes, it never moves
+    if(lpDragState.drag||lpDragState.resize) return;
     if(e.button!==undefined && e.button!==0) return;
     const isMouse=(e.pointerType==='mouse');
     const sx=e.clientX, sy=e.clientY;
@@ -4685,6 +4686,218 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
   save();
   rescheduleAllEventReminders();
 }
+/* ============ v18.2 — RESIZE BY DRAGGING AN EDGE (quick time edit) ============
+   Grabbing the top or bottom edge of a block stretches / shrinks it right on
+   the grid — no event modal, no time fields. The gesture snaps to the same
+   15-minute steps as quick-add, never goes below 15 minutes, shows a live
+   «start → end · duration» bubble (red while it would clash with another
+   block), works past midnight in the night tail, and — exactly like a move —
+   resizing one day of a multi-day series splits that day off into its own
+   event. Every applied resize offers an «↩️ برگرداندن» (undo) in its toast.
+   Keyboard: focus a block, ↑/↓ resize the end, Shift+↑/↓ resize the start. */
+let __evResizeUndo=null; // deep copy of DB.events taken before the last resize
+function lpDurationLabel(mins){
+  const d=Math.max(0,Math.round(Number(mins)||0));
+  const h=Math.floor(d/60), m=d%60;
+  if(h&&m) return `${h} ساعت و ${m} دقیقه`;
+  if(h) return `${h} ساعت`;
+  return `${m} دقیقه`;
+}
+function lpResizeTimes(r){
+  // only the grabbed edge moves: the other one keeps the stored time, even
+  // when this placement is clipped by the grid (e.g. a 04:00 start at 06:00)
+  return {
+    startMin: r.edge==='start' ? r.curFrom-r.shift : r.origStart,
+    endMin:   r.edge==='end'   ? r.curTo-r.shift   : r.origEnd
+  };
+}
+function lpResizeConflict(r){
+  const ev=DB.events.find(x=>x.id===r.evRef.id)||r.evRef;
+  const {startMin,endMin}=lpResizeTimes(r);
+  const days=eventDays(ev);
+  const candidate={title:ev.title, days, startMin, endMin};
+  const others=DB.events.filter(x=>x.id!==ev.id);
+  if(days.length>1){
+    candidate.days=[r.dayIdx];
+    const rem=days.filter(dd=>dd!==r.dayIdx);
+    if(rem.length) others.push({title:ev.title, days:rem, startMin:r.origStart, endMin:r.origEnd});
+  }
+  return lpCandidateConflicts(candidate,others);
+}
+function attachEventResize(el, ev, dayIdx, shift, gridFrom, gridTo){
+  shift=Number(shift)||0;
+  [['start','ev-resize-handle-top','لبه بالا را بکش تا ساعت شروع عوض شود'],
+   ['end','ev-resize-handle-bottom','لبه پایین را بکش تا ساعت پایان عوض شود']].forEach(([edge,cls,label])=>{
+    const h=document.createElement('span');
+    h.className=`ev-resize-handle ${cls}`;
+    h.dataset.edge=edge;
+    h.setAttribute('aria-hidden','true');
+    h.title=label;
+    h.innerHTML='<span class="ev-resize-grip"></span>';
+    h.addEventListener('pointerdown', (e)=>{
+      if(lpDragState.drag||lpDragState.resize) return;
+      if(e.button!==undefined && e.button!==0) return;
+      e.preventDefault(); e.stopPropagation();
+      // on a very short block both handles overlap — the half that was
+      // actually grabbed decides which edge is being resized
+      const rect=el.getBoundingClientRect();
+      const realEdge=(rect.height<30 && Number.isFinite(e.clientY))
+        ? ((e.clientY-rect.top)<rect.height/2 ? 'start' : 'end') : edge;
+      lpBeginResize(e, el, ev, dayIdx, shift, realEdge, gridFrom, gridTo);
+    });
+    el.appendChild(h);
+  });
+  // keyboard resize: ↑/↓ move the end, Shift+↑/↓ move the start (15-min steps)
+  el.addEventListener('keydown', (e)=>{
+    if(e.key!=='ArrowDown' && e.key!=='ArrowUp') return;
+    if(lpDragState.drag||lpDragState.resize) return;
+    const dir=(e.key==='ArrowDown'?1:-1)*CAL_SNAP_MIN;
+    const s=eventStartMinutes(ev), en=eventEndMinutes(ev);
+    let gFrom=s+shift, gTo=en+shift;
+    if(e.shiftKey) gFrom=Math.max(CAL_START_HOUR*60, Math.min(gTo-CAL_SNAP_MIN, gFrom+dir));
+    else gTo=Math.max(gFrom+CAL_SNAP_MIN, Math.min(CAL_END_HOUR*60, gTo+dir));
+    e.preventDefault(); e.stopPropagation();
+    lpApplyEventResize(ev, dayIdx, shift, gFrom, gTo, e.shiftKey?'start':'end');
+  });
+}
+function lpBeginResize(e, el, ev, dayIdx, shift, edge, gridFrom, gridTo){
+  lpCancelHold();
+  try{ if(navigator.vibrate) navigator.vibrate(10); }catch(_){}
+  const col=el.parentElement;
+  if(!col) return;
+  const tip=document.createElement('div');
+  tip.className='ev-resize-tip';
+  tip.setAttribute('aria-hidden','true');
+  document.body.appendChild(tip);
+  const guide=document.createElement('div');
+  guide.className='ev-resize-guide';
+  guide.setAttribute('aria-hidden','true');
+  col.appendChild(guide);
+  el.classList.add('lp-resizing');
+  const r={ evRef:ev, el, col, tip, guide, dayIdx, shift:Number(shift)||0, edge,
+    origStart:eventStartMinutes(ev), origEnd:eventEndMinutes(ev),
+    origFrom:Number(gridFrom), origTo:Number(gridTo), curFrom:Number(gridFrom), curTo:Number(gridTo),
+    moved:false, lastX:e.clientX, lastY:e.clientY, lastSnap:null, conflict:null };
+  lpDragState.resize=r;
+  document.addEventListener('touchmove', lpBlockScroll, {passive:false});
+  const move=(m)=>lpResizeMove(m);
+  const up=()=>{ cleanup(); lpResizeEnd(); };
+  const cancel=()=>{ cleanup(); lpResizeCancel(); };
+  const cleanup=()=>{
+    document.removeEventListener('pointermove',move);
+    document.removeEventListener('pointerup',up);
+    document.removeEventListener('pointercancel',cancel);
+  };
+  r.cleanup=cleanup;
+  document.addEventListener('pointermove',move,{passive:true});
+  document.addEventListener('pointerup',up);
+  document.addEventListener('pointercancel',cancel);
+  lpResizeMove(e);
+  lpResizeAutoscrollStep(r);
+}
+function lpResizeMove(e){
+  const r=lpDragState.resize; if(!r) return;
+  if(typeof e.clientX==='number'){ r.lastX=e.clientX; r.lastY=e.clientY; }
+  const rect=r.col.getBoundingClientRect();
+  if(!rect.height) return;
+  let gridMin=Math.round(((r.lastY-rect.top)/CAL_PX_HOUR*60 + CAL_START_HOUR*60)/CAL_SNAP_MIN)*CAL_SNAP_MIN;
+  if(r.edge==='start') r.curFrom=Math.max(CAL_START_HOUR*60, Math.min(r.curTo-CAL_SNAP_MIN, gridMin));
+  else r.curTo=Math.max(r.curFrom+CAL_SNAP_MIN, Math.min(CAL_END_HOUR*60, gridMin));
+  r.moved = r.moved || r.curFrom!==r.origFrom || r.curTo!==r.origTo;
+  const snapped=(r.edge==='start'?r.curFrom:r.curTo);
+  if(snapped!==r.lastSnap){
+    r.lastSnap=snapped;
+    try{ if(navigator.vibrate) navigator.vibrate(3); }catch(_){}
+  }
+  // live preview: the block itself stretches, the guide marks the snapped edge
+  r.el.style.top=((r.curFrom-CAL_START_HOUR*60)/60*CAL_PX_HOUR)+'px';
+  r.el.style.height=Math.max(10,(r.curTo-r.curFrom)/60*CAL_PX_HOUR-2)+'px';
+  const dur=r.curTo-r.curFrom;
+  r.el.classList.toggle('event-tiny', dur<15);
+  r.el.classList.toggle('event-short', dur>=15 && dur<30);
+  r.guide.style.top=(((r.edge==='start'?r.curFrom:r.curTo)-CAL_START_HOUR*60)/60*CAL_PX_HOUR)+'px';
+  const {startMin,endMin}=lpResizeTimes(r);
+  r.conflict=lpResizeConflict(r);
+  r.el.classList.toggle('lp-resize-blocked', !!r.conflict);
+  r.tip.classList.toggle('is-blocked', !!r.conflict);
+  r.tip.textContent=`${calClockLabel(startMin)} تا ${calClockLabel(endMin)} · ${lpDurationLabel(endMin-startMin)}${r.conflict?' · ⚠️ تداخل دارد':''}`;
+  r.tip.style.left=Math.max(8, Math.min(window.innerWidth-8-r.tip.offsetWidth, r.lastX-r.tip.offsetWidth/2))+'px';
+  r.tip.style.top=Math.max(8, r.lastY-46)+'px';
+}
+function lpResizeAutoscrollStep(r){
+  if(lpDragState.resize!==r) return;
+  let scrolled=false;
+  if(r.lastY<90){ window.scrollBy(0,-14); scrolled=true; }
+  else if(r.lastY>window.innerHeight-90){ window.scrollBy(0,14); scrolled=true; }
+  if(scrolled) lpResizeMove({});
+  requestAnimationFrame(()=>lpResizeAutoscrollStep(r));
+}
+function lpResizeCleanup(){
+  const r=lpDragState.resize;
+  document.removeEventListener('touchmove', lpBlockScroll);
+  if(r){
+    r.tip.remove();
+    r.guide.remove();
+    r.el.classList.remove('lp-resizing','lp-resize-blocked');
+  }
+  lpDragState.resize=null;
+}
+function lpResizeCancel(){
+  if(!lpDragState.resize) return;
+  lpResizeCleanup();
+  renderCalendar();
+}
+function lpResizeEnd(){
+  const r=lpDragState.resize;
+  lpResizeCleanup();
+  if(!r) return;
+  if(r.moved) lpDragState.suppressClickUntil=Date.now()+600; // swallow the trailing click
+  if(!r.moved){ renderCalendar(); return; }
+  lpApplyEventResize(r.evRef, r.dayIdx, r.shift, r.curFrom, r.curTo, r.edge);
+}
+function lpApplyEventResize(evRef, dayIdx, shift, gridFrom, gridTo, edge){
+  const ev=DB.events.find(x=>x.id===evRef.id)||evRef;
+  const origStart=eventStartMinutes(ev), origEnd=eventEndMinutes(ev);
+  const r={evRef:ev, dayIdx, shift:Number(shift)||0, edge, origStart, origEnd, curFrom:Number(gridFrom), curTo:Number(gridTo)};
+  const {startMin:ns, endMin:ne}=lpResizeTimes(r);
+  if(ns===origStart && ne===origEnd){ renderCalendar(); return; } // put back exactly where it was
+  if(ne-ns<CAL_SNAP_MIN){ renderCalendar(); return; }
+  const conflict=lpResizeConflict(r);
+  if(conflict){
+    toast(`⚠️ «${esc(conflict.title)}» مانع این تغییر است؛ ساعت‌ها تداخل دارند`);
+    renderCalendar();
+    return;
+  }
+  __evResizeUndo=JSON.parse(JSON.stringify(DB.events||[]));
+  const days=eventDays(ev);
+  const multiDay=days.length>1;
+  if(multiDay){
+    // resizing one occurrence of a series → that day becomes its own event
+    ev.days=days.filter(dd=>dd!==dayIdx);
+    delete ev.day;
+    DB.events.push({
+      id:uid(), title:ev.title, desc:eventDesc(ev), days:[dayIdx], startMin:ns, endMin:ne,
+      reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null,
+      startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
+    });
+  }else{
+    ev.startMin=ns; ev.endMin=ne;
+    ev.startHour=Math.floor(ns/60); ev.endHour=Math.min(24,Math.floor(ne/60));
+  }
+  save();
+  rescheduleAllEventReminders();
+  renderCalendar();
+  toast(`${multiDay?'📌 این روز جدا شد — ':''}⏱️ «${esc(ev.title)}» شد ${calClockLabel(ns)} تا ${calClockLabel(ne)} (${lpDurationLabel(ne-ns)}) <button class="dp-undo-btn" type="button" onclick="lpUndoEventResize()">↩️ برگرداندن</button>`, 5200);
+}
+function lpUndoEventResize(){
+  if(!__evResizeUndo) return;
+  DB.events=__evResizeUndo;
+  __evResizeUndo=null;
+  save();
+  rescheduleAllEventReminders();
+  renderCalendar();
+  toast('↩️ برگردانده شد');
+}
 // swallow the click that follows a finished drag, without touching the block's own handler
 (function(){
   const grid=document.getElementById('weekGrid');
@@ -4765,7 +4978,7 @@ function renderCalendar(){
       el.className='ev-block'+sizeClass+(from>=CAL_DAY_MIN?' ev-night':'');
       el.style.top=((from-START*60)/60*PX_HOUR)+'px';
       el.style.height=Math.max(10,(to-from)/60*PX_HOUR-2)+'px';
-      el.title=`${e.title} — ${dayNames[d]} ${calClockLabel(s)} تا ${calClockLabel(en)}`;
+      el.title=`${e.title} — ${dayNames[d]} ${calClockLabel(s)} تا ${calClockLabel(en)} · لبه بالا یا پایین را بکش تا ساعت شروع یا پایان عوض شود`;
       el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
       if(eventDesc(e)){
         // v16.6: small hint that tapping the block reveals a description
@@ -4785,6 +4998,7 @@ function renderCalendar(){
         el.style.boxShadow=`inset 0 0 0 1px ${lpHexToRgba(ecol,.28)}, 0 2px 10px ${lpHexToRgba(ecol,.22)}`;
       }
       attachEventDrag(el,e,d,shift);
+      attachEventResize(el,e,d,shift,from,to);
       el.onclick=()=>onEventBlockClick(e.id,d);
       col.appendChild(el);
     });
@@ -5874,7 +6088,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='18.1';
+const LP_APP_VERSION='18.2';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
