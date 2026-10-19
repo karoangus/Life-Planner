@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-18.1-00e5ff?style=for-the-badge&logoColor=white" alt="Version 18.1" />
+  <img src="https://img.shields.io/badge/نسخه-18.2-00e5ff?style=for-the-badge&logoColor=white" alt="Version 18.2" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -158,6 +158,7 @@ https://karoangus.github.io/Life-Planner/
 - **بلوک‌بندی ساعتی ۶ صبح تا ۳ بامداد (جدید در v17.1):** هر ستونِ روز ۲۱ بلوک یک‌ساعته دارد که از ۰۶:۰۰ شروع می‌شود و تا ۰۳:۰۰ بامدادِ روز بعد ادامه دارد؛ ساعت‌های بعد از نیمه‌شب با رنگ بنفش جدا شده‌اند و رویدادهای شبانه یک‌تکه کشیده می‌شوند.
 - **نشانگر دقیق زمان و افزودن سریع (جدید در v17.2):** خط زمانِ فعلی دقیقه‌به‌دقیقه و هم‌زمان با رفتن به ساعت بعد جابه‌جا می‌شود؛ تاریخ جلالی هر روز هم در سربرگ دیده می‌شود. روی بخش خالی هر ساعت بزن تا فرم «رویداد جدید» با روز و زمان همان بخش آماده شود.
 - **کشیدن و رها کردن رویدادها (Drag & Drop):** تغییر زمان یا روز رویدادها با نگه‌داشتن و کشیدن در شبکه هفتگی، همراه با اسنپ ۱۵ دقیقه‌ای و بررسی تداخل ساعت‌ها.
+- **تغییر مدت با کشیدن لبه‌ها (جدید در v18.2):** لبه‌ی بالا یا پایین هر بلوک را بکش تا ساعت شروع/پایان همان‌جا روی شبکه عوض شود؛ پیش‌نمایش زنده‌ی «شروع تا پایان · مدت»، خط راهنمای اسنپ، هشدار قرمز هنگام تداخل، پشتیبانی از بعد از نیمه‌شب و جدا شدن فقط همان روز از رویدادهای چندروزه، میانبر `↑`/`↓` (و `Shift+↑`/`↓` برای شروع) و دکمه‌ی «برگرداندن» بعد از هر تغییر.
 - **مدیریت پیشرفته رویدادهای چندروزه:** امکان ویرایش تکیِ فقط یک روز خاص از یک رویداد زنجیره‌ای، یا ویرایش سراسری کل روزها.
 - دسته‌بندی‌های رنگی رویدادها و وظایف با پالت رنگ‌های جذاب.
 
@@ -286,13 +287,13 @@ npm test
 
 هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **هر پنج جا با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"18.1"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '18.1';`
-3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"18.1.0"`).
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"18.2"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '18.2';`
+3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"18.2.0"`).
 4. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 5. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v74';
+   const CACHE_NAME = 'life-planner-cache-v75';
    ```
 
 > ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ همه‌ی تست‌ها باید سبز باشند.
@@ -300,6 +301,13 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 18.2 — تغییر ساعت رویداد با کشیدن لبه‌ها
+- ↔️ **ریزایز مستقیم روی تقویم:** لبه‌ی بالا یا پایینِ هر بلوک رویداد را بگیر و بکش تا ساعت شروع یا پایانش کم‌وزیاد شود — دیگر لازم نیست برای چند دقیقه جابه‌جایی وارد فرم ویرایش و ساعت‌ها شوی. دستگیره‌ها روی بلوک دیده می‌شوند (در موبایل همیشه نیمه‌پیدا هستند) و ناحیه‌ی لمسشان بزرگ است.
+- 👁️ **پیش‌نمایش زنده:** حین کشیدن، خود بلوک کش می‌آید، یک خط راهنما جای دقیق لبه را نشان می‌دهد و یک حباب شناور «ساعت شروع تا پایان · مدت» را لحظه‌ای نمایش می‌دهد. اسنپ روی گام‌های ۱۵ دقیقه‌ای است، حداقل مدت ۱۵ دقیقه می‌ماند و اگر بازه با رویداد دیگری تداخل پیدا کند حباب قرمز می‌شود و تغییر اعمال نمی‌شود.
+- 🌙 **سازگار با شب و رویدادهای چندروزه:** کشیدن تا بعد از نیمه‌شب (تا ۰۳:۰۰) هم درست کار می‌کند؛ اگر رویداد چندروزه باشد، فقط همان روزی که لبه‌اش را کشیدی از سری جدا می‌شود و بقیه‌ی روزها دست‌نخورده می‌مانند — دقیقاً مثل جابه‌جا کردن یک روز از سری.
+- ⌨️ **میانبر صفحه‌کلید و برگرداندن:** با فوکوس روی بلوک، `↑`/`↓` پایان رویداد و `Shift+↑`/`↓` شروعش را ۱۵ دقیقه جابه‌جا می‌کند. بعد از هر تغییر هم در پیام تأیید دکمه‌ی «↩️ برگرداندن» هست تا اگر اشتباه کشیدی، یک‌لمسی برگردد.
+- 🌐 **ترجمه‌ی انگلیسی کامل:** راهنمای تقویم، راهنمای لبه‌ها، حباب زنده و پیام‌های جدید در حالت English ترجمه شده‌اند.
 
 ### ✨ نسخه 18.1 — «برنامه روز»: دفترچه‌ی مستقل هر روزِ تقویم
 - 🗒️ **کاملاً جدا از بخش تسک‌ها:** پنلی که با زدن روی نام هر روز باز می‌شود دیگر هیچ ارتباطی با تسک‌های اصلی ندارد. داده‌هایش در `DB.dayPlans` و جداگانه برای هر تاریخ ذخیره می‌شوند؛ تیک زدن اینجا نه XP می‌دهد، نه استریک را تغییر می‌دهد و نه روی بخش تسک‌ها اثری می‌گذارد.
@@ -429,6 +437,7 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
+- **↔️ Drag-to-resize calendar events (new in v18.2):** Drag a block's top or bottom edge on the weekly grid to change its start or end — no event form needed. Live «start to end · duration» bubble with 15-minute snapping, a red warning on overlaps, after-midnight support, splitting only the resized day out of multi-day series, keyboard resizing (`↑`/`↓`, `Shift+↑`/`↓` for the start) and an undo button after every change.
 - **🗒️ “Day plan” — the calendar's own per-day notebook (redesigned in v18.1):** Tap a weekday header to open a lightweight checklist for that day which is **completely separate from the main Tasks section** and stored in `DB.dayPlans`: no Inbox, no workflow statuses, no categories, no subtasks and no XP. Quick-add with automatic time parsing (`14:30 piano practice`) and an importance marker (`!buy bread`), a per-day progress bar, a remaining-count badge on every day header, drag-to-reorder, move to tomorrow, carry over yesterday's leftovers, copy yesterday's plan, inline editing, a per-day note, clear-completed with undo, and an optional read-only strip for main-task deadlines.
 - **🔴 Live Inbox count (new in v18):** The Tasks Inbox tab shows a red, immediately refreshed count of items waiting in the Inbox.
 - **📱 Two-button quick bar (new in v18):** Choose 2, 3 or 4 main shortcuts; the two-button setting keeps exactly two shortcuts plus More. Extra second-row links remain optional, and the choice is backed up.

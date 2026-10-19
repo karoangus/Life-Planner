@@ -450,6 +450,107 @@ if (!useFallback) {
     v172.english.shortDate==='15 Mehr' && v172.english.slotHint==='Tap to add an event at 10:00' &&
     v172.english.intro.includes('tap an empty time slot'), JSON.stringify(v172.english));
 
+  // ---------- v18.2: drag a block's edge to resize it on the grid ----------
+  const v182 = await page.evaluate(async () => {
+    showView('calendar');
+    DB.events = []; save();
+    const mk = (id, title, days, s, e) => {
+      const ev = { id, title, days, startMin:s, endMin:e,
+        startHour:Math.floor(s/60), endHour:Math.min(24, Math.floor(e/60)) };
+      DB.events.push(ev); return ev;
+    };
+    const evA = mk('v182-a', 'ریزایز اصلی', [2], 600, 660);       // Tue 10:00–11:00
+    mk('v182-b', 'همسایه', [2], 780, 840);                        // Tue 13:00–14:00
+    save(); renderCalendar();
+    const col = () => document.querySelector('#weekGrid .lp-cal-day[data-day="2"]');
+    const blockA = () => col().querySelector('.ev-block');
+    const yFor = (gridMin) => col().getBoundingClientRect().top + (gridMin - 360) / 60 * 52;
+    const xFor = () => { const r = col().getBoundingClientRect(); return r.left + r.width / 2; };
+    const ptr = (type, target, y) => target.dispatchEvent(new PointerEvent(type,
+      { bubbles:true, cancelable:true, pointerType:'mouse', button:0, clientX:xFor(), clientY:y }));
+    const get = (id) => DB.events.find(e => e.id === id);
+
+    const handles = blockA() ? blockA().querySelectorAll('.ev-resize-handle').length : 0;
+
+    // real bottom-edge drag: 11:00 → 12:30, with a live preview + bubble
+    let b = blockA();
+    ptr('pointerdown', b.querySelector('.ev-resize-handle-bottom'), yFor(660));
+    ptr('pointermove', document, yFor(750));
+    const preview = { h: parseFloat(b.style.height),
+      tip: document.querySelector('.ev-resize-tip')?.textContent || '',
+      guide: !!document.querySelector('.ev-resize-guide') };
+    ptr('pointerup', document, yFor(750));
+    const bottomDrag = { start:get('v182-a').startMin, end:get('v182-a').endMin };
+
+    // undo offered in the toast brings the bottom edge straight back
+    lpUndoEventResize();
+    const undoOk = get('v182-a').startMin === 600 && get('v182-a').endMin === 660;
+
+    // real top-edge drag: 10:00 → 09:15
+    b = blockA();
+    ptr('pointerdown', b.querySelector('.ev-resize-handle-top'), yFor(600));
+    ptr('pointermove', document, yFor(555));
+    ptr('pointerup', document, yFor(555));
+    const topDrag = { start:get('v182-a').startMin, end:get('v182-a').endMin };
+
+    // keyboard: ↓ stretches the end, Shift+↑ pulls the start earlier
+    b = blockA(); b.focus();
+    b.dispatchEvent(new KeyboardEvent('keydown', { key:'ArrowDown', bubbles:true, cancelable:true }));
+    const kbEnd = get('v182-a').endMin;
+    b = blockA(); b.focus();
+    b.dispatchEvent(new KeyboardEvent('keydown', { key:'ArrowUp', shiftKey:true, bubbles:true, cancelable:true }));
+    const kbStart = get('v182-a').startMin;
+
+    // a resize that would overlap the neighbour is refused, nothing changes
+    lpApplyEventResize(get('v182-a'), 2, 0, kbStart, 810, 'end');
+    const conflictOk = get('v182-a').endMin === kbEnd;
+
+    // resizing one day of a multi-day series splits only that day off
+    const series = mk('v182-c', 'سری چندروزه', [1, 3], 900, 960); save(); renderCalendar();
+    lpApplyEventResize(series, 3, 0, 900, 1020, 'end');
+    const split = DB.events.filter(e => e.title === 'سری چندروزه');
+    const splitOk = split.length === 2 &&
+      split.some(e => e.days.join(',') === '1' && e.endMin === 960) &&
+      split.some(e => e.days.join(',') === '3' && e.endMin === 1020);
+
+    // night tail: Sunday 01:00–02:00 is drawn in Saturday's column (shift 1440)
+    const night = mk('v182-d', 'نیمه‌شب', [1], 60, 120); save(); renderCalendar();
+    const nightBlock = document.querySelector('#weekGrid .lp-cal-day[data-day="0"] .ev-block');
+    const nightDrawn = !!nightBlock && !!nightBlock.querySelector('.ev-resize-handle-bottom');
+    lpApplyEventResize(night, 1, 1440, 1500, 1590, 'end');       // → ends 02:30 real time
+    const nightOk = get('v182-d').startMin === 60 && get('v182-d').endMin === 150;
+
+    const oldLang = localStorage.getItem('lifePlannerLang_v1');
+    localStorage.setItem('lifePlannerLang_v1', 'en');
+    const english = {
+      intro: lpTranslate('هر روز ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود، لبه‌ی بالا یا پایینش را بکش تا ساعتش کم‌وزیاد شود — بدون رفتن توی تنظیمات. برای افزودن سریع رویداد، روی خانه‌ی خالی بزن.'),
+      handle: lpTranslate('لبه پایین را بکش تا ساعت پایان عوض شود'),
+      tip: lpTranslate('10:00 تا 12:30 · 2 ساعت و 30 دقیقه'),
+      blocked: lpTranslate('⚠️ «همسایه» مانع این تغییر است؛ ساعت‌ها تداخل دارند')
+    };
+    if (oldLang === null) localStorage.removeItem('lifePlannerLang_v1');
+    else localStorage.setItem('lifePlannerLang_v1', oldLang);
+
+    DB.events = []; save(); renderCalendar();
+    return { handles, preview, bottomDrag, undoOk, topDrag, kbEnd, kbStart, conflictOk, splitOk, nightDrawn, nightOk, english };
+  });
+  check('v18.2 every calendar block grows top + bottom resize handles', v182.handles === 2, JSON.stringify(v182));
+  check('v18.2 dragging the bottom edge live-previews and stores the new end',
+    Math.abs(v182.preview.h - 128) < 1 && v182.preview.tip.includes('12:30') && v182.preview.guide &&
+    v182.bottomDrag.start === 600 && v182.bottomDrag.end === 750, JSON.stringify(v182));
+  check('v18.2 the resize toast undo restores the previous time', v182.undoOk, JSON.stringify(v182));
+  check('v18.2 dragging the top edge stores the new start', v182.topDrag.start === 555 && v182.topDrag.end === 660, JSON.stringify(v182));
+  check('v18.2 keyboard resizes the end (↓) and the start (Shift+↑) in 15-minute steps',
+    v182.kbEnd === 675 && v182.kbStart === 540, JSON.stringify(v182));
+  check('v18.2 a resize into a neighbouring event is refused', v182.conflictOk, JSON.stringify(v182));
+  check('v18.2 resizing one day of a series splits only that day off', v182.splitOk, JSON.stringify(v182));
+  check('v18.2 resizing works in the after-midnight night tail', v182.nightDrawn && v182.nightOk, JSON.stringify(v182));
+  check('v18.2 resize strings are translated for English mode',
+    v182.english.intro.includes('drag its top or bottom edge') &&
+    v182.english.handle === 'Drag the bottom edge to change the end time' &&
+    v182.english.tip === '10:00 to 12:30 · 2 h 30 min' &&
+    v182.english.blocked.includes('blocks this change'), JSON.stringify(v182.english));
+
   // ---------- v18: inbox count, reliable two-button quick bar and day task lists ----------
   const v18 = await page.evaluate(async () => {
     const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -1102,6 +1203,28 @@ if (!useFallback) {
      'برای نوشتن کارهای هر روز، روی نام آن روز بزن — «برنامه روز» جدا از تسک‌های اصلی است.',
      'ردیف اصلی را از ۲ تا ۴ دکمه بچین؛ «۲» یعنی دو میان‌بر به‌علاوه‌ی «بیشتر». دکمه‌های اضافی اختیاری‌اند (حداکثر ۵ تا).']
       .every(k => langJs.includes(k)) && langJs.includes('Plan for this day'));
+
+  // ---------- v18.2: drag an event's edge to resize it on the grid ----------
+  check('v18.2 edge-resize handles, live preview and apply/undo are wired in',
+    coreJs.includes('function attachEventResize') && coreJs.includes('function lpBeginResize') &&
+    coreJs.includes('function lpResizeMove') && coreJs.includes('function lpApplyEventResize') &&
+    coreJs.includes('function lpUndoEventResize') && coreJs.includes('attachEventResize(el,e,d,shift,from,to)') &&
+    coreJs.includes("if(e.target?.closest?.('.ev-resize-handle')) return;") &&
+    coreJs.includes('ev-resize-handle-bottom') && coreJs.includes('ev-resize-tip') && appCss.includes('.ev-resize-grip') &&
+    appCss.includes('.ev-resize-guide') && appCss.includes('cursor:ns-resize'));
+  check('v18.2 resize snaps to 15 minutes, keeps 15 minutes minimum and refuses overlaps',
+    coreJs.includes('function lpResizeConflict') && coreJs.includes('r.curTo-CAL_SNAP_MIN') &&
+    coreJs.includes('r.curFrom+CAL_SNAP_MIN') && coreJs.includes('lpCandidateConflicts(candidate,others)') &&
+    coreJs.includes('مانع این تغییر است؛ ساعت‌ها تداخل دارند'));
+  check('v18.2 resizing one day of a series splits only that day, night tail included',
+    coreJs.includes('ev.days=days.filter(dd=>dd!==dayIdx);') &&
+    coreJs.includes("startMin: r.edge==='start' ? r.curFrom-r.shift : r.origStart") &&
+    coreJs.includes("endMin:   r.edge==='end'   ? r.curTo-r.shift   : r.origEnd"));
+  check('v18.2 keyboard resize and English strings are present',
+    coreJs.includes("e.key!=='ArrowDown' && e.key!=='ArrowUp'") && coreJs.includes('lpDurationLabel') &&
+    indexHtml.includes('لبه‌ی بالا یا پایینش را بکش تا ساعتش کم‌وزیاد شود') &&
+    ['لبه بالا را بکش تا ساعت شروع عوض شود', 'لبه پایین را بکش تا ساعت پایان عوض شود']
+      .every(k => langJs.includes(k)) && langJs.includes('drag its top or bottom edge'));
 
   // ---------- v17: «مرخصی» (time off) tick on the quest card ----------
   const questBoxBody = (coreJs.match(/function renderQuestBox\(\)\{[\s\S]*?\n\}/) || [''])[0];
