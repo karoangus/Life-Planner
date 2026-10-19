@@ -4373,6 +4373,7 @@ function saveCategoryFromManager(){
    column) can legitimately run up to 1620. calNormalizeSlot() converts such a
    value back to the real {day, minute} pair that gets stored on the event. */
 const CAL_START_HOUR=6, CAL_END_HOUR=27, CAL_PX_HOUR=52, CAL_SNAP_MIN=15;
+const CAL_RESIZE_INTENT_PX=12; // ignore touch jitter; an intentional drag still moves one 15-minute step
 const CAL_DAY_MIN=1440;
 const CAL_SPAN_MIN=(CAL_END_HOUR-CAL_START_HOUR)*60;
 /* 25:30 on the grid is really 01:30 of the next day — show it as such. */
@@ -4438,22 +4439,62 @@ function updateCalendarNowMarker(now=new Date()){
   }
   return {day:activeDay,hour:activeHour,minute:gridMinute,position,visible:true,time:timeLabel};
 }
-function openCalendarSlot(dayIdx,gridHour,clientY,slotEl){
-  if(!Number.isFinite(Number(dayIdx))||!Number.isFinite(Number(gridHour)))return;
-  let withinHour=0;
-  const rect=slotEl?.getBoundingClientRect?.();
-  if(rect&&rect.height>0&&Number.isFinite(clientY)){
-    const fraction=Math.max(0,Math.min(.9999,(clientY-rect.top)/rect.height));
-    withinHour=Math.min(45,Math.floor(fraction*4)*15);
+/* Treat events already drawn in the tapped calendar column as booked ranges.
+   Placements are used instead of the stored clock fields so overnight events
+   occupy the same night-tail minutes the user sees on the grid. */
+function calEventIntervalsInColumn(dayIdx){
+  const intervals=[];
+  (DB.events||[]).forEach(ev=>{
+    calEventPlacements(ev).forEach(p=>{
+      if(p.col===dayIdx&&p.to>p.from) intervals.push({start:p.from,end:p.to});
+    });
+  });
+  intervals.sort((a,b)=>a.start-b.start||a.end-b.end);
+  const merged=[];
+  intervals.forEach(interval=>{
+    const last=merged[merged.length-1];
+    if(last&&interval.start<=last.end) last.end=Math.max(last.end,interval.end);
+    else merged.push({start:interval.start,end:interval.end});
+  });
+  return merged;
+}
+/* A tap always targets the beginning of its hour. If that point is occupied,
+   advance to the first free minute; size the event to fit the gap before the
+   next block (up to the normal one-hour quick-add default). */
+function calQuickAddWindow(dayIdx,gridHour){
+  const day=Number(dayIdx), hour=Number(gridHour);
+  if(!Number.isInteger(day)||day<0||day>6||!Number.isInteger(hour)||hour<CAL_START_HOUR||hour>=CAL_END_HOUR)return null;
+  const intervals=calEventIntervalsInColumn(day);
+  let start=hour*60, i=0;
+  while(i<intervals.length&&intervals[i].end<=start)i++;
+  while(i<intervals.length&&intervals[i].start<=start){
+    start=Math.max(start,intervals[i].end);
+    i++;
   }
-  const gridStart=Number(gridHour)*60+withinHour;
-  const slot=calNormalizeSlot(Number(dayIdx),gridStart);
-  const duration=Math.max(15,Math.min(60,CAL_END_HOUR*60-gridStart));
-  const end=calNormalizeSlot(Number(dayIdx),gridStart+duration);
+  const gridEnd=CAL_END_HOUR*60;
+  if(start>=gridEnd)return null;
+  const nextBlockStart=i<intervals.length?intervals[i].start:gridEnd;
+  const available=nextBlockStart-start;
+  if(available<=0)return null;
+  const duration=Math.min(60,available);
+  const end=start+duration;
+  return {
+    startGrid:start,
+    endGrid:end,
+    duration,
+    start:calNormalizeSlot(day,start),
+    end:calNormalizeSlot(day,end)
+  };
+}
+function openCalendarSlot(dayIdx,gridHour,clientY,slotEl){
+  // clientY is intentionally ignored: tapping anywhere in an hour starts at
+  // that hour's first free minute, not at the quarter under the finger.
+  const addWindow=calQuickAddWindow(dayIdx,gridHour);
+  if(!addWindow){ toast('⚠️ این ساعت زمان خالی ندارد'); return; }
   openEventModal();
-  document.querySelectorAll('#eDays .chip-opt').forEach(chip=>chip.classList.toggle('sel',Number(chip.dataset.v)===slot.day));
-  document.getElementById('eHourStart').value=formatTimeMinutes(slot.min);
-  document.getElementById('eHourEnd').value=formatTimeMinutes(end.min);
+  document.querySelectorAll('#eDays .chip-opt').forEach(chip=>chip.classList.toggle('sel',Number(chip.dataset.v)===addWindow.start.day));
+  document.getElementById('eHourStart').value=formatTimeMinutes(addWindow.start.min);
+  document.getElementById('eHourEnd').value=formatTimeMinutes(addWindow.end.min);
   document.getElementById('eTitle').focus();
 }
 function scrollCalendarToNow(){
@@ -4686,7 +4727,7 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
   save();
   rescheduleAllEventReminders();
 }
-/* ============ v18.2 — RESIZE BY DRAGGING AN EDGE (quick time edit) ============
+/* ============ v18.2/v18.3 — RESIZE BY DRAGGING AN EDGE (quick time edit) ============
    Grabbing the top or bottom edge of a block stretches / shrinks it right on
    the grid — no event modal, no time fields. The gesture snaps to the same
    15-minute steps as quick-add, never goes below 15 minutes, shows a live
@@ -4694,7 +4735,8 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
    block), works past midnight in the night tail, and — exactly like a move —
    resizing one day of a multi-day series splits that day off into its own
    event. Every applied resize offers an «↩️ برگرداندن» (undo) in its toast.
-   Keyboard: focus a block, ↑/↓ resize the end, Shift+↑/↓ resize the start. */
+   v18.3: finger jitter under 12px is ignored; the visible grip stays out of the
+   way on touch screens. Keyboard: focus a block, ↑/↓ resize the end, Shift+↑/↓ resize the start. */
 let __evResizeUndo=null; // deep copy of DB.events taken before the last resize
 function lpDurationLabel(mins){
   const d=Math.max(0,Math.round(Number(mins)||0));
@@ -4704,11 +4746,11 @@ function lpDurationLabel(mins){
   return `${m} دقیقه`;
 }
 function lpResizeTimes(r){
-  // only the grabbed edge moves: the other one keeps the stored time, even
-  // when this placement is clipped by the grid (e.g. a 04:00 start at 06:00)
+  // Only the grabbed edge moves. A click, or a placement clipped by the grid,
+  // must keep the original stored time exactly as-is.
   return {
-    startMin: r.edge==='start' ? r.curFrom-r.shift : r.origStart,
-    endMin:   r.edge==='end'   ? r.curTo-r.shift   : r.origEnd
+    startMin: r.edge==='start' && r.curFrom!==r.origFrom ? r.curFrom-r.shift : r.origStart,
+    endMin:   r.edge==='end' && r.curTo!==r.origTo ? r.curTo-r.shift : r.origEnd
   };
 }
 function lpResizeConflict(r){
@@ -4737,7 +4779,7 @@ function attachEventResize(el, ev, dayIdx, shift, gridFrom, gridTo){
     h.addEventListener('pointerdown', (e)=>{
       if(lpDragState.drag||lpDragState.resize) return;
       if(e.button!==undefined && e.button!==0) return;
-      e.preventDefault(); e.stopPropagation();
+      e.stopPropagation();
       // on a very short block both handles overlap — the half that was
       // actually grabbed decides which edge is being resized
       const rect=el.getBoundingClientRect();
@@ -4762,22 +4804,23 @@ function attachEventResize(el, ev, dayIdx, shift, gridFrom, gridTo){
 }
 function lpBeginResize(e, el, ev, dayIdx, shift, edge, gridFrom, gridTo){
   lpCancelHold();
-  try{ if(navigator.vibrate) navigator.vibrate(10); }catch(_){}
   const col=el.parentElement;
   if(!col) return;
   const tip=document.createElement('div');
   tip.className='ev-resize-tip';
+  tip.style.display='none';
   tip.setAttribute('aria-hidden','true');
   document.body.appendChild(tip);
   const guide=document.createElement('div');
   guide.className='ev-resize-guide';
+  guide.style.display='none';
   guide.setAttribute('aria-hidden','true');
   col.appendChild(guide);
-  el.classList.add('lp-resizing');
   const r={ evRef:ev, el, col, tip, guide, dayIdx, shift:Number(shift)||0, edge,
     origStart:eventStartMinutes(ev), origEnd:eventEndMinutes(ev),
     origFrom:Number(gridFrom), origTo:Number(gridTo), curFrom:Number(gridFrom), curTo:Number(gridTo),
-    moved:false, lastX:e.clientX, lastY:e.clientY, lastSnap:null, conflict:null };
+    startY:e.clientY, moved:false, lastX:e.clientX, lastY:e.clientY,
+    lastSnap:edge==='start'?Number(gridFrom):Number(gridTo), conflict:null };
   lpDragState.resize=r;
   document.addEventListener('touchmove', lpBlockScroll, {passive:false});
   const move=(m)=>lpResizeMove(m);
@@ -4798,14 +4841,25 @@ function lpBeginResize(e, el, ev, dayIdx, shift, edge, gridFrom, gridTo){
 function lpResizeMove(e){
   const r=lpDragState.resize; if(!r) return;
   if(typeof e.clientX==='number'){ r.lastX=e.clientX; r.lastY=e.clientY; }
-  const rect=r.col.getBoundingClientRect();
-  if(!rect.height) return;
-  let gridMin=Math.round(((r.lastY-rect.top)/CAL_PX_HOUR*60 + CAL_START_HOUR*60)/CAL_SNAP_MIN)*CAL_SNAP_MIN;
-  if(r.edge==='start') r.curFrom=Math.max(CAL_START_HOUR*60, Math.min(r.curTo-CAL_SNAP_MIN, gridMin));
-  else r.curTo=Math.max(r.curFrom+CAL_SNAP_MIN, Math.min(CAL_END_HOUR*60, gridMin));
-  r.moved = r.moved || r.curFrom!==r.origFrom || r.curTo!==r.origTo;
+  const deltaY=r.lastY-r.startY;
+  if(Math.abs(deltaY)<CAL_RESIZE_INTENT_PX){
+    // Tapping or brushing the edge must never change a time. The visible
+    // handle itself is deliberately tiny, so require a real drag gesture.
+    r.curFrom=r.origFrom;
+    r.curTo=r.origTo;
+  }else{
+    const baseEdge=r.edge==='start'?r.origFrom:r.origTo;
+    const gridMin=Math.round((baseEdge+deltaY/CAL_PX_HOUR*60)/CAL_SNAP_MIN)*CAL_SNAP_MIN;
+    if(r.edge==='start') r.curFrom=Math.max(CAL_START_HOUR*60, Math.min(r.curTo-CAL_SNAP_MIN, gridMin));
+    else r.curTo=Math.max(r.curFrom+CAL_SNAP_MIN, Math.min(CAL_END_HOUR*60, gridMin));
+  }
+  const intentional=Math.abs(deltaY)>=CAL_RESIZE_INTENT_PX;
+  r.moved=r.curFrom!==r.origFrom||r.curTo!==r.origTo;
+  r.el.classList.toggle('lp-resizing',intentional);
+  r.tip.style.display=intentional?'':'none';
+  r.guide.style.display=intentional?'':'none';
   const snapped=(r.edge==='start'?r.curFrom:r.curTo);
-  if(snapped!==r.lastSnap){
+  if(intentional&&snapped!==r.lastSnap){
     r.lastSnap=snapped;
     try{ if(navigator.vibrate) navigator.vibrate(3); }catch(_){}
   }
@@ -4817,7 +4871,7 @@ function lpResizeMove(e){
   r.el.classList.toggle('event-short', dur>=15 && dur<30);
   r.guide.style.top=(((r.edge==='start'?r.curFrom:r.curTo)-CAL_START_HOUR*60)/60*CAL_PX_HOUR)+'px';
   const {startMin,endMin}=lpResizeTimes(r);
-  r.conflict=lpResizeConflict(r);
+  r.conflict=intentional?lpResizeConflict(r):null;
   r.el.classList.toggle('lp-resize-blocked', !!r.conflict);
   r.tip.classList.toggle('is-blocked', !!r.conflict);
   r.tip.textContent=`${calClockLabel(startMin)} تا ${calClockLabel(endMin)} · ${lpDurationLabel(endMin-startMin)}${r.conflict?' · ⚠️ تداخل دارد':''}`;
@@ -4852,14 +4906,18 @@ function lpResizeEnd(){
   lpResizeCleanup();
   if(!r) return;
   if(r.moved) lpDragState.suppressClickUntil=Date.now()+600; // swallow the trailing click
-  if(!r.moved){ renderCalendar(); return; }
+  if(!r.moved) return; // preserve the original block so an edge tap still opens its event
   lpApplyEventResize(r.evRef, r.dayIdx, r.shift, r.curFrom, r.curTo, r.edge);
 }
 function lpApplyEventResize(evRef, dayIdx, shift, gridFrom, gridTo, edge){
   const ev=DB.events.find(x=>x.id===evRef.id)||evRef;
   const origStart=eventStartMinutes(ev), origEnd=eventEndMinutes(ev);
-  const r={evRef:ev, dayIdx, shift:Number(shift)||0, edge, origStart, origEnd, curFrom:Number(gridFrom), curTo:Number(gridTo)};
-  const {startMin:ns, endMin:ne}=lpResizeTimes(r);
+  const shiftMin=Number(shift)||0;
+  const ns=edge==='start'?Number(gridFrom)-shiftMin:origStart;
+  const ne=edge==='end'?Number(gridTo)-shiftMin:origEnd;
+  const r={evRef:ev, dayIdx, shift:shiftMin, edge, origStart, origEnd,
+    origFrom:origStart+shiftMin, origTo:origEnd+shiftMin,
+    curFrom:Number(gridFrom), curTo:Number(gridTo)};
   if(ns===origStart && ne===origEnd){ renderCalendar(); return; } // put back exactly where it was
   if(ne-ns<CAL_SNAP_MIN){ renderCalendar(); return; }
   const conflict=lpResizeConflict(r);
@@ -6088,7 +6146,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='18.2';
+const LP_APP_VERSION='18.3';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

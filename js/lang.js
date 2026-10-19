@@ -28,6 +28,9 @@
   window.lpGetLang = getLang;
 
   var EXACT = {
+    /* ---- v18.3: safer edge resizing + smart quick-add in free calendar gaps ---- */
+    "هر روز از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا جابه‌جا شود، لبه‌ی بالا یا پایینش را بکش تا ساعتش عوض شود. روی خانه‌ی خالی هر ساعت بزن تا رویداد از ابتدای ساعت یا اولین دقیقه‌ی آزاد شروع شود و مدت آن با فاصله تا رویداد بعدی (حداکثر یک ساعت) هماهنگ شود.": "Every day is blocked out from 6 AM to 3 AM; hold and drag an event to move it, or drag its top or bottom edge to change its time. Tap an empty hour to start at the hour's beginning or the first free minute; its duration then fits the gap before the next block, up to one hour.",
+    "⚠️ این ساعت زمان خالی ندارد": "⚠️ There is no free time left in this hour",
     /* ---- v18.1: «برنامه روز» — the calendar's own per-day plan ---- */
     "برنامه این روز": "Plan for this day",
     "خالی": "empty",

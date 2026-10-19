@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-18.2-00e5ff?style=for-the-badge&logoColor=white" alt="Version 18.2" />
+  <img src="https://img.shields.io/badge/نسخه-18.3-00e5ff?style=for-the-badge&logoColor=white" alt="Version 18.3" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -159,6 +159,8 @@ https://karoangus.github.io/Life-Planner/
 - **نشانگر دقیق زمان و افزودن سریع (جدید در v17.2):** خط زمانِ فعلی دقیقه‌به‌دقیقه و هم‌زمان با رفتن به ساعت بعد جابه‌جا می‌شود؛ تاریخ جلالی هر روز هم در سربرگ دیده می‌شود. روی بخش خالی هر ساعت بزن تا فرم «رویداد جدید» با روز و زمان همان بخش آماده شود.
 - **کشیدن و رها کردن رویدادها (Drag & Drop):** تغییر زمان یا روز رویدادها با نگه‌داشتن و کشیدن در شبکه هفتگی، همراه با اسنپ ۱۵ دقیقه‌ای و بررسی تداخل ساعت‌ها.
 - **تغییر مدت با کشیدن لبه‌ها (جدید در v18.2):** لبه‌ی بالا یا پایین هر بلوک را بکش تا ساعت شروع/پایان همان‌جا روی شبکه عوض شود؛ پیش‌نمایش زنده‌ی «شروع تا پایان · مدت»، خط راهنمای اسنپ، هشدار قرمز هنگام تداخل، پشتیبانی از بعد از نیمه‌شب و جدا شدن فقط همان روز از رویدادهای چندروزه، میانبر `↑`/`↓` (و `Shift+↑`/`↓` برای شروع) و دکمه‌ی «برگرداندن» بعد از هر تغییر.
+- **ریزایز خلوت و بدون تغییر ناخواسته (جدید در v18.3):** خط‌های دستگیره دیگر روی موبایل همیشه دیده نمی‌شوند و در دسکتاپ فقط با بردن نشانگر روی بلوک ظاهر می‌شوند. لمس یا لرزش کوتاهِ انگشت زمان را عوض نمی‌کند؛ برای ثبت تغییر باید لبه را واقعاً بکشید.
+- **افزودن رویداد با تشخیص فضای خالی (جدید در v18.3):** زدن هر جای خانه‌ی یک ساعت، رویداد را از ابتدای همان ساعت آماده می‌کند؛ اگر ابتدای ساعت اشغال باشد، شروع را به اولین دقیقه‌ی آزاد می‌برد. مدت تا رویداد بعدی (حداکثر یک ساعت) اندازه می‌شود، پس فاصله‌ی خالیِ ۴۵ دقیقه‌ای دقیقاً به رویداد ۴۵ دقیقه‌ای تبدیل می‌شود.
 - **مدیریت پیشرفته رویدادهای چندروزه:** امکان ویرایش تکیِ فقط یک روز خاص از یک رویداد زنجیره‌ای، یا ویرایش سراسری کل روزها.
 - دسته‌بندی‌های رنگی رویدادها و وظایف با پالت رنگ‌های جذاب.
 
@@ -285,15 +287,16 @@ npm test
 
 ## 🔢 راهنمای به‌روزرسانی و توسعه نسخه جدید
 
-هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **هر پنج جا با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
+هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **همه‌ی محل‌های زیر با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"18.2"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '18.2';`
-3. فایل `package.json` ➔ کلید `"version"` (مثلاً `"18.2.0"`).
-4. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
-5. فایل `sw.js` ➔ ارتقای نام کش:
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"18.3"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '18.3';`
+3. فایل `package.json` و نسخه‌ی ریشه در `package-lock.json` ➔ مثلاً `"18.3.0"`.
+4. فایل `index.html` ➔ مقدار `id="settingsVersion"`.
+5. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
+6. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v75';
+   const CACHE_NAME = 'life-planner-cache-v76';
    ```
 
 > ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ همه‌ی تست‌ها باید سبز باشند.
@@ -301,6 +304,13 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 18.3 — افزودن سریع از فضای خالی و ریزایز مطمئن‌تر
+- 📅 **زمان شروع قابل‌پیش‌بینی:** با زدن هر جای خانه‌ی یک ساعت، شروع رویداد از سرِ همان ساعت است، نه از ربع‌ساعتی که انگشت به آن خورده. اگر آن زمان داخل رویداد دیگری باشد، برنامه از اولین دقیقه‌ی آزاد بعد از آن شروع می‌کند.
+- ⏱️ **مدتِ متناسب با فاصله:** رویداد پیشنهادی تا رویداد بعدی امتداد پیدا می‌کند (تا سقف پیش‌فرض یک ساعت). برای نمونه، فاصله‌ی ۰۶:۱۵ تا ۰۷:۰۰ به‌صورت رویداد ۴۵ دقیقه‌ای آماده می‌شود؛ رویدادها روی هم نمی‌افتند.
+- 🫧 **ظاهر خلوت‌تر برای کشیدن لبه‌ها:** خط‌های سفیدِ دائمی روی بلوک‌ها حذف شدند؛ در دسکتاپ نشانه‌ی کوچک فقط هنگام hover یا فوکوس دیده می‌شود و در موبایل مزاحم دید نیست.
+- 🛡️ **جلوگیری از تغییر ناخواسته:** لمس یا لرزش چندپیکسلی دیگر ساعت را جابه‌جا نمی‌کند. تغییر فقط با کشیدن واقعیِ لبه ثبت می‌شود؛ لمس بدون کشیدن مثل قبل جزئیات رویداد را باز می‌کند.
+- 🌐 **ترجمه‌ی انگلیسی کامل:** راهنمای تقویم و پیامِ نبودن فضای خالی در حالت English هم ترجمه می‌شوند.
 
 ### ✨ نسخه 18.2 — تغییر ساعت رویداد با کشیدن لبه‌ها
 - ↔️ **ریزایز مستقیم روی تقویم:** لبه‌ی بالا یا پایینِ هر بلوک رویداد را بگیر و بکش تا ساعت شروع یا پایانش کم‌وزیاد شود — دیگر لازم نیست برای چند دقیقه جابه‌جایی وارد فرم ویرایش و ساعت‌ها شوی. دستگیره‌ها روی بلوک دیده می‌شوند (در موبایل همیشه نیمه‌پیدا هستند) و ناحیه‌ی لمسشان بزرگ است.
@@ -437,6 +447,8 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
+- **🆕 Smarter calendar quick-add (new in v18.3):** Tapping anywhere in an hour starts at that hour's beginning, or at the first free minute if an event is already in progress. The duration fits the gap before the next event, so a 45-minute gap becomes a 45-minute event without overlap.
+- **🫧 Quieter, safer resize handles (new in v18.3):** The persistent edge lines are gone on touch screens and the small desktop affordance appears only on hover/focus. Taps and small finger jitter no longer change event times; resizing requires an intentional drag.
 - **↔️ Drag-to-resize calendar events (new in v18.2):** Drag a block's top or bottom edge on the weekly grid to change its start or end — no event form needed. Live «start to end · duration» bubble with 15-minute snapping, a red warning on overlaps, after-midnight support, splitting only the resized day out of multi-day series, keyboard resizing (`↑`/`↓`, `Shift+↑`/`↓` for the start) and an undo button after every change.
 - **🗒️ “Day plan” — the calendar's own per-day notebook (redesigned in v18.1):** Tap a weekday header to open a lightweight checklist for that day which is **completely separate from the main Tasks section** and stored in `DB.dayPlans`: no Inbox, no workflow statuses, no categories, no subtasks and no XP. Quick-add with automatic time parsing (`14:30 piano practice`) and an importance marker (`!buy bread`), a per-day progress bar, a remaining-count badge on every day header, drag-to-reorder, move to tomorrow, carry over yesterday's leftovers, copy yesterday's plan, inline editing, a per-day note, clear-completed with undo, and an optional read-only strip for main-task deadlines.
 - **🔴 Live Inbox count (new in v18):** The Tasks Inbox tab shows a red, immediately refreshed count of items waiting in the Inbox.

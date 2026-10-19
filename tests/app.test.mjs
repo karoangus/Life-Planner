@@ -410,7 +410,7 @@ if (!useFallback) {
     document.getElementById('eTitle').value='v17.2 quick add test';
     await saveEvent();
     const saved = DB.events.find(e=>e.title==='v17.2 quick add test');
-    const quickAddOk = !!saved && saved.days[0]===2 && saved.startMin===630 && saved.endMin===690;
+    const quickAddOk = !!saved && saved.days[0]===2 && saved.startMin===600 && saved.endMin===660;
 
     const lateSlot = document.querySelector('#weekGrid .lp-cal-day[data-day="6"] .lp-cal-slot[data-grid-hour="26"]');
     const lateRect = lateSlot.getBoundingClientRect();
@@ -438,11 +438,11 @@ if (!useFallback) {
     v172.nextHour.row==='11:00' && Math.abs(v172.nextHour.top-260)<.02,
     JSON.stringify({at59:v172.at59,at11:v172.at11,next:v172.nextHour}));
   check('v17.2 current-time line still maps after midnight to the previous day column', v172.nightOk);
-  check('v17.2 tapping an empty slot opens a prefilled one-hour event at the quarter-hour',
-    v172.quickAddOk && v172.prefill.days.join(',')==='2' && v172.prefill.start==='10:30' && v172.prefill.end==='11:30',
+  check('v17.2 tapping an empty hour opens a prefilled one-hour event from the hour start',
+    v172.quickAddOk && v172.prefill.days.join(',')==='2' && v172.prefill.start==='10:00' && v172.prefill.end==='11:00',
     JSON.stringify(v172.prefill));
   check('v17.2 quick-add clamps the last night slot at 03:00 on the next day',
-    v172.latePrefill.days.join(',')==='0' && v172.latePrefill.start==='02:45' && v172.latePrefill.end==='03:00',
+    v172.latePrefill.days.join(',')==='0' && v172.latePrefill.start==='02:00' && v172.latePrefill.end==='03:00',
     JSON.stringify(v172.latePrefill));
   check('v17.2 the Now button and all 147 quick-add slots are present', v172.nowButton && v172.slotCount===147);
   check('v17.2 calendar labels and help are translated to English',
@@ -472,8 +472,15 @@ if (!useFallback) {
 
     const handles = blockA() ? blockA().querySelectorAll('.ev-resize-handle').length : 0;
 
-    // real bottom-edge drag: 11:00 → 12:30, with a live preview + bubble
+    // A tap / small finger jitter on the visible or invisible edge must not resize.
     let b = blockA();
+    ptr('pointerdown', b.querySelector('.ev-resize-handle-bottom'), yFor(660)-8);
+    ptr('pointermove', document, yFor(660)-4);
+    ptr('pointerup', document, yFor(660)-4);
+    const tapNoResize = get('v182-a').startMin===600 && get('v182-a').endMin===660;
+
+    // real bottom-edge drag: 11:00 → 12:30, with a live preview + bubble
+    b = blockA();
     ptr('pointerdown', b.querySelector('.ev-resize-handle-bottom'), yFor(660));
     ptr('pointermove', document, yFor(750));
     const preview = { h: parseFloat(b.style.height),
@@ -532,9 +539,10 @@ if (!useFallback) {
     else localStorage.setItem('lifePlannerLang_v1', oldLang);
 
     DB.events = []; save(); renderCalendar();
-    return { handles, preview, bottomDrag, undoOk, topDrag, kbEnd, kbStart, conflictOk, splitOk, nightDrawn, nightOk, english };
+    return { handles, tapNoResize, preview, bottomDrag, undoOk, topDrag, kbEnd, kbStart, conflictOk, splitOk, nightDrawn, nightOk, english };
   });
-  check('v18.2 every calendar block grows top + bottom resize handles', v182.handles === 2, JSON.stringify(v182));
+  check('v18.2 every calendar block has top + bottom resize hit zones', v182.handles === 2, JSON.stringify(v182));
+  check('v18.3 a tap or small edge jitter never changes the event time', v182.tapNoResize, JSON.stringify(v182));
   check('v18.2 dragging the bottom edge live-previews and stores the new end',
     Math.abs(v182.preview.h - 128) < 1 && v182.preview.tip.includes('12:30') && v182.preview.guide &&
     v182.bottomDrag.start === 600 && v182.bottomDrag.end === 750, JSON.stringify(v182));
@@ -550,6 +558,82 @@ if (!useFallback) {
     v182.english.handle === 'Drag the bottom edge to change the end time' &&
     v182.english.tip === '10:00 to 12:30 · 2 h 30 min' &&
     v182.english.blocked.includes('blocks this change'), JSON.stringify(v182.english));
+
+  // ---------- v18.3: quiet resize edges + hour-start / free-gap quick-add ----------
+  const v183 = await page.evaluate(async () => {
+    showView('calendar');
+    DB.events=[]; save(); renderCalendar();
+    const mk=(id,title,day,s,e)=>{
+      const ev={id,title,days:[day],startMin:s,endMin:e,
+        startHour:Math.floor(s/60),endHour:Math.min(24,Math.floor(e/60))};
+      DB.events.push(ev); return ev;
+    };
+    const readForm=()=>({
+      days:[...document.querySelectorAll('#eDays .chip-opt.sel')].map(x=>Number(x.dataset.v)),
+      start:document.getElementById('eHourStart').value,
+      end:document.getElementById('eHourEnd').value
+    });
+    const clickSlot=(day,h,fraction)=>{
+      const slot=document.querySelector(`#weekGrid .lp-cal-day[data-day="${day}"] .lp-cal-slot[data-grid-hour="${h}"]`);
+      const rect=slot.getBoundingClientRect();
+      slot.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientY:rect.top+rect.height*fraction}));
+      return readForm();
+    };
+
+    // A 45-minute gap follows an event that ends at 06:15 and precedes one at 07:00.
+    mk('v183-prev','v183 previous',[2],360,375);
+    mk('v183-next','v183 next',[2],420,480);
+    save(); renderCalendar();
+    const gapTapA=clickSlot(2,6,.50);
+    closeModal('eventModalBg');
+    const gapTapB=clickSlot(2,6,.95);
+    const sameHourStart=gapTapA.start==='06:15'&&gapTapA.end==='07:00'&&
+      gapTapB.start===gapTapA.start&&gapTapB.end===gapTapA.end;
+    document.getElementById('eTitle').value='v183 45-minute gap';
+    await saveEvent();
+    const saved=DB.events.find(e=>e.title==='v183 45-minute gap');
+    const exactGap=!!saved&&saved.days[0]===2&&saved.startMin===375&&saved.endMin===420;
+
+    // With no surrounding events, the tap position is ignored and the hour's start is used.
+    DB.events=[]; save(); renderCalendar();
+    const emptyA=clickSlot(3,8,.10);
+    closeModal('eventModalBg');
+    const emptyB=clickSlot(3,8,.90);
+    const hourStart=emptyA.start==='08:00'&&emptyA.end==='09:00'&&
+      emptyB.start===emptyA.start&&emptyB.end===emptyA.end;
+    closeModal('eventModalBg');
+
+    // If the tapped hour begins occupied, quick-add starts at the first free minute.
+    mk('v183-busy','v183 occupied',[4],360,375);
+    save(); renderCalendar();
+    const afterBusy=clickSlot(4,6,.80);
+    const bumpToFree=afterBusy.days.join(',')==='4'&&afterBusy.start==='06:15'&&afterBusy.end==='07:15';
+    closeModal('eventModalBg');
+
+    // The night-tail schedule uses the same logic (Sunday 01:00 is in Saturday's 25:00 row).
+    DB.events=[]; mk('v183-night','v183 night',[1],60,120); save(); renderCalendar();
+    const night=calQuickAddWindow(0,25);
+    const nightFree=!!night&&night.start.day===1&&night.start.min===120&&
+      night.end.day===1&&night.end.min===180;
+
+    const oldLang=localStorage.getItem('lifePlannerLang_v1');
+    localStorage.setItem('lifePlannerLang_v1','en');
+    const english={
+      intro:lpTranslate('هر روز از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا جابه‌جا شود، لبه‌ی بالا یا پایینش را بکش تا ساعتش عوض شود. روی خانه‌ی خالی هر ساعت بزن تا رویداد از ابتدای ساعت یا اولین دقیقه‌ی آزاد شروع شود و مدت آن با فاصله تا رویداد بعدی (حداکثر یک ساعت) هماهنگ شود.'),
+      noFree:lpTranslate('⚠️ این ساعت زمان خالی ندارد')
+    };
+    if(oldLang===null)localStorage.removeItem('lifePlannerLang_v1'); else localStorage.setItem('lifePlannerLang_v1',oldLang);
+    DB.events=[]; save(); renderCalendar();
+    return {sameHourStart,exactGap,hourStart,bumpToFree,nightFree,english};
+  });
+  check('v18.3 tap location no longer changes the selected start within an hour',
+    v183.sameHourStart&&v183.hourStart,JSON.stringify(v183));
+  check('v18.3 a 45-minute opening between two events becomes a 45-minute event',
+    v183.exactGap,JSON.stringify(v183));
+  check('v18.3 a busy hour advances to its first free minute, including the night tail',
+    v183.bumpToFree&&v183.nightFree,JSON.stringify(v183));
+  check('v18.3 calendar guidance and no-free-space message translate to English',
+    v183.english.intro.includes('first free minute')&&v183.english.noFree==='⚠️ There is no free time left in this hour',JSON.stringify(v183.english));
 
   // ---------- v18: inbox count, reliable two-button quick bar and day task lists ----------
   const v18 = await page.evaluate(async () => {
@@ -878,6 +962,7 @@ if (!useFallback) {
   const appCss = fs.readFileSync(path.join(ROOT, 'css/app.css'), 'utf-8');
   const versionJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'app-version.json'), 'utf-8'));
   const pkgJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'));
+  const pkgLockJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package-lock.json'), 'utf-8'));
 
   // 1-2: app loads & no fatal syntax
   check('app loads', indexHtml.includes('id="taskFilters"') && indexHtml.includes('id="allTasks"'));
@@ -1139,7 +1224,7 @@ if (!useFallback) {
     coreJs.includes('function openCalendarSlot') && coreJs.includes('data-grid-hour=') &&
     coreJs.includes('function scrollCalendarToNow') &&
     indexHtml.includes('onclick="scrollCalendarToNow()"') &&
-    indexHtml.includes('برای افزودن سریع رویداد، روی خانه‌ی خالی بزن'));
+    indexHtml.includes('روی خانه‌ی خالی هر ساعت بزن'));
   check('v17.2 English translations cover the new calendar labels, hints and short Jalali dates',
     ['🕒 الان', 'زمان فعلی', 'Tap to add an event at $1', 'Every day is blocked out hour by hour from 6 AM to 3 AM; hold and drag an event to move it, or tap an empty time slot to quickly add one.']
       .every(k => langJs.includes(k)) && langJs.includes('translateJalaliMonthDay'));
@@ -1218,13 +1303,27 @@ if (!useFallback) {
     coreJs.includes('مانع این تغییر است؛ ساعت‌ها تداخل دارند'));
   check('v18.2 resizing one day of a series splits only that day, night tail included',
     coreJs.includes('ev.days=days.filter(dd=>dd!==dayIdx);') &&
-    coreJs.includes("startMin: r.edge==='start' ? r.curFrom-r.shift : r.origStart") &&
-    coreJs.includes("endMin:   r.edge==='end'   ? r.curTo-r.shift   : r.origEnd"));
+    coreJs.includes("startMin: r.edge==='start' && r.curFrom!==r.origFrom ? r.curFrom-r.shift : r.origStart") &&
+    coreJs.includes("endMin:   r.edge==='end' && r.curTo!==r.origTo ? r.curTo-r.shift : r.origEnd"));
   check('v18.2 keyboard resize and English strings are present',
     coreJs.includes("e.key!=='ArrowDown' && e.key!=='ArrowUp'") && coreJs.includes('lpDurationLabel') &&
-    indexHtml.includes('لبه‌ی بالا یا پایینش را بکش تا ساعتش کم‌وزیاد شود') &&
+    indexHtml.includes('لبه‌ی بالا یا پایینش را بکش تا ساعتش عوض شود') &&
     ['لبه بالا را بکش تا ساعت شروع عوض شود', 'لبه پایین را بکش تا ساعت پایان عوض شود']
       .every(k => langJs.includes(k)) && langJs.includes('drag its top or bottom edge'));
+
+  // ---------- v18.3: quieter, guarded resize + first-free-time quick-add ----------
+  check('v18.3 edge handles are visually quiet and ignore touch jitter',
+    coreJs.includes('const CAL_RESIZE_INTENT_PX=12') && coreJs.includes('Math.abs(deltaY)<CAL_RESIZE_INTENT_PX') &&
+    coreJs.includes('startY:e.clientY') && appCss.includes('@media(hover:none){.ev-resize-grip{display:none;}}') &&
+    appCss.includes('.ev-resize-grip{width:12px;height:2px;'));
+  check('v18.3 quick-add starts at the hour or first free minute and fits the next gap',
+    coreJs.includes('function calEventIntervalsInColumn') && coreJs.includes('function calQuickAddWindow') &&
+    coreJs.includes('const duration=Math.min(60,available)') &&
+    coreJs.includes('const addWindow=calQuickAddWindow(dayIdx,gridHour)') &&
+    coreJs.includes('clientY is intentionally ignored') && indexHtml.includes('فاصله تا رویداد بعدی (حداکثر یک ساعت) هماهنگ شود'));
+  check('v18.3 new calendar guidance and error translate to English',
+    langJs.includes('Every day is blocked out from 6 AM to 3 AM; hold and drag an event to move it') &&
+    langJs.includes('There is no free time left in this hour'));
 
   // ---------- v17: «مرخصی» (time off) tick on the quest card ----------
   const questBoxBody = (coreJs.match(/function renderQuestBox\(\)\{[\s\S]*?\n\}/) || [''])[0];
@@ -1271,17 +1370,21 @@ if (!useFallback) {
   check('status sorting present', coreJs.includes('STATUS_ORDER') && coreJs.includes('inprogress:0'));
   check('reward display fixed', coreJs.includes('reward-grid') && appCss.includes('reward-grid'));
 
-  // the version has to move in all five places together
+  // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];
   const cacheVer = (swJs.match(/life-planner-cache-v(\d+)/) || [])[1];
+  const settingsVer = (indexHtml.match(/id="settingsVersion">([^<]+)</) || [])[1];
   const versionAligned =
     coreVer === versionJson.version &&
     pkgJson.version === coreVer + '.0' &&
+    pkgLockJson.version === pkgJson.version &&
+    pkgLockJson.packages?.['']?.version === pkgJson.version &&
+    settingsVer === coreVer &&
     readme.includes(`badge/نسخه-${coreVer}-`) &&
     readme.includes(`نسخه ${coreVer}`) &&
     readme.includes(`const CACHE_NAME = 'life-planner-cache-v${cacheVer}';`);
-  check('version bumped consistently in all 5 places', versionAligned,
-    `core=${coreVer} json=${versionJson.version} pkg=${pkgJson.version} cache=v${cacheVer}`);
+  check('version bumped consistently across app, package, docs and cache', versionAligned,
+    `core=${coreVer} json=${versionJson.version} pkg=${pkgJson.version} lock=${pkgLockJson.version} ui=${settingsVer} cache=v${cacheVer}`);
 }
 
 server.close();
