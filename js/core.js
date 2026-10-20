@@ -671,7 +671,6 @@ document.querySelectorAll('.chip-group').forEach(g=>{
     const opt = e.target.closest('.chip-opt'); if(!opt) return;
     // Some chip groups own their selection state (they re-render themselves
     // after a click); let their handlers manage it instead of the generic toggle.
-    if(g.id==='calDayQuickActions') return;
     if(g.id==='taskFilters'){ g.querySelectorAll('.chip-opt').forEach(o=>o.classList.remove('sel')); opt.classList.add('sel'); renderTasks(opt.dataset.f); return; }
     if(g.id==='eDays'){ opt.classList.toggle('sel'); return; }
     if(g.id==='pomoTabs'){ g.querySelectorAll('.chip-opt').forEach(o=>o.classList.remove('sel')); opt.classList.add('sel'); showPomoTab(opt.dataset.pt); return; }
@@ -737,12 +736,7 @@ function renderXP(){
   setEl('xpBarSheet','width', pct+'%');
   setEl('xpTitleIconSheet','text', t.icon);
   setEl('xpTitleNameSheet','text', t.title);
-  // v9.1: the dashboard hero shows the same level/XP strip (safe no-op elsewhere)
-  setEl('dashXpLevel','text', DB.level);
-  setEl('dashXpText','text', txt);
-  setEl('dashXpBar','width', pct+'%');
-  setEl('dashXpTitleIcon','text', t.icon);
-  setEl('dashXpTitleName','text', t.title);
+  // v20: dashboard XP strip removed
 }
 function renderProfile(){
   const need = DB.level*100;
@@ -2874,7 +2868,7 @@ function openTaskModal(id){
     document.getElementById('tDate').value = t.date||'';
     document.getElementById('tDateDisplay').value = isoToJalaliText(t.date||'');
     document.getElementById('tEst').value = t.est||'';
-    document.getElementById('tNote').value = t.note||'';
+    // v20: note field removed
     window.__taskColorPicked = t.color||null;
     renderTaskColorRow();
     document.querySelector('#tPriority [data-v="'+t.priority+'"]').classList.add('sel');
@@ -2905,7 +2899,7 @@ function openTaskModal(id){
   } else {
     /* v18.1: the calendar no longer opens this editor — a day plan has its own
        quick-add. The editor therefore always starts from a clean slate. */
-    ['tTitle','tCat','tEst','tNote'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
+    ['tTitle','tCat','tEst'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
     const da=document.getElementById('tDate'); if(da) da.value='';
     const dd=document.getElementById('tDateDisplay'); if(dd) dd.value='';
     document.getElementById('extraDeadlinesWrap').innerHTML='';
@@ -2976,7 +2970,7 @@ function saveTask(){
   const data = {
     title, cat: document.getElementById('tCat').value.trim(),
     date: document.getElementById('tDate').value, priority, status,
-    est: document.getElementById('tEst').value, note: document.getElementById('tNote').value.trim(),
+    est: document.getElementById('tEst').value,
     extraDeadlines, subtasks, inbox:false,
     color: window.__taskColorPicked||null // v12.1 — optional custom color
   };
@@ -3302,26 +3296,7 @@ function setTaskStatus(id, status){
   renderTaskActionDetails();
   toast(`${TASK_STATUS_META[status].icon} وضعیت تسک: ${TASK_STATUS_META[status].label}`);
 }
-function pickRandomTask(){
-  const f = document.querySelector('#taskFilters .sel')?.dataset.f || 'all';
-  let pool = sortTasks(DB.tasks).filter(t=>!t.done && !t.inbox);
-  if(f==='inprogress') pool = pool.filter(t=>(t.status||'notstarted')==='inprogress');
-  else if(f==='queued') pool = pool.filter(t=>(t.status||'notstarted')==='queued');
-  else if(f==='paused') pool = pool.filter(t=>(t.status||'notstarted')==='paused');
-  else if(f==='notstarted') pool = pool.filter(t=>(t.status||'notstarted')==='notstarted');
-  else if(f==='inbox') pool = [];
-  else if(f==='critical') pool = pool.filter(t=>t.priority==='critical');
-  else if(f==='high') pool = pool.filter(t=>t.priority==='high');
-  else if(f==='done') pool = [];
-  if(currentCatFilter && f!=='inbox') pool = pool.filter(t=>(t.cat||'').trim()===currentCatFilter);
-  if(!pool.length){
-    toast(f==='done' || f==='inbox' ? '🎲 توی این فیلتر تسک بازی وجود نداره — یک فیلتر دیگه انتخاب کن' : '🎲 تسک انجام‌نشده‌ای در این فیلتر پیدا نشد');
-    return;
-  }
-  const chosen = pool[Math.floor(Math.random()*pool.length)];
-  toast(`🎲 تسک تصادفی: «${chosen.title}»`);
-  openTaskDetails(chosen.id);
-}
+/* v20 removed: pickRandomTask — simplified Tasks */
 
 let currentStatusFilter = 'all';
 let currentCatFilter = null;
@@ -3464,13 +3439,21 @@ function saveHabit(){
 function dateToLocalISO(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+/* v20: one simple week switch. 0 = this week; ±1 = previous/next week. */
+let CAL_WEEK_OFFSET = 0;
+function calWeekShift(n){
+  CAL_WEEK_OFFSET = Math.max(-52, Math.min(52, (Number(n)||0)));
+  renderCalendar();
+}
+function calWeekStep(n){ calWeekShift(CAL_WEEK_OFFSET + (Number(n)||0)); }
+function calWeekToday(){ calWeekShift(0); scrollCalendarToNow(); }
 function weekDates(){
-  // Returns 7 dates for the current week (Sat to Fri, Iranian calendar week) using LOCAL date
+  // Returns 7 dates for the shown week (Sat to Fri, Iranian calendar week) using LOCAL date
   const arr=[];
   const now = new Date();
   const dayOfWeek = (now.getDay()+1)%7; // 0=Sat,1=Sun,...,6=Fri
   const sat = new Date(now);
-  sat.setDate(now.getDate() - dayOfWeek);
+  sat.setDate(now.getDate() - dayOfWeek + CAL_WEEK_OFFSET*7);
   for(let i=0;i<7;i++){
     const d=new Date(sat);
     d.setDate(sat.getDate()+i);
@@ -3542,19 +3525,9 @@ function renderHabits(){
     </div>`;
   }).join('');
 
-  const mini = document.getElementById('habitMini');
-  if(!DB.habits.length) mini.innerHTML = `<div class="empty" style="padding:10px;">هنوز عادتی نداری</div>`;
-  else mini.innerHTML = DB.habits.slice(0,4).map(h=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 2px;font-size:13px;">
-    <span>${h.icon} ${esc(h.name)}</span><b class="num" style="color:var(--neon)">${habitStreak(h)} روز</b></div>`).join('');
+  /* v20: the dashboard habit tile is gone; the Habits view is the one place. */
 }
-/* Dashboard slice of renderHabits (see renderTodayWidget note). */
-function renderHabitMini(){
-  const mini = document.getElementById('habitMini');
-  if(!mini) return;
-  if(!DB.habits.length) mini.innerHTML = `<div class="empty" style="padding:10px;">هنوز عادتی نداری</div>`;
-  else mini.innerHTML = DB.habits.slice(0,4).map(h=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 2px;font-size:13px;">
-    <span>${h.icon} ${esc(h.name)}</span><b class="num" style="color:var(--neon)">${habitStreak(h)} روز</b></div>`).join('');
-}
+function renderHabitMini(){}
 function deleteHabit(id){ if(!DB.habits.find(x=>x.id===id)) return; DB.habits = DB.habits.filter(x=>x.id!==id); save(); }
 
 /* ============ GOALS ============ */
@@ -3639,21 +3612,9 @@ function renderGoals(){
     </div>
   </div>`).join('');
 
-  const mini = document.getElementById('goalMini');
-  if(!DB.goals.length) mini.innerHTML = `<div class="empty" style="padding:10px;">هنوز هدفی نداری</div>`;
-  else mini.innerHTML = DB.goals.slice(0,4).map(g=>`<div style="margin-bottom:12px;">
-    <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>${esc(g.title)}</span><b class="num">${g.progress}٪</b></div>
-    <div class="bar-track"><div class="bar-fill" style="width:${g.progress}%"></div></div></div>`).join('');
+  /* v20: the dashboard goal tile is gone; the Goals view is the one place. */
 }
-/* Dashboard slice of renderGoals (see renderTodayWidget note). */
-function renderGoalMini(){
-  const mini = document.getElementById('goalMini');
-  if(!mini) return;
-  if(!DB.goals.length) mini.innerHTML = `<div class="empty" style="padding:10px;">هنوز هدفی نداری</div>`;
-  else mini.innerHTML = DB.goals.slice(0,4).map(g=>`<div style="margin-bottom:12px;">
-    <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>${esc(g.title)}</span><b class="num">${g.progress}٪</b></div>
-    <div class="bar-track"><div class="bar-fill" style="width:${g.progress}%"></div></div></div>`).join('');
-}
+function renderGoalMini(){}
 function deleteGoal(id){ if(!DB.goals.find(x=>x.id===id)) return; DB.goals = DB.goals.filter(x=>x.id!==id); save(); }
 
 /* ============ NOTES ============ */
@@ -4393,6 +4354,11 @@ function calendarHeaderDate(iso){
 function updateCalendarNowMarker(now=new Date()){
   const grid=document.getElementById('weekGrid');
   if(!grid)return null;
+  if(CAL_WEEK_OFFSET!==0){          /* v20: the live line only belongs to this week */
+    grid.querySelector('.lp-cal-now-line')?.remove();
+    grid.querySelector('.lp-cal-now-label')?.remove();
+    return null;
+  }
   const today=(now.getDay()+1)%7;
   const nightTail=now.getHours()<CAL_START_HOUR;
   const activeDay=nightTail?(today+6)%7:today;
@@ -4967,32 +4933,20 @@ function lpUndoEventResize(){
 function renderCalendar(){
   const START=CAL_START_HOUR,END=CAL_END_HOUR,PX_HOUR=CAL_PX_HOUR;
   const now=new Date();
+  const thisWeek = CAL_WEEK_OFFSET===0;
   const today=(now.getDay()+1)%7;
   /* Between midnight and 06:00 we are still inside the night tail of the
      PREVIOUS column, so "now" is highlighted there (e.g. 01:00 Sunday lights
      up the 01:00 slot at the bottom of the Saturday column). */
   const nightTail=now.getHours()<START;
-  const activeDay=nightTail?(today+6)%7:today;
-  const activeHour=nightTail?now.getHours()+24:now.getHours();
+  const activeDay=thisWeek?(nightTail?(today+6)%7:today):-1;
+  const activeHour=thisWeek?(nightTail?now.getHours()+24:now.getHours()):-1;
 
   const dates=weekDates().map(calendarHeaderDate);
   const wISOs=weekDates();
-  /* v18.1: the badge counts that day's own plan (DB.dayPlans) — not the main
-     task list. It shows what is still open, and a tick once the day is done. */
-  const dayPlanStat=wISOs.map(iso=>dpStats(iso));
   let head='<div class="lp-cal-head lp-cal-time"></div>';
-  const openDayIso = window.__calOpenDayISO || null;
   dayNames.forEach((d,i)=>{
-    const st=dayPlanStat[i]||{total:0,done:0,open:0};
-    const cntHtml = st.total
-      ? `<span class="lp-cal-day-count${st.open?'':' is-done'}">${st.open?toFaDigits(String(st.open)):'✓'}</span>`
-      : '';
-    const isOpen=openDayIso===wISOs[i];
-    const openCls = isOpen ? ' lp-cal-head-open' : '';
-    const ariaLabel = st.total
-      ? `${d} ${dates[i]||''} — برنامه روز: ${toFaDigits(String(st.done))} از ${toFaDigits(String(st.total))} انجام‌شده`
-      : `${d} ${dates[i]||''} — برنامه روز خالی است`;
-    head+=`<button type="button" class="lp-cal-head${i===today?' today current-day':''}${openCls}" data-cal-head-day="${i}" data-cal-head-iso="${wISOs[i]}" aria-expanded="${isOpen}" aria-controls="calDayTasksCard" aria-label="${esc(ariaLabel)}"><span class="lp-cal-day-name">${cntHtml}${d}</span><span class="lp-cal-head-date" dir="auto">${dates[i]||''}</span>${st.open>0?'<span class="lp-cal-day-taskdot" aria-hidden="true"></span>':''}</button>`;
+    head+=`<div class="lp-cal-head${thisWeek&&i===today?' today current-day':''}"><span class="lp-cal-day-name">${d}</span><span class="lp-cal-head-date" dir="auto">${dates[i]||''}</span></div>`;
   });
 
   const hourClasses=h=>(h>=24?' next-day':'')+(h===24?' midnight':'');
@@ -5011,14 +4965,19 @@ function renderCalendar(){
   document.getElementById('weekGrid').innerHTML=
     `<div class="lp-cal-wrap" style="--lp-cal-rows:${END-START};--lp-cal-px-hour:${PX_HOUR}px"><div class="lp-cal-header">${head}</div><div class="lp-cal-body"><div class="lp-cal-time-col">${axis}</div><div class="lp-cal-days">${days}</div></div></div>`;
 
+  /* v20: a single, plain week switch — no agenda view, no templates. */
+  const lbl=document.getElementById('calWeekLabel');
+  if(lbl) lbl.textContent = CAL_WEEK_OFFSET===0
+    ? 'این هفته'
+    : `${calendarHeaderDate(wISOs[0])} — ${calendarHeaderDate(wISOs[6])}`;
+  const tBtn=document.getElementById('calWeekTodayBtn');
+  if(tBtn) tBtn.classList.toggle('sel', CAL_WEEK_OFFSET===0);
+
   const cols=document.querySelectorAll('#weekGrid .lp-cal-day');
   cols.forEach(col=>col.querySelectorAll('.lp-cal-slot').forEach(slot=>{
     slot.addEventListener('click',e=>openCalendarSlot(Number(col.dataset.day),Number(slot.dataset.gridHour),e.clientY,slot));
   }));
-  // Day headers are real buttons: mouse, touch, Enter and Space all open the dedicated day list.
-  document.querySelectorAll('#weekGrid .lp-cal-head[data-cal-head-iso]').forEach(h=>{
-    h.addEventListener('click',()=>openCalDayTasks(h.dataset.calHeadIso, Number(h.dataset.calHeadDay)));
-  });
+  // v20: day headers are display-only
   updateCalendarNowMarker(now);
   const offGrid=[]; // blocks that fall in the 03:00–06:00 gap the grid does not draw
   DB.events.forEach(e=>{
@@ -5074,8 +5033,7 @@ function renderCalendar(){
     note.innerHTML=`🌙 <span>بیرون از بازهٔ نمایش تقویم</span> — ${names}${more}`;
     wrap.appendChild(note);
   }
-  // v16.3: refresh per-day tasks panel if open
-  if(window.__calOpenDayISO) renderCalDayTasks();
+  // v20: day-plan panel removed
 }
 
 /* =============================================================
@@ -5098,653 +5056,13 @@ function renderCalendar(){
    week no longer keeps a ghost panel open, filters are gone (there is nothing
    left to filter), and adding an item never leaves the page.
    ============================================================= */
-const DP_MAX_ITEMS = 120;          /* hard cap per day, keeps the store sane */
-const DP_MAX_LEN = 120;            /* characters per item */
-function dpDigitsToEn(s){ return String(s||'').replace(/[۰-۹]/g, ch=>String(ch.charCodeAt(0)-0x06F0)); }
-function isISODate(s){ return /^\d{4}-\d{2}-\d{2}$/.test(String(s||'')); }
-function dpStore(){
-  if(!DB.dayPlans || typeof DB.dayPlans!=='object' || Array.isArray(DB.dayPlans)) DB.dayPlans={};
-  return DB.dayPlans;
-}
-function dpPrefs(){
-  if(!DB.dayPlanPrefs || typeof DB.dayPlanPrefs!=='object' || Array.isArray(DB.dayPlanPrefs)) DB.dayPlanPrefs={};
-  if(typeof DB.dayPlanPrefs.showDone!=='boolean') DB.dayPlanPrefs.showDone = true;
-  if(typeof DB.dayPlanPrefs.showLinked!=='boolean') DB.dayPlanPrefs.showLinked = false;
-  return DB.dayPlanPrefs;
-}
-function dpEntry(iso){ return isISODate(iso) ? (dpStore()[iso]||null) : null; }
-function dpItems(iso){
-  const e = dpEntry(iso);
-  return (e && Array.isArray(e.items)) ? e.items : [];
-}
-function dpEnsure(iso){
-  if(!isISODate(iso)) return null;
-  const store = dpStore();
-  if(!store[iso] || typeof store[iso]!=='object' || Array.isArray(store[iso])) store[iso]={items:[],note:''};
-  if(!Array.isArray(store[iso].items)) store[iso].items=[];
-  if(typeof store[iso].note!=='string') store[iso].note='';
-  return store[iso];
-}
-function dpPrune(iso){            /* an empty day is deleted so the store never grows forever */
-  const e = dpEntry(iso);
-  if(!e) return;
-  if(!(e.items||[]).length && !String(e.note||'').trim()) delete dpStore()[iso];
-}
-function dpStats(iso){
-  const items = dpItems(iso);
-  const total = items.length;
-  const done = items.filter(i=>i && i.done).length;
-  return { total, done, open: total-done, pct: total ? Math.round(done/total*100) : 0 };
-}
-function dpDateFromISO(iso){
-  const [y,m,d] = String(iso).split('-').map(Number);
-  return new Date(y, (m||1)-1, d||1, 12, 0, 0, 0);
-}
-function dpShiftISO(iso, days){
-  if(!isISODate(iso)) return '';
-  const d = dpDateFromISO(iso);
-  d.setDate(d.getDate() + (Number(days)||0));
-  return dateToLocalISO(d);
-}
-function dpJalaliDay(iso){
-  try{
-    const [y,m,d] = String(iso).split('-').map(Number);
-    if(![y,m,d].every(n=>Number.isFinite(n))) return 0;
-    return toJalaali(y,m,d).jd;
-  }catch(_){ return 0; }
-}
-function dpRelativeLabel(iso){
-  const t = todayISO();
-  if(iso===t) return 'امروز';
-  if(iso===dpShiftISO(t,1)) return 'فردا';
-  if(iso===dpShiftISO(t,-1)) return 'دیروز';
-  return '';
-}
-function dpPrevDayLabel(iso){
-  const prev = dpShiftISO(iso,-1);
-  const rel = dpRelativeLabel(prev);
-  return rel || (isoToCalDayTitle(prev).weekday || 'روز قبل');
-}
-/* Long-form date used by the panel header («دوشنبه ۵ آبان ۱۴۰۴»). */
-function isoToCalDayTitle(iso){
-  try{
-    const parts=String(iso||'').split('-').map(Number);
-    if(parts.length!==3||parts.some(n=>!Number.isFinite(n))) return {weekday:'',long:iso||''};
-    const d=new Date(parts[0],parts[1]-1,parts[2],12);
-    if(Number.isNaN(d.getTime())) return {weekday:'',long:iso||''};
-    const wd=(d.getDay()+1)%7;
-    const txt=d.toLocaleDateString('fa-IR',{day:'numeric',month:'long',year:'numeric'});
-    return {weekday:dayNames[wd],long:txt};
-  }catch(_){ return {weekday:'',long:iso||''}; }
-}
-/* Main tasks due on a given date — only used by the opt-in "linked deadlines"
-   strip, never to build the day plan itself. */
-function tasksForDay(iso){
-  if(!iso || !Array.isArray(DB.tasks)) return [];
-  return DB.tasks.filter(t=>{
-    if(!t || t.inbox) return false;
-    return t.date===iso || (Array.isArray(t.extraDeadlines) && t.extraDeadlines.includes(iso));
-  });
-}
+/* =============================================================
+   v20: the per-day calendar plan («برنامه روز») was removed.
 
-/* --- quick-add parser: «۱۴:۳۰ تمرین پیانو» / «!خرید نان» / «ساعت ۸ ورزش» --- */
-function dpParse(raw){
-  let text = String(raw||'').replace(/\s+/g,' ').trim();
-  if(!text) return null;
-  let star = false, time = '';
-  if(/^[!！]/.test(text)){ star = true; text = text.replace(/^[!！]\s*/,''); }
-  if(/[!！]$/.test(text)){ star = true; text = text.replace(/\s*[!！]$/,''); }
-  let m = text.match(/^(?:ساعت\s*)?([0-9۰-۹]{1,2})[:：.．,]([0-9۰-۹]{2})(?:\s*[-–—]\s*)?/);
-  if(m){
-    const h = Number(dpDigitsToEn(m[1])), mi = Number(dpDigitsToEn(m[2]));
-    time = (h>=0&&h<=23&&mi>=0&&mi<=59) ? (String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0')) : '';
-    if(time) text = text.slice(m[0].length);
-  }
-  if(!time){
-    m = text.match(/^ساعت\s*([0-9۰-۹]{1,2})(?:\s*[-–—]\s*)?/);
-    if(m){
-      const h = Number(dpDigitsToEn(m[1]));
-      time = (h>=0&&h<=23) ? (String(h).padStart(2,'0')+':00') : '';
-      if(time) text = text.slice(m[0].length);
-    }
-  }
-  text = text.replace(/^[\s\-–—،,]+/,'').trim();
-  if(!text) return null;
-  return { title: text.slice(0,DP_MAX_LEN), time, star };
-}
-
-/* --- mutations (all of them persist, none of them touch DB.tasks) --- */
-function dpAddItem(iso, raw){
-  const parsed = dpParse(raw);
-  if(!parsed){ toast('⚠️ اول بنویس چه کاری مدنظرت هست'); return false; }
-  const entry = dpEnsure(iso);
-  if(!entry) return false;
-  if(entry.items.length >= DP_MAX_ITEMS){ toast('⚠️ این روز پر شده — اول چند کار انجام‌شده را پاک کن'); return false; }
-  const item = { id:uid(), title:parsed.title, time:parsed.time||'', star:!!parsed.star, done:false, created:Date.now() };
-  /* Timed lines stay on top in clock order; untimed ones keep the manual
-     order underneath, so the list reads like a real day. */
-  let at = entry.items.length;
-  if(item.time){
-    const idx = entry.items.findIndex(i=>!i || !i.time || String(i.time) > item.time);
-    if(idx >= 0) at = idx;
-  }
-  entry.items.splice(at, 0, item);
-  save();
-  return true;
-}
-function dpToggleItem(iso,id){
-  const it = dpItems(iso).find(i=>i && i.id===id);
-  if(!it) return;
-  it.done = !it.done;
-  it.doneAt = it.done ? Date.now() : null;
-  save();
-  const s = dpStats(iso);
-  if(it.done && s.total>0 && s.open===0) toast('🎉 برنامه این روز کامل شد');
-}
-function dpToggleStar(iso,id){
-  const it = dpItems(iso).find(i=>i && i.id===id);
-  if(!it) return;
-  it.star = !it.star;
-  save();
-}
-function dpRenameItem(iso,id,title){
-  const it = dpItems(iso).find(i=>i && i.id===id);
-  if(!it) return;
-  const raw = String(title||'').replace(/\s+/g,' ').trim();
-  if(!raw){ dpRemoveItem(iso,id); return; }
-  const parsed = dpParse(raw);
-  it.title = parsed ? parsed.title : raw.slice(0,DP_MAX_LEN);
-  if(parsed && parsed.time) it.time = parsed.time;
-  if(parsed && parsed.star) it.star = true;
-  save();
-}
-function dpMoveItem(iso,id,delta){
-  const entry = dpEntry(iso);
-  if(!entry || !Array.isArray(entry.items)) return;
-  const idx = entry.items.findIndex(i=>i && i.id===id);
-  if(idx < 0) return;
-  const to = idx + (Number(delta)||0);
-  if(to < 0 || to >= entry.items.length) return;
-  const [it] = entry.items.splice(idx,1);
-  entry.items.splice(to,0,it);
-  save();
-}
-function dpApplyOrder(iso, ids){
-  const entry = dpEntry(iso);
-  if(!entry || !Array.isArray(entry.items)) return;
-  const map = new Map(entry.items.map(i=>[i.id,i]));
-  const next = [];
-  (ids||[]).forEach(id=>{ const it = map.get(id); if(it){ next.push(it); map.delete(id); } });
-  map.forEach(it=>next.push(it));   /* anything the DOM missed is kept, never lost */
-  entry.items = next;
-  save();
-}
-function dpPostpone(iso,id){
-  const entry = dpEntry(iso);
-  if(!entry || !Array.isArray(entry.items)) return;
-  const idx = entry.items.findIndex(i=>i && i.id===id);
-  if(idx < 0) return;
-  const [item] = entry.items.splice(idx,1);
-  const target = dpShiftISO(iso,1);
-  const dst = dpEnsure(target);
-  if(!dst){ entry.items.splice(idx,0,item); return; }
-  item.done = false; item.doneAt = null;
-  dst.items.push(item);
-  dpPrune(iso);
-  save();
-  toast(`➡️ «${esc(item.title)}» به ${dpRelativeLabel(target)||'روز بعد'} منتقل شد`);
-}
-function dpRemoveItem(iso,id){
-  const entry = dpEntry(iso);
-  if(!entry || !Array.isArray(entry.items)) return;
-  const idx = entry.items.findIndex(i=>i && i.id===id);
-  if(idx < 0) return;
-  const [item] = entry.items.splice(idx,1);
-  dpPrune(iso);
-  save();
-  dpRememberUndo('🗑️ حذف شد', iso, [{item, index:idx}]);
-}
-function dpClearDone(iso){
-  const entry = dpEntry(iso);
-  if(!entry || !Array.isArray(entry.items)) return;
-  const removed = [];
-  entry.items = entry.items.filter((i,idx)=>{ if(i && i.done){ removed.push({item:i,index:idx}); return false; } return true; });
-  if(!removed.length){ toast('✅ انجام‌شده‌ای برای پاک کردن نیست'); return; }
-  dpPrune(iso);
-  save();
-  dpRememberUndo(`🧹 ${toFaDigits(String(removed.length))} کار انجام‌شده پاک شد`, iso, removed);
-}
-function dpCarryOver(iso){
-  const from = dpShiftISO(iso,-1);
-  const src = dpEnsure(from);
-  if(!src) return;
-  const moved = src.items.filter(i=>i && !i.done);
-  if(!moved.length){ toast('✅ از دیروز کار ناتمامی نمونده'); return; }
-  src.items = src.items.filter(i=>i && i.done);
-  const dst = dpEnsure(iso);
-  moved.forEach(i=>{ i.done=false; i.doneAt=null; dst.items.push(i); });
-  dpPrune(from);
-  save();
-  toast(`📥 ${toFaDigits(String(moved.length))} کارِ ناتمامِ دیروز به این روز اومد`);
-}
-function dpCopyFrom(iso, from){
-  const src = dpItems(from);
-  if(!src.length){ toast('⚠️ اون روز برنامه‌ای نداره که کپی بشه'); return; }
-  const dst = dpEnsure(iso);
-  if(!dst) return;
-  src.forEach(i=>dst.items.push({ id:uid(), title:i.title, time:i.time||'', star:!!i.star, done:false, created:Date.now() }));
-  save();
-  toast(`📋 ${toFaDigits(String(src.length))} کار کپی شد`);
-}
-/* --- undo: one slot, offered in the toast after a delete or a sweep --- */
-let __dpUndo = null;
-function dpRememberUndo(label, iso, entries){
-  __dpUndo = { iso, entries };
-  toast(`${label} <button class="dp-undo-btn" type="button" onclick="dpUndo()">↩️ برگرداندن</button>`, 5200);
-}
-function dpUndo(){
-  if(!__dpUndo) return;
-  const { iso, entries } = __dpUndo;
-  __dpUndo = null;
-  const entry = dpEnsure(iso);
-  if(!entry) return;
-  entries.slice().sort((a,b)=>a.index-b.index).forEach(({item,index})=>{
-    entry.items.splice(Math.min(Math.max(index,0), entry.items.length), 0, item);
-  });
-  save();
-  toast('↩️ برگردانده شد');
-}
-/* --- the day's own note (debounced so typing never fights the renderer) --- */
-let __dpNoteTimer = 0;
-function dpSetNote(iso, text){
-  const entry = dpEnsure(iso);
-  if(!entry) return;
-  entry.note = String(text||'').slice(0,600);
-  persist();
-  clearTimeout(__dpNoteTimer);
-  __dpNoteTimer = setTimeout(()=>{ dpPrune(iso); save(); }, 700);
-}
-
-/* --- open / close / render ------------------------------------------------ */
-window.__calOpenDayISO = window.__calOpenDayISO || null;
-function openCalDayTasks(iso){
-  if(!isISODate(iso)) return;
-  if(window.__calOpenDayISO===iso){ closeCalDayTasks(); return; }   /* second tap closes */
-  window.__calOpenDayISO = iso;
-  const card = document.getElementById('calDayTasksCard');
-  if(card){
-    card.style.display = '';
-    card.classList.remove('dplan-enter');
-    void card.offsetWidth;                 /* restart the entrance animation */
-    card.classList.add('dplan-enter');
-  }
-  if(viewActive('calendar')) renderCalendar();
-  else renderCalDayTasks();
-  dpScrollIntoViewIfNeeded(card);
-  /* Focus the quick-add on desktop, but never on touch: popping the on-screen
-     keyboard the moment you just wanted to look at the day is hostile. */
-  setTimeout(()=>{
-    if(window.__calOpenDayISO !== iso) return;
-    if(window.matchMedia && window.matchMedia('(hover: none)').matches) return;
-    document.getElementById('calDayAddInput')?.focus({ preventScroll:true });
-  }, 140);
-}
-function closeCalDayTasks(){
-  window.__calOpenDayISO = null;
-  const card = document.getElementById('calDayTasksCard');
-  if(card) card.style.display = 'none';
-  if(viewActive('calendar')) renderCalendar();
-}
-function dpScrollIntoViewIfNeeded(card){
-  if(!card || !card.getBoundingClientRect) return;
-  const r = card.getBoundingClientRect();
-  const vh = window.innerHeight || 800;
-  if(r.top > vh - 140 || r.bottom < 90){
-    card.scrollIntoView({ behavior:'smooth', block:'start' });
-  }
-}
-function renderCalDayTasks(){
-  const card = document.getElementById('calDayTasksCard');
-  if(!card) return;
-  const iso = window.__calOpenDayISO;
-  if(!iso){ card.style.display='none'; return; }
-  /* A day left over from a previous week must not keep a panel open — the
-     grid only ever shows the current week, so the selection is dropped. */
-  if(!weekDates().includes(iso)){ window.__calOpenDayISO=null; card.style.display='none'; return; }
-  card.style.display = '';
-  /* Keep the toolbar honest: the «👁️» switch reflects the stored preference and
-     the typing hint only matters while the day is still empty. */
-  const doneToggle = document.getElementById('calDayTasksToggleDone');
-  if(doneToggle){
-    const showDone = dpPrefs().showDone;
-    doneToggle.setAttribute('aria-pressed', showDone ? 'true' : 'false');
-    doneToggle.classList.toggle('sel', showDone);
-  }
-  const hintEl = document.getElementById('calDayAddHint');
-  if(hintEl) hintEl.hidden = dpItems(iso).length > 0;
-  renderDayPlanHeader(iso);
-  renderDayPlanProgress(iso);
-  renderDayPlanQuick(iso);
-  renderDayPlanList(iso);
-  renderDayPlanFoot(iso);
-  renderDayPlanLinked(iso);
-  renderDayPlanNote(iso);
-}
-function renderDayPlanHeader(iso){
-  const info = isoToCalDayTitle(iso);
-  const s = dpStats(iso);
-  const rel = dpRelativeLabel(iso);
-  const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent = val; };
-  set('calDayTasksTitle','برنامه این روز');
-  set('calDayTasksDate', dpJalaliDay(iso) ? toFaDigits(String(dpJalaliDay(iso))) : '📅');
-  set('calDayTasksSubDate', info.long);
-  set('calDayTasksSubDay', info.weekday);
-  /* Numbers live in their own <span> so the label stays a fixed, translatable
-     string instead of a new "X کار مانده" variant for every count. */
-  const openEl = document.getElementById('calDayTasksSubOpen');
-  if(openEl) openEl.innerHTML = s.total
-    ? `<span class="num">${toFaDigits(String(s.open))}</span> <span>کار مانده</span>`
-    : `<span>خالی</span>`;
-  const relEl = document.getElementById('calDayTasksSubRel');
-  if(relEl){ relEl.textContent = rel || ''; relEl.hidden = !rel; }
-  const card = document.getElementById('calDayTasksCard');
-  if(card) card.classList.toggle('is-today', iso===todayISO());
-}
-function renderDayPlanProgress(iso){
-  const s = dpStats(iso);
-  const bar = document.getElementById('calDayTasksBar');
-  if(bar) bar.style.width = (s.pct||0) + '%';
-  const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent = val; };
-  const txtEl = document.getElementById('calDayTasksProgressTxt');
-  if(txtEl) txtEl.innerHTML = s.total
-    ? `<span class="num">${toFaDigits(String(s.done))}</span> <span>از</span> <span class="num">${toFaDigits(String(s.total))}</span> <span>انجام شد</span>`
-    : `<span>هنوز کاری ننوشتی</span>`;
-  set('calDayTasksProgressPct', s.total ? toFaDigits(String(s.pct))+'٪' : '');
-  const wrap = document.getElementById('calDayProgressWrap');
-  if(wrap) wrap.classList.toggle('is-complete', s.total>0 && s.open===0);
-}
-function renderDayPlanQuick(iso){
-  const el = document.getElementById('calDayQuickActions');
-  if(!el) return;
-  const prev = dpShiftISO(iso,-1);
-  const ps = dpStats(prev);
-  const label = dpPrevDayLabel(iso);
-  const btns = [];
-  if(ps.open > 0) btns.push(`<button class="dplan-quick-btn" type="button" onclick="dpCarryOver('${iso}')">📥 <span>مانده‌های</span> <span>${esc(label)}</span> <span class="num">${toFaDigits(String(ps.open))}</span></button>`);
-  if(ps.total > 0) btns.push(`<button class="dplan-quick-btn ghost" type="button" onclick="dpCopyFrom('${iso}','${prev}')">📋 <span>کپی از برنامه‌ی</span> <span>${esc(label)}</span></button>`);
-  el.innerHTML = btns.join('');
-  el.style.display = btns.length ? '' : 'none';
-}
-function dpRowHtml(it, iso){
-  const cls = ['dplan-row'];
-  if(it.done) cls.push('is-done');
-  if(it.star) cls.push('is-star');
-  const meta = [];
-  if(it.time) meta.push(`<span class="dplan-time num">🕒 ${esc(toFaDigits(it.time))}</span>`);
-  if(it.star) meta.push(`<button class="dplan-star" type="button" data-act="star" title="مهم">★ مهم</button>`);
-  return `<div class="${cls.join(' ')}" data-id="${esc(it.id)}" data-iso="${esc(iso)}">
-    <button class="dplan-grip" type="button" data-act="grip" aria-label="جابه‌جایی این کار" title="نگه‌دار و بکش — یا با فلش بالا/پایین جابه‌جا کن">⠿</button>
-    <button class="dplan-chk${it.done?' done':''}" type="button" data-act="toggle" aria-pressed="${it.done?'true':'false'}" aria-label="${it.done?'انجام‌شده — برای برگرداندن بزن':'انجام‌نشده — برای انجام‌شده کردن بزن'}">${it.done?'✓':''}</button>
-    <div class="dplan-main">
-      <div class="dplan-title" data-act="edit" role="button" tabindex="0" title="برای ویرایش بزن">${esc(it.title)}</div>
-      ${meta.length?`<div class="dplan-meta">${meta.join('')}</div>`:''}
-    </div>
-    <div class="dplan-row-actions">
-      <button class="dplan-icon" type="button" data-act="tomorrow" title="انتقال به فردا" aria-label="انتقال به فردا">➡️</button>
-      <button class="dplan-icon" type="button" data-act="edit" title="ویرایش" aria-label="ویرایش">✏️</button>
-      <button class="dplan-icon danger" type="button" data-act="del" title="حذف" aria-label="حذف">🗑️</button>
-    </div>
-  </div>`;
-}
-function renderDayPlanList(iso){
-  const listEl = document.getElementById('calDayTasksList');
-  if(!listEl) return;
-  /* Never yank the caret out of an inline editor that is mid-edit for THIS day. */
-  const focusedEdit = listEl.querySelector('.dplan-edit-input:focus');
-  if(focusedEdit && focusedEdit.closest('.dplan-row')?.dataset.iso === iso) return;
-  const items = dpItems(iso);
-  const showDone = dpPrefs().showDone;
-  const visible = showDone ? items : items.filter(i=>!i || !i.done);
-  if(!items.length){
-    listEl.innerHTML = `<div class="empty dplan-empty">
-      <div class="ic">🗒️</div>
-      <div class="dplan-empty-title">این روز هنوز برنامه‌ای نداره</div>
-      <div class="dplan-empty-hint">بنویس «۱۴:۳۰ تمرین پیانو» یا «!خرید نان» — ساعت و علامت ! خودکار تشخیص داده می‌شن.</div>
-    </div>`;
-    return;
-  }
-  if(!visible.length){
-    listEl.innerHTML = `<div class="empty dplan-empty dplan-all-done">
-      <div class="ic">🎉</div>
-      <div class="dplan-empty-title">همه‌ی کارهای این روز انجام شد</div>
-      <button class="btn ghost sm" type="button" onclick="toggleDayPlanDone()">👁️ نمایش انجام‌شده‌ها</button>
-    </div>`;
-    return;
-  }
-  listEl.innerHTML = visible.map(it=>dpRowHtml(it, iso)).join('');
-}
-function renderDayPlanFoot(iso){
-  const s = dpStats(iso);
-  const clearBtn = document.getElementById('calDayClearDoneBtn');
-  if(clearBtn) clearBtn.disabled = s.done===0;
-  const linkBtn = document.getElementById('calDayLinkBtn');
-  if(linkBtn){
-    linkBtn.setAttribute('aria-expanded', dpPrefs().showLinked ? 'true' : 'false');
-    linkBtn.classList.toggle('sel', !!dpPrefs().showLinked);
-  }
-  setLinkedCount(iso);
-}
-function setLinkedCount(iso){
-  const el = document.getElementById('calDayLinkCount');
-  if(el) el.textContent = toFaDigits(String(tasksForDay(iso).length));
-}
-function toggleDayPlanDone(){
-  const p = dpPrefs();
-  p.showDone = !p.showDone;
-  const btn = document.getElementById('calDayTasksToggleDone');
-  if(btn){ btn.setAttribute('aria-pressed', p.showDone?'true':'false'); btn.classList.toggle('sel', p.showDone); }
-  persist();
-  renderCalDayTasks();
-}
-function toggleDayPlanLinked(){
-  const p = dpPrefs();
-  p.showLinked = !p.showLinked;
-  persist();
-  renderDayPlanFoot(window.__calOpenDayISO);
-  renderDayPlanLinked(window.__calOpenDayISO);
-}
-function renderDayPlanLinked(iso){
-  const wrap = document.getElementById('calDayLinkedWrap');
-  if(!wrap) return;
-  setLinkedCount(iso);
-  if(!dpPrefs().showLinked){ wrap.style.display='none'; wrap.innerHTML=''; return; }
-  const tasks = tasksForDay(iso);
-  wrap.style.display = '';
-  wrap.innerHTML = `<div class="dplan-linked-head">فقط برای اطلاع — این‌ها تسک‌های اصلی‌اند و جدا از برنامه این روز می‌مانند.</div>` +
-    (tasks.length
-      ? tasks.map(t=>{
-          const c = taskColor(t);
-          return `<button class="dplan-linked-row${t.done?' is-done':''}" type="button" onclick="openTaskDetails('${esc(t.id)}')">
-            <span class="dplan-linked-dot" style="background:${esc(c||'var(--neon)')}"></span>
-            <span class="dplan-linked-title">${esc(t.title)}</span>
-            <span class="dplan-linked-pr num">${esc(prLabel(t.priority))}</span>
-          </button>`;
-        }).join('')
-      : `<div class="dplan-linked-head muted">هیچ تسک اصلی‌ای برای این روز ددلاین نداره.</div>`);
-}
-function renderDayPlanNote(iso){
-  const el = document.getElementById('calDayNoteInput');
-  if(!el) return;
-  const val = (dpEntry(iso)?.note) || '';
-  if(document.activeElement===el && el.value===val) return;   /* don't fight the caret */
-  el.value = val;
-  const sum = document.querySelector('#calDayNoteWrap .dplan-note-sum');
-  if(sum) sum.classList.toggle('has-note', !!val.trim());
-}
-/* --- inline editing ------------------------------------------------------- */
-function dpStartEdit(row){
-  const iso = row?.dataset?.iso, id = row?.dataset?.id;
-  const it = dpItems(iso).find(i=>i && i.id===id);
-  if(!it) return;
-  const main = row.querySelector('.dplan-main');
-  if(!main || main.querySelector('.dplan-edit-input')) return;
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'dplan-edit-input';
-  input.value = it.title;
-  input.maxLength = DP_MAX_LEN;
-  input.setAttribute('aria-label','ویرایش عنوان این کار');
-  main.innerHTML = '';
-  main.appendChild(input);
-  input.focus();
-  input.select();
-  let closed = false;
-  const finish = (keep)=>{
-    if(closed) return;
-    closed = true;
-    const val = input.value;
-    /* Drop focus and take the input out BEFORE the repaint, otherwise the
-       "don't yank the caret while editing" guard in renderDayPlanList() keeps
-       the stale editor on screen forever. */
-    input.removeEventListener('blur', onBlur);
-    if(document.activeElement === input) input.blur();
-    input.remove();
-    renderCalDayTasks();
-    if(keep) dpRenameItem(iso, id, val);
-  };
-  const onBlur = ()=>finish(true);
-  input.addEventListener('blur', onBlur);
-  input.addEventListener('keydown', ev=>{
-    if(ev.key==='Enter'){ ev.preventDefault(); finish(true); }
-    else if(ev.key==='Escape'){ ev.preventDefault(); finish(false); }
-    ev.stopPropagation();
-  });
-}
-function dpFocusGrip(id){
-  const tryFocus = (n)=>{
-    const el = document.querySelector(`.dplan-row[data-id="${id}"] .dplan-grip`);
-    if(el){ el.focus(); return; }
-    if(n > 0) setTimeout(()=>tryFocus(n-1), 60);
-  };
-  tryFocus(5);
-}
-
-/* --- drag to reorder (mouse + touch, one pointer implementation) ---------- */
-const __dpDrag = { row:null, list:null, startY:0, moved:false, iso:'', grip:null };
-function dpDragStart(e, grip){
-  const row = grip.closest('.dplan-row');
-  const list = row?.parentElement;
-  if(!row || !list) return;
-  e.preventDefault();
-  __dpDrag.row = row; __dpDrag.list = list; __dpDrag.grip = grip;
-  __dpDrag.startY = e.clientY; __dpDrag.moved = false;
-  __dpDrag.iso = row.dataset.iso || '';
-  row.classList.add('dragging');
-  document.body.classList.add('dplan-dragging');
-  try{ grip.setPointerCapture?.(e.pointerId); }catch(_){}
-  grip.addEventListener('pointermove', dpDragMove);
-  grip.addEventListener('pointerup', dpDragEnd);
-  grip.addEventListener('pointercancel', dpDragEnd);
-}
-function dpDragMove(e){
-  const d = __dpDrag;
-  if(!d.row || !d.list) return;
-  if(e.cancelable) e.preventDefault();
-  const y = e.clientY;
-  d.row.style.transform = `translateY(${y - d.startY}px)`;
-  const rows = [...d.list.children].filter(r => r !== d.row);
-  let target = null;
-  for(const r of rows){ const rc = r.getBoundingClientRect(); if(y < rc.top + rc.height/2){ target = r; break; } }
-  const movingToEnd = !target && d.list.lastElementChild !== d.row;
-  if((target && target.nextSibling !== d.row) || movingToEnd){
-    const before = d.row.getBoundingClientRect().top;
-    if(target) d.list.insertBefore(d.row, target); else d.list.appendChild(d.row);
-    d.row.style.transform = 'none';
-    const after = d.row.getBoundingClientRect().top;
-    d.startY += (after - before);                 /* keep the row under the finger */
-    d.row.style.transform = `translateY(${y - d.startY}px)`;
-    d.moved = true;
-  }
-}
-function dpDragEnd(){
-  const d = __dpDrag;
-  if(!d.row) return;
-  d.grip?.removeEventListener('pointermove', dpDragMove);
-  d.grip?.removeEventListener('pointerup', dpDragEnd);
-  d.grip?.removeEventListener('pointercancel', dpDragEnd);
-  const row = d.row, list = d.list, iso = d.iso, moved = d.moved;
-  row.style.transform = '';
-  row.classList.remove('dragging');
-  document.body.classList.remove('dplan-dragging');
-  __dpDrag.row = null; __dpDrag.list = null; __dpDrag.grip = null;
-  if(moved){
-    dpApplyOrder(iso, [...list.children].map(r=>r.dataset.id).filter(Boolean));
-  }
-}
-/* Delegated handlers: the list markup is rebuilt on every render, these are not. */
-(function(){
-  const list = document.getElementById('calDayTasksList');
-  if(!list) return;
-  const actOf = t => (t && t.closest) ? t.closest('[data-act]') : null;
-  list.addEventListener('click', e=>{
-    const el = actOf(e.target);
-    if(!el) return;
-    const row = el.closest('.dplan-row');
-    if(!row) return;
-    const iso = row.dataset.iso, id = row.dataset.id;
-    switch(el.dataset.act){
-      case 'toggle':   dpToggleItem(iso,id); break;
-      case 'star':     dpToggleStar(iso,id); break;
-      case 'tomorrow': dpPostpone(iso,id); break;
-      case 'del':      dpRemoveItem(iso,id); break;
-      case 'edit':     dpStartEdit(row); break;
-      default: break;
-    }
-  });
-  list.addEventListener('keydown', e=>{
-    const el = actOf(e.target);
-    if(!el) return;
-    const row = el.closest('.dplan-row');
-    if(!row) return;
-    const iso = row.dataset.iso, id = row.dataset.id;
-    if(el.dataset.act==='edit' && (e.key==='Enter' || e.key===' ')){ e.preventDefault(); dpStartEdit(row); return; }
-    if(el.dataset.act==='grip'){
-      if(e.key==='ArrowUp'){ e.preventDefault(); dpMoveItem(iso,id,-1); dpFocusGrip(id); }
-      else if(e.key==='ArrowDown'){ e.preventDefault(); dpMoveItem(iso,id,1); dpFocusGrip(id); }
-    }
-  });
-  list.addEventListener('pointerdown', e=>{
-    if(e.button !== undefined && e.button !== 0) return;
-    const grip = e.target.closest?.('[data-act="grip"]');
-    if(grip) dpDragStart(e, grip);
-  });
-  /* Quick add: Enter adds, Escape clears. The input is never re-rendered, so
-     the caret and the typed text survive every repaint of the list. */
-  const input = document.getElementById('calDayAddInput');
-  const addBtn = document.getElementById('calDayAddBtn');
-  if(input){
-    const submit = ()=>{
-      const iso = window.__calOpenDayISO;
-      if(!iso) return;
-      if(dpAddItem(iso, input.value)) input.value = '';
-      input.focus({preventScroll:true});
-    };
-    input.addEventListener('keydown', e=>{
-      if(e.key==='Enter'){ e.preventDefault(); submit(); }
-      else if(e.key==='Escape'){ e.preventDefault(); input.value=''; input.blur(); }
-    });
-    addBtn?.addEventListener('click', e=>{ e.preventDefault(); submit(); });
-  }
-  const note = document.getElementById('calDayNoteInput');
-  if(note) note.addEventListener('input', ()=>{
-    const iso = window.__calOpenDayISO;
-    if(iso) dpSetNote(iso, note.value);
-  });
-  const card = document.getElementById('calDayTasksCard');
-  card?.addEventListener('keydown', e=>{
-    if(e.key==='Escape' && !e.target.closest?.('.dplan-edit-input')) closeCalDayTasks();
-  });
-})();
+   The old data stays untouched in DB.dayPlans (loadStore still
+   normalises it) so nothing is lost if it is ever needed again,
+   but no UI, no rendering and no handlers read it any more.
+   ============================================================= */
 
 /* ============ CHARTS (self-contained, no external library) ============ */
 function last7(){ const arr=[]; for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(dateToLocalISO(d)); } return arr; }
@@ -6026,25 +5344,9 @@ document.getElementById('importFile').onchange = (e)=>{
 function renderDashboard(){
   const hour = new Date().getHours();
   const greet = hour<5?'شب‌بخیر 🌙': hour<12?'صبح‌بخیر ☀️': hour<18?'ظهر‌بخیر 🌤️':'عصر‌بخیر 🌆';
-  document.getElementById('greetTitle').textContent = greet;
-  document.getElementById('todayStr').textContent = new Date().toLocaleDateString('fa-IR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  const g=document.getElementById('greetTitle'); if(g) g.textContent=greet;
+  const ts=document.getElementById('todayStr'); if(ts) ts.textContent=new Date().toLocaleDateString('fa-IR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
   renderMotivation();
-
-  const doneToday = DB.tasks.filter(t=>!t.inbox && t.doneDate===todayISO()).length;
-  document.getElementById('statDone').textContent = doneToday;
-  const maxStreak = DB.habits.length ? Math.max(0, ...DB.habits.map(habitStreak)) : 0;
-  document.getElementById('statStreak').textContent = maxStreak;
-  const avgGoal = DB.goals.length ? Math.round(DB.goals.reduce((s,g)=>s+g.progress,0)/DB.goals.length) : 0;
-  document.getElementById('statGoals').textContent = avgGoal+'٪';
-  const score = Math.min(100, doneToday*15 + maxStreak*5 + Math.round(avgGoal*0.2));
-  document.getElementById('statScore').textContent = score;
-
-  const total = DB.tasks.filter(t=>!t.inbox).length, done = DB.tasks.filter(t=>!t.inbox && t.done).length;
-  const pct = total? Math.round(done/total*100):0;
-  document.getElementById('totalTasksN').textContent = total;
-  document.getElementById('doneTasksN').textContent = done;
-  document.getElementById('donutText').textContent = pct+'٪';
-  document.getElementById('donutWrap').style.background = `conic-gradient(#00e5ff ${pct*3.6}deg, rgba(255,255,255,.08) 0deg)`;
 }
 
 /* ============ RENDER ALL ============ */
@@ -6057,7 +5359,7 @@ function renderDashboard(){
 function viewActive(id){ const el=document.getElementById('view-'+id); return !!(el && el.classList.contains('active')); }
 function renderView(v){
   const jobs = {
-    dashboard: ()=>{ renderXP(); renderDashboard(); renderTodayWidget(); renderHabitMini(); renderGoalMini(); renderQuestBox(); },
+    dashboard: ()=>{ renderXP(); renderDashboard(); renderTodayWidget(); renderQuestBox(); },
     tasks:     ()=>renderTasks(document.querySelector('#taskFilters .sel')?.dataset.f || 'all'),
     calendar:  ()=>renderCalendar(),
     habits:    ()=>renderHabits(),
@@ -6081,8 +5383,8 @@ function renderAll(){
   const jobs = [
     ['XP', ()=>renderXP()],
     ['Tasks', ()=>{ if(viewActive('tasks')) renderTasks(document.querySelector('#taskFilters .sel')?.dataset.f || 'all'); else if(onDashboard) renderTodayWidget(); }],
-    ['Habits', ()=>{ if(viewActive('habits')) renderHabits(); else if(onDashboard) renderHabitMini(); }],
-    ['Goals', ()=>{ if(viewActive('goals')) renderGoals(); else if(onDashboard) renderGoalMini(); }],
+    ['Habits', ()=>{ if(viewActive('habits')) renderHabits(); }],
+    ['Goals', ()=>{ if(viewActive('goals')) renderGoals(); }],
     ['Notes', ()=>{ if(viewActive('notes')) renderNotes(); }],
     ['Calendar', ()=>{ if(viewActive('calendar')) renderCalendar(); }],
     ['Dashboard', ()=>{ if(onDashboard) renderDashboard(); }],
@@ -6146,7 +5448,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='19.0';
+const LP_APP_VERSION='20.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
