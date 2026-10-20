@@ -167,6 +167,16 @@
     "لبه بالا را بکش تا ساعت شروع عوض شود": "Drag the top edge to change the start time",
     "لبه پایین را بکش تا ساعت پایان عوض شود": "Drag the bottom edge to change the end time",
     "· لبه بالا یا پایین را بکش تا ساعت شروع یا پایان عوض شود": "· drag the top or bottom edge to change the start or end time",
+    /* ---- v21.2: an edge never steals a move; hold it to resize, drag it to move ----
+       The block tooltip is composite (title — day time · hint), so the translator
+       splits it on its separators and looks each island up on its own. */
+    "لبه را نگه دار و بکش تا زمانش عوض شود": "hold an edge and drag to change its time",
+    "وسط را بکش تا جابه‌جا شود": "drag the middle to move it",
+    "لبهٔ بالا یا پایینش را یک لحظه نگه دار و بعد بکش تا مدتش کم‌وزیاد شود": "hold its top or bottom edge for a moment, then drag to make it shorter or longer",
+    "رویداد را بکش تا جابه‌جا شود؛ لبهٔ بالا یا پایینش را یک لحظه نگه دار و بعد بکش تا مدتش کم‌وزیاد شود. روی خانه‌ی خالی بزن تا رویداد جدید بسازی.": "Drag an event to move it; hold its top or bottom edge for a moment, then drag to make it shorter or longer. Tap an empty slot to create a new one.",
+    "⚠️ چیزی برای بازگرداندن نیست": "⚠️ There is nothing to undo",
+    "⚠️ مهلت بازگرداندن تمام شد": "⚠️ The undo window has closed",
+    "⚠️ این رویداد دیگر وجود ندارد؛ بازگردانده نشد": "⚠️ That event no longer exists; nothing was restored",
     /* ---- v17.2: minute-accurate calendar and quick-add slots ---- */
     "🕒 الان": "🕒 Now",
     "زمان فعلی": "Current time",

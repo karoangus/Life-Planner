@@ -1032,7 +1032,7 @@ textarea{resize:vertical; min-height:70px;}
 .note-card p{font-size:12px; color:var(--txt-dim); overflow:hidden; flex:1; line-height:1.7;}
 .note-card .tag{margin-top:8px; align-self:flex-start;}
 
-.toast{position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel2); border:1px solid var(--line2); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:700; box-shadow:var(--shadow); z-index:300; opacity:0; transition:.25s; pointer-events:none; display:flex; align-items:center; gap:8px;}
+.toast{position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel2); border:1px solid var(--line2); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:700; box-shadow:var(--shadow); z-index:300; opacity:0; transition:.25s; pointer-events:none; display:flex; align-items:center; gap:8px; max-width:min(92vw,540px); flex-wrap:wrap; justify-content:center; text-align:center; box-sizing:border-box;}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
 /* no sidebar — bottom nav handles all screen sizes */
@@ -1416,6 +1416,15 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 /* Touch users still drag the invisible edge zone, but no permanent white lines
    clutter every event block or invite an accidental resize. */
 @media(hover:none){.ev-resize-grip{display:none;}}
+/* v21.2 — on touch the edge strip is slimmer, so most of a short block stays
+   "body" (the part that moves the event). */
+@media(hover:none){.ev-resize-handle{height:9px;}}
+/* Held still long enough, the edge means "I want to change the time": the block
+   lights up and the grip becomes visible even where there is no hover, so the
+   mode is obvious before the finger moves. Until then, dragging off the edge
+   moves the block — see lpBeginEdgeGrab in js/core.js. */
+.ev-block.lp-edge-armed{filter:brightness(1.14);box-shadow:inset 0 0 0 1.5px var(--neon), 0 4px 14px rgba(0,229,255,.28);z-index:9;}
+.ev-block.lp-edge-armed .ev-resize-grip{display:block;width:22px;height:3px;opacity:1;background:var(--neon);}
 .ev-block.lp-resizing{filter:brightness(1.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,.28), 0 4px 14px rgba(0,229,255,.25);z-index:9;cursor:ns-resize;}
 .ev-block.lp-resize-blocked{box-shadow:inset 0 0 0 2px rgba(255,70,70,.85), 0 6px 22px rgba(255,70,70,.3);}
 .ev-resize-guide{position:absolute;left:2px;right:2px;height:1px;z-index:11;pointer-events:none;background:var(--neon);box-shadow:0 0 5px var(--neon);transform:translateY(-1px);}
@@ -1935,10 +1944,22 @@ html[data-lang="en"] .ev-block.has-desc::after{left:auto;right:3px;}
 }
 .dplan-note:focus{border-color:var(--neon);}
 body.dplan-dragging{cursor:grabbing; user-select:none;}
+/* v21.2 — a toast can carry an action («↩️ برگرداندن»). The strip itself still
+   lets every tap through to the page, but the button is a real target: it takes
+   pointer events back, it is tall enough for a finger, and the message next to it
+   shrinks and wraps instead of pushing the button outside the viewport (which is
+   what made it look dead on a phone). */
+.toast .dp-undo-msg{flex:1 1 auto;min-width:0;}
 .toast .dp-undo-btn{
-  border:0; background:transparent; color:var(--neon); font-family:inherit; font-weight:900;
-  font-size:12px; cursor:pointer; text-decoration:underline; padding:0;
+  pointer-events:auto; flex:0 0 auto; min-height:34px;
+  border:1px solid var(--neon); background:rgba(0,229,255,.14); color:var(--neon);
+  font-family:inherit; font-weight:900; font-size:12px; line-height:1;
+  padding:9px 13px; border-radius:10px; cursor:pointer; white-space:nowrap;
+  -webkit-tap-highlight-color:transparent; transition:background .15s, transform .1s;
 }
+.toast .dp-undo-btn:hover{background:rgba(0,229,255,.26);}
+.toast .dp-undo-btn:active{transform:scale(.95);}
+.toast .dp-undo-btn:focus-visible{outline:2px solid var(--neon);outline-offset:2px;}
 .calendar-intro-copy span.calendar-intro-plan{
   white-space:normal; overflow:visible; text-overflow:clip;
   color:var(--neon); font-size:10.5px; line-height:1.6; margin-top:3px;
