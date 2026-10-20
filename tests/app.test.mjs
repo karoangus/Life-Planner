@@ -684,6 +684,7 @@ if (!useFallback) {
   const appCss = fs.readFileSync(path.join(ROOT, 'css/app.css'), 'utf-8');
   const cssApp = appCss;
   const v20Css = fs.readFileSync(path.join(ROOT, 'css/v20.css'), 'utf-8');
+  const swJsRegister = fs.readFileSync(path.join(ROOT, 'js/sw-register.js'), 'utf-8');
   const versionJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'app-version.json'), 'utf-8'));
   const pkgJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'));
   const pkgLockJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package-lock.json'), 'utf-8'));
@@ -756,7 +757,7 @@ if (!useFallback) {
 
   // the new file must be precached, otherwise the offline PWA loses it
   check('v16 script is precached by the service worker',
-    swJs.includes("'./js/v16.js'") && indexHtml.includes('js/v16.js'));
+    /['"`]\.\/js\/v16\.js(?:\?v=[^'"`]*)?['"`]/.test(swJs) && indexHtml.includes('js/v16.js'));
 
   // every new user-facing Persian string needs an English translation
   check('v16 strings translated for English mode',
@@ -816,7 +817,7 @@ if (!useFallback) {
 
   // the new file must be precached, otherwise the offline PWA loses it
   check('v16.2 script is precached by the service worker',
-    swJs.includes("'./js/v162.js'") && indexHtml.includes('js/v162.js'));
+    /['"`]\.\/js\/v162\.js(?:\?v=[^'"`]*)?['"`]/.test(swJs) && indexHtml.includes('js/v162.js'));
 
   check('v16.2 strings translated for English mode',
     ['⚡ پرفورمنس', '⚡ حالت پرفورمنس (خاموش کردن انیمیشن‌ها)', '⚡ حالت پرفورمنس فعال شد',
@@ -1098,6 +1099,29 @@ if (!useFallback) {
   check('inbox quick-add modal present', indexHtml.includes('inboxQuickModalBg'));
   check('status sorting present', coreJs.includes('STATUS_ORDER') && coreJs.includes('inprogress:0'));
   check('reward display fixed', coreJs.includes('reward-grid') && appCss.includes('reward-grid'));
+
+  // ---------- v20.1: a release can never hide behind a stale cache ----------
+  const assetRefs = [...indexHtml.matchAll(/(?:src|href)="((?:css|js)\/[^"]+)"/g)].map(m => m[1]);
+  check('v20.1 every local CSS/JS asset is requested with its version',
+    assetRefs.length >= 9 && assetRefs.every(u => /\?v=\d/.test(u)),
+    assetRefs.filter(u => !/\?v=\d/.test(u)).join(', '));
+
+  check('v20.1 the service worker is network-first for code and cache-first for media',
+    /const VERSION = '20\.1';/.test(swJs) &&
+    swJs.includes('const CACHE_NAME') && swJs.includes("cache: 'no-store'") &&
+    swJs.includes("cache: 'reload'") && swJs.includes('isFreshFirst') &&
+    swJs.includes('caches.keys()') && swJs.includes('self.skipWaiting()') &&
+    swJs.includes("self.clients.claim()"));
+
+  check('v20.1 the worker cache list carries the same version query as the page',
+    /`\.\/js\/core\.js\?v=\$\{VERSION\}`/.test(swJs) &&
+    /`\.\/css\/v20\.css\?v=\$\{VERSION\}`/.test(swJs));
+
+  check('v20.1 a new build reloads the app once, by itself',
+    swJsRegister.includes("updateViaCache: 'none'") &&
+    swJsRegister.includes("controllerchange") && swJsRegister.includes('lpForceUpdate') &&
+    swJsRegister.includes('15 * 60 * 1000') &&
+    coreJs.includes('window.lpForceUpdate'));
 
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];
