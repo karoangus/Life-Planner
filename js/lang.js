@@ -232,7 +232,7 @@
     "⚡ حالت پرفورمنس فعال شد": "⚡ Performance mode on",
     "✨ حالت پرفورمنس غیرفعال شد": "✨ Performance mode off",
     "⛔ غیرفعال": "⛔ Off",
-    "مخصوص گوشی‌های ضعیف: با فعال کردن این گزینه، همه‌ی انیمیشن‌ها، جلوه‌های حرکتی و افکت‌های شیشه‌ایِ برنامه خاموش می‌شوند تا اسکرول و جابه‌جایی بین بخش‌ها روان‌تر شود. ظاهر، رنگ‌ها، تم‌ها و همه‌ی دکمه‌ها دقیقاً بدون تغییر می‌مانند.": "Made for weaker phones: turning this on switches off every animation, motion effect and frosted-glass layer so scrolling and moving between sections feels smoother. The look, the colours, the themes and every button stay exactly the same.",
+    "مخصوص گوشی‌های ضعیف: با فعال کردن این گزینه، همه‌ی انیمیشن‌ها، جلوه‌های حرکتی و افکت‌های شیشه‌ایِ برنامه خاموش می‌شوند تا اسکرول و جابه‌جایی بین بخش‌ها روان‌تر شود. پنجره‌ها و منوهای بازشو هم به‌جای شیشه‌ی بلوردار، پس‌زمینه‌ی مات و پشتشان تاریک‌تر می‌شود تا نوشته‌ها روی محتوای پشت، خوانا بمانند؛ ظاهر، رنگ‌ها، تم‌ها و همه‌ی دکمه‌ها همچنان بدون تغییر می‌مانند.": "Made for weaker phones: turning this on switches off every animation, motion effect and frosted-glass layer so scrolling and moving between sections feels smoother. Popups and menus get a solid background and a darker page behind them instead of the frosted glass, so their text stays readable over whatever is underneath; the look, the colours, the themes and every button still stay the same.",
 
     "محافظت Streak Shield": "Streak Shield protection",
     "انتخاب کن این Shield از کدام عادت‌ها محافظت کند.": "Choose which habits this Shield protects.",

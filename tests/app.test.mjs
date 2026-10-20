@@ -781,6 +781,62 @@ if (!useFallback) {
     v21Js.includes('HTMLElement.prototype.focus') && v21Js.includes('autocomplete'),
     'v21.js');
 
+  /* ---------- v21.1: performance mode keeps every popup readable ---------- */
+  /* The blur used to be the only thing hiding the page behind a popup. With
+     `html.lp-perf` on, the panel must be painted solid and the scrim behind it
+     darker — otherwise the task sheet turns into a window onto the list. */
+  const v211 = await page.evaluate(() => {
+    const alpha = c => {
+      if (!c || c === 'transparent') return 0;
+      const m = c.match(/rgba?\(([^)]+)\)/);
+      if (!m) return 1;
+      const p = m[1].split(',').map(Number);
+      return p.length > 3 ? p[3] : 1;
+    };
+    const read = () => {
+      openModal('taskModalBg');
+      openSheet();
+      const scrim = getComputedStyle(document.getElementById('taskModalBg'));
+      const modal = getComputedStyle(document.querySelector('#taskModalBg .modal'));
+      const drawer = getComputedStyle(document.getElementById('sheetDrawer'));
+      const nav = getComputedStyle(document.querySelector('.bottom-nav'));
+      const out = {
+        modalAlpha: alpha(modal.backgroundColor),
+        drawerAlpha: alpha(drawer.backgroundColor),
+        navAlpha: alpha(nav.backgroundColor),
+        scrimAlpha: alpha(scrim.backgroundColor),
+        pomoBlur: (() => {
+          const el = document.createElement('div');
+          el.className = 'pomo-custom-modal';
+          document.body.appendChild(el);
+          const v = getComputedStyle(el).backdropFilter;
+          el.remove();
+          return v;
+        })(),
+        blurs: [modal.backdropFilter, drawer.backdropFilter, nav.backdropFilter, scrim.backdropFilter],
+      };
+      closeSheet(); closeModal('taskModalBg');
+      return out;
+    };
+    lpSetPerfMode(true);
+    const perf = read();
+    lpSetPerfMode(false);
+    const normal = read();
+    return { perf, normal };
+  });
+  const perfBlurs = v211.perf.blurs.map(b => b || 'none');
+  perfBlurs.push(v211.perf.pomoBlur || 'none');
+  check('v21.1 performance mode paints popups solid instead of see-through',
+    v211.perf.modalAlpha === 1 && v211.perf.drawerAlpha === 1 && v211.perf.navAlpha === 1,
+    JSON.stringify(v211.perf));
+  check('v21.1 performance mode dims the page harder behind a popup',
+    v211.perf.scrimAlpha >= 0.8, 'scrim=' + v211.perf.scrimAlpha);
+  check('v21.1 performance mode still costs zero backdrop-filter', 
+    perfBlurs.every(b => b === 'none'), perfBlurs.join(' | '));
+  check('v21.1 normal mode keeps its frosted glass exactly as before',
+    v211.normal.modalAlpha < 1 && v211.normal.blurs.some(b => /blur/.test(b)),
+    JSON.stringify(v211.normal));
+
   await browser.close();
 } else {
   // FALLBACK: no browser available (restricted sandbox). Verify core logic via file inspection.
@@ -913,6 +969,16 @@ if (!useFallback) {
     v162Js.includes('localStorage.setItem(PERF_KEY') && v162Js.includes('lifePlannerPerfMode_v1') &&
     indexHtml.includes('lifePlannerPerfMode_v1') &&
     coreJs.includes("perfMode:localStorage.getItem('lifePlannerPerfMode_v1')"));
+
+  // v21.1: the blur is gone, so every floating surface gets an opaque base and a
+  // heavier dim behind it — otherwise the page shows straight through a popup.
+  check('v21.1 perf mode gives popups an opaque base instead of a see-through one',
+    appCss.includes('html.lp-perf .modal,\nhtml.lp-perf .toast{background-color:var(--panel2);}') &&
+    appCss.includes('html.lp-perf .sheet-drawer,\nhtml.lp-perf .bottom-nav{background-color:var(--bg2);}'));
+  check('v21.1 perf mode darkens the page behind every popup (dark + light theme)',
+    appCss.includes('html.lp-perf .modal-bg{background:rgba(3,5,12,.88);}') &&
+    appCss.includes('html.lp-perf .sheet-overlay{background:rgba(3,5,12,.8);}') &&
+    appCss.includes('html[data-theme="light"].lp-perf .modal-bg{background:rgba(28,38,66,.62);}'));
 
   // ---------- v16.2: smoother scrolling ----------
   check('v16.2 scroll work reduced (off-screen rows, paused blur, coalesced typing)',
