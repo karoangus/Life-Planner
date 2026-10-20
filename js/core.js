@@ -4335,6 +4335,20 @@ function saveCategoryFromManager(){
    value back to the real {day, minute} pair that gets stored on the event. */
 const CAL_START_HOUR=6, CAL_END_HOUR=27, CAL_PX_HOUR=52, CAL_SNAP_MIN=15;
 const CAL_RESIZE_INTENT_PX=12; // ignore touch jitter; an intentional drag still moves one 15-minute step
+/* v21.2 — an edge may never steal a move. The resize strips sit on top of a block
+   that is also draggable, so a finger that landed a few pixels off used to change
+   the event's time when the user meant to move it. How the gesture starts now
+   decides what it is:
+     • touch/pen — dragging off the edge (any direction, CAL_EDGE_MOVE_PX) picks
+       the block up and MOVES it, exactly like the middle of the block does. Only
+       holding the edge still for CAL_EDGE_ARM_MS arms the resize (a tick of
+       vibration + the grip lights up); from then on the drag stretches it.
+     • mouse — the grip is visible on hover and the pointer is precise, so the
+       edge resizes as soon as it is dragged vertically; a clearly sideways first
+       movement is handed over to the move instead. */
+const CAL_EDGE_ARM_MS=300, CAL_EDGE_MOVE_PX=10, CAL_EDGE_SIDE_PX=6;
+/* An undo offered in a toast stays valid only as long as that toast is on screen. */
+const LP_UNDO_WINDOW_MS=8000;
 const CAL_DAY_MIN=1440;
 const CAL_SPAN_MIN=(CAL_END_HOUR-CAL_START_HOUR)*60;
 /* 25:30 on the grid is really 01:30 of the next day — show it as such. */
@@ -4490,7 +4504,7 @@ function calEventPlacements(e){
   });
   return out;
 }
-const lpDragState={ drag:null, resize:null, holdTimer:null, suppressClickUntil:0 };
+const lpDragState={ drag:null, resize:null, edgeGrab:null, holdTimer:null, suppressClickUntil:0 };
 function lpCandidateConflicts(candidate,events){
   const cSeg=eventSegments(candidate);
   for(const other of events){
@@ -4505,17 +4519,20 @@ function lpCandidateConflicts(candidate,events){
 function lpCalColumns(){ return [...document.querySelectorAll('#weekGrid .lp-cal-day')]; }
 function lpCancelHold(){ if(lpDragState.holdTimer){ clearTimeout(lpDragState.holdTimer); lpDragState.holdTimer=null; } }
 function lpBlockScroll(e){ if(lpDragState.drag||lpDragState.resize) e.preventDefault(); }
+/* True while any calendar gesture (move, resize, or an edge still being judged)
+   owns the pointer — a second finger or button must not start another one. */
+function lpGestureBusy(){ return !!(lpDragState.drag||lpDragState.resize||lpDragState.edgeGrab); }
 function attachEventDrag(el, ev, dayIdx, shift){
   shift=Number(shift)||0; // 1440 when the block is drawn in the previous column's night tail
   el.addEventListener('pointerdown', (e)=>{
-    if(e.target?.closest?.('.ev-resize-handle')) return; // an edge grab resizes, it never moves
-    if(lpDragState.drag||lpDragState.resize) return;
+    if(e.target?.closest?.('.ev-resize-handle')) return; // the edge runs its own gesture (lpBeginEdgeGrab)
+    if(lpGestureBusy()) return;
     if(e.button!==undefined && e.button!==0) return;
     const isMouse=(e.pointerType==='mouse');
     const sx=e.clientX, sy=e.clientY;
     lpDragState.holdTimer=setTimeout(()=>{ // long-press lifts the event (touch)
       lpDragState.holdTimer=null;
-      if(!lpDragState.drag) lpBeginDrag(e, el, ev, dayIdx, shift);
+      if(!lpGestureBusy()) lpBeginDrag(e, el, ev, dayIdx, shift);
     }, 340);
     const move=(m)=>{
       if(lpDragState.drag){ lpDragMove(m); return; }
@@ -4539,6 +4556,24 @@ function attachEventDrag(el, ev, dayIdx, shift){
     document.addEventListener('pointerup',up);
     document.addEventListener('pointercancel',cancel);
   });
+}
+/* Owns the pointer for a move that is already under way: every move feeds the
+   drag, release applies it, pointercancel puts the block back. A press on the
+   body gets these listeners from its own pointerdown closure; an edge press that
+   turned out to be a move (v21.2) never ran that closure, so it binds them here —
+   without this the lifted block would follow the finger and never land. */
+function lpDragBindPointer(){
+  const mv=(m)=>{ if(lpDragState.drag) lpDragMove(m); };
+  const off=()=>{
+    document.removeEventListener('pointermove',mv);
+    document.removeEventListener('pointerup',up);
+    document.removeEventListener('pointercancel',cancel);
+  };
+  const up=()=>{ off(); if(lpDragState.drag) lpDragEnd(); };
+  const cancel=()=>{ off(); if(lpDragState.drag) lpDragCancel(); };
+  document.addEventListener('pointermove',mv,{passive:true});
+  document.addEventListener('pointerup',up);
+  document.addEventListener('pointercancel',cancel);
 }
 function lpBeginDrag(e, el, ev, dayIdx, shift){
   shift=Number(shift)||0;
@@ -4673,26 +4708,32 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
     return;
   }
 
+  const undo=lpCaptureEventUndo(ev); // v21.2 — a move is undoable too, exactly like a resize
+  let msg;
   if(!sameDay && multiDay){
     // one occurrence of a series is moved → it becomes its own standalone event
     ev.days=days.filter(dd=>dd!==fromDay);
     delete ev.day;
+    const newId=uid();
     DB.events.push({
-      id:uid(), title:ev.title, desc:eventDesc(ev), days:[toDay], startMin:ns, endMin:ne,
+      id:newId, title:ev.title, desc:eventDesc(ev), days:[toDay], startMin:ns, endMin:ne,
       reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null,
       startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
-    toast(`📌 این روز از «${esc(ev.title)}» جدا شد و به ${dayNames[toDay]} ${calClockLabel(ns)} رفت`);
+    if(undo) undo.removedIds.push(newId); // undoing the move must take the split day back
+    msg=`📌 این روز از «${esc(ev.title)}» جدا شد و به ${dayNames[toDay]} ${calClockLabel(ns)} رفت`;
   }else{
     if(!sameDay){ ev.days=[toDay]; delete ev.day; }
     ev.startMin=ns; ev.endMin=ne;
     ev.startHour=Math.floor(ns/60); ev.endHour=Math.min(24,Math.floor(ne/60));
-    toast(!sameDay
+    msg=!sameDay
       ? `📅 «${esc(ev.title)}» به ${dayNames[toDay]} منتقل شد — ${calClockLabel(ns)} تا ${calClockLabel(ne)}`
-      : `🕒 «${esc(ev.title)}» به ${calClockLabel(ns)} تا ${calClockLabel(ne)} منتقل شد`);
+      : `🕒 «${esc(ev.title)}» به ${calClockLabel(ns)} تا ${calClockLabel(ne)} منتقل شد`;
   }
+  lpEventUndoRecord=undo;
   save();
   rescheduleAllEventReminders();
+  lpAnnounceEventChange(msg);
 }
 /* ============ v18.2/v18.3 — RESIZE BY DRAGGING AN EDGE (quick time edit) ============
    Grabbing the top or bottom edge of a block stretches / shrinks it right on
@@ -4704,7 +4745,48 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
    event. Every applied resize offers an «↩️ برگرداندن» (undo) in its toast.
    v18.3: finger jitter under 12px is ignored; the visible grip stays out of the
    way on touch screens. Keyboard: focus a block, ↑/↓ resize the end, Shift+↑/↓ resize the start. */
-let __evResizeUndo=null; // deep copy of DB.events taken before the last resize
+/* ---- v21.2 — ONE UNDO STEP, KEPT SURGICAL ----
+   The first version remembered a deep copy of the whole DB.events array, and
+   «↩️ برگرداندن» swapped the entire array back. Two things went wrong with it:
+
+     • the button never reacted. The toast strip is pointer-events:none (so a
+       message can never eat a tap meant for the page), and the button inherited
+       that — it was painted but unreachable. On a phone the long message also
+       pushed it outside the viewport, since the toast had no max-width.
+     • rolling the whole array back is a blunt instrument: anything else that
+       happened while the toast was up (a deleted event, a second edit) was
+       silently undone with it, and the snapshot never expired.
+
+   Now the record describes only the event the gesture touched — plus the
+   occurrence a split created, which undo removes again — the button is a real
+   tap target wired by delegation on #toast (no inline handler to lose), and the
+   step expires together with the toast that offers it. */
+let lpEventUndoRecord=null;
+function lpCaptureEventUndo(ev){
+  try{ return { at:Date.now(), id:ev.id, before:JSON.parse(JSON.stringify(ev)), removedIds:[] }; }
+  catch(_){ return null; }
+}
+/* Says what changed and offers the way back. The text is wrapped in a span so it
+   can shrink instead of pushing the button off-screen. */
+function lpAnnounceEventChange(msg, ms){
+  if(!lpEventUndoRecord){ toast(msg, ms); return; }
+  toast(`<span class="dp-undo-msg">${msg}</span><button class="dp-undo-btn" type="button" data-lp-undo="event">↩️ برگرداندن</button>`, ms||5600);
+}
+function lpUndoEventResize(){
+  const rec=lpEventUndoRecord;
+  lpEventUndoRecord=null; // one shot: a second tap can never undo something older
+  if(!rec){ toast('⚠️ چیزی برای بازگرداندن نیست'); return; }
+  if(Date.now()-rec.at>LP_UNDO_WINDOW_MS){ toast('⚠️ مهلت بازگرداندن تمام شد'); return; }
+  const list=Array.isArray(DB.events)?DB.events:null;
+  const i=list?list.findIndex(x=>x&&x.id===rec.id):-1;
+  if(i<0){ toast('⚠️ این رویداد دیگر وجود ندارد؛ بازگردانده نشد'); return; }
+  rec.removedIds.forEach(id=>{ const j=list.findIndex(x=>x&&x.id===id); if(j>=0) list.splice(j,1); });
+  list[i]=JSON.parse(JSON.stringify(rec.before));
+  save();
+  rescheduleAllEventReminders();
+  renderCalendar();
+  toast('↩️ برگردانده شد');
+}
 function lpDurationLabel(mins){
   const d=Math.max(0,Math.round(Number(mins)||0));
   const h=Math.floor(d/60), m=d%60;
@@ -4744,7 +4826,7 @@ function attachEventResize(el, ev, dayIdx, shift, gridFrom, gridTo){
     h.title=label;
     h.innerHTML='<span class="ev-resize-grip"></span>';
     h.addEventListener('pointerdown', (e)=>{
-      if(lpDragState.drag||lpDragState.resize) return;
+      if(lpGestureBusy()) return;
       if(e.button!==undefined && e.button!==0) return;
       e.stopPropagation();
       // on a very short block both handles overlap — the half that was
@@ -4752,14 +4834,17 @@ function attachEventResize(el, ev, dayIdx, shift, gridFrom, gridTo){
       const rect=el.getBoundingClientRect();
       const realEdge=(rect.height<30 && Number.isFinite(e.clientY))
         ? ((e.clientY-rect.top)<rect.height/2 ? 'start' : 'end') : edge;
-      lpBeginResize(e, el, ev, dayIdx, shift, realEdge, gridFrom, gridTo);
+      /* v21.2 — the press does not decide anything yet: lpBeginEdgeGrab watches
+         how the gesture starts and only then commits to a resize or hands the
+         block over to the move. */
+      lpBeginEdgeGrab(e, el, ev, dayIdx, shift, realEdge, gridFrom, gridTo);
     });
     el.appendChild(h);
   });
   // keyboard resize: ↑/↓ move the end, Shift+↑/↓ move the start (15-min steps)
   el.addEventListener('keydown', (e)=>{
     if(e.key!=='ArrowDown' && e.key!=='ArrowUp') return;
-    if(lpDragState.drag||lpDragState.resize) return;
+    if(lpGestureBusy()) return;
     const dir=(e.key==='ArrowDown'?1:-1)*CAL_SNAP_MIN;
     const s=eventStartMinutes(ev), en=eventEndMinutes(ev);
     let gFrom=s+shift, gTo=en+shift;
@@ -4768,6 +4853,91 @@ function attachEventResize(el, ev, dayIdx, shift, gridFrom, gridTo){
     e.preventDefault(); e.stopPropagation();
     lpApplyEventResize(ev, dayIdx, shift, gFrom, gTo, e.shiftKey?'start':'end');
   });
+}
+/* ============ v21.2 — THE EDGE GRAB: MOVE OR RESIZE, DECIDED BY THE GESTURE ====
+   The two resize strips lie on top of a block that is also draggable, and on a
+   phone they are invisible. Landing a few pixels off used to mean "the time
+   changed" when the user wanted "the block moved" — with no way back, because
+   the undo button in the toast did not react. So the press on an edge no longer
+   decides anything by itself; how the gesture *starts* does:
+
+     • touch / pen — dragging off the edge in ANY direction (≥10px) picks the
+       block up and moves it, exactly like grabbing its middle. Only holding the
+       edge still for CAL_EDGE_ARM_MS arms the resize: a short vibration, the grip
+       lights up, and from then on dragging stretches or shrinks the block. A
+       quick tap on the edge still opens the event, as before.
+     • mouse — the grip is visible on hover and a pointer is precise, so the edge
+       resizes as soon as it is dragged vertically; a clearly sideways first
+       movement (≥6px, more than the vertical part) becomes a move instead.
+
+   The state lives in lpDragState.edgeGrab, so a second pointer can never start
+   another gesture while one is still being judged, and Escape drops it. */
+function lpBeginEdgeGrab(e, el, ev, dayIdx, shift, edge, gridFrom, gridTo){
+  if(lpGestureBusy()) return;
+  lpCancelHold();
+  const fine=(e.pointerType==='mouse');
+  const sx=e.clientX, sy=e.clientY;
+  const g={ el, ev, dayIdx, shift:Number(shift)||0, edge,
+    gridFrom:Number(gridFrom), gridTo:Number(gridTo),
+    downEvent:e, armed:false, done:false, timer:null, detach:null };
+  lpDragState.edgeGrab=g;
+  if(!fine){
+    // touch: the edge resizes only when it is deliberately held still
+    g.timer=setTimeout(()=>{
+      g.timer=null;
+      if(g.done||lpDragState.edgeGrab!==g) return;
+      g.armed=true;
+      try{ if(navigator.vibrate) navigator.vibrate(10); }catch(_){}
+      lpEdgeGrabToResize(g, null);
+      /* The grip stays lit for as long as the resize runs, so the mode is
+         visible on a screen that has no hover; lpResizeCleanup clears it. */
+      if(lpDragState.resize) el.classList.add('lp-edge-armed');
+    }, CAL_EDGE_ARM_MS);
+  }
+  const move=(m)=>{
+    if(g.done||lpDragState.edgeGrab!==g) return;
+    const dx=m.clientX-sx, dy=m.clientY-sy;
+    if(fine){
+      if(Math.abs(dx)>=CAL_EDGE_SIDE_PX && Math.abs(dx)>Math.abs(dy)){ lpEdgeGrabToMove(g, m); return; }
+      if(Math.abs(dy)>=CAL_EDGE_SIDE_PX){ lpEdgeGrabToResize(g, m); return; }
+      return; // still inside the jitter window: decide nothing yet
+    }
+    // touch: any real movement off the edge is a move, never a resize
+    if(Math.abs(dx)>=CAL_EDGE_MOVE_PX || Math.abs(dy)>=CAL_EDGE_MOVE_PX) lpEdgeGrabToMove(g, m);
+  };
+  const up=()=>lpEdgeGrabCleanup(g);
+  const cancel=()=>lpEdgeGrabCleanup(g);
+  g.detach=()=>{
+    document.removeEventListener('pointermove',move);
+    document.removeEventListener('pointerup',up);
+    document.removeEventListener('pointercancel',cancel);
+  };
+  document.addEventListener('pointermove',move,{passive:true});
+  document.addEventListener('pointerup',up);
+  document.addEventListener('pointercancel',cancel);
+}
+function lpEdgeGrabCleanup(g){
+  if(!g||g.done) return;
+  g.done=true;
+  if(g.timer){ clearTimeout(g.timer); g.timer=null; }
+  if(g.detach) g.detach();
+  g.el.classList.remove('lp-edge-armed');
+  if(lpDragState.edgeGrab===g) lpDragState.edgeGrab=null;
+}
+function lpEdgeGrabToResize(g, m){
+  if(g.done) return;
+  lpEdgeGrabCleanup(g);
+  if(lpDragState.drag||lpDragState.resize) return;
+  // the grab point stays the press point, so the first move is measured from it
+  lpBeginResize(g.downEvent, g.el, g.ev, g.dayIdx, g.shift, g.edge, g.gridFrom, g.gridTo);
+  if(m) lpResizeMove(m);
+}
+function lpEdgeGrabToMove(g, m){
+  if(g.done) return;
+  lpEdgeGrabCleanup(g);
+  if(lpDragState.drag||lpDragState.resize) return;
+  lpBeginDrag(m||g.downEvent, g.el, g.ev, g.dayIdx, g.shift); // also feeds the first move
+  lpDragBindPointer();
 }
 function lpBeginResize(e, el, ev, dayIdx, shift, edge, gridFrom, gridTo){
   lpCancelHold();
@@ -4859,7 +5029,7 @@ function lpResizeCleanup(){
   if(r){
     r.tip.remove();
     r.guide.remove();
-    r.el.classList.remove('lp-resizing','lp-resize-blocked');
+    r.el.classList.remove('lp-resizing','lp-resize-blocked','lp-edge-armed');
   }
   lpDragState.resize=null;
 }
@@ -4893,35 +5063,29 @@ function lpApplyEventResize(evRef, dayIdx, shift, gridFrom, gridTo, edge){
     renderCalendar();
     return;
   }
-  __evResizeUndo=JSON.parse(JSON.stringify(DB.events||[]));
+  const undo=lpCaptureEventUndo(ev); // before anything is mutated
   const days=eventDays(ev);
   const multiDay=days.length>1;
   if(multiDay){
     // resizing one occurrence of a series → that day becomes its own event
     ev.days=days.filter(dd=>dd!==dayIdx);
     delete ev.day;
+    const newId=uid();
     DB.events.push({
-      id:uid(), title:ev.title, desc:eventDesc(ev), days:[dayIdx], startMin:ns, endMin:ne,
+      id:newId, title:ev.title, desc:eventDesc(ev), days:[dayIdx], startMin:ns, endMin:ne,
       reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null,
       startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
+    if(undo) undo.removedIds.push(newId); // undoing must take the split day back
   }else{
     ev.startMin=ns; ev.endMin=ne;
     ev.startHour=Math.floor(ns/60); ev.endHour=Math.min(24,Math.floor(ne/60));
   }
+  lpEventUndoRecord=undo;
   save();
   rescheduleAllEventReminders();
   renderCalendar();
-  toast(`${multiDay?'📌 این روز جدا شد — ':''}⏱️ «${esc(ev.title)}» شد ${calClockLabel(ns)} تا ${calClockLabel(ne)} (${lpDurationLabel(ne-ns)}) <button class="dp-undo-btn" type="button" onclick="lpUndoEventResize()">↩️ برگرداندن</button>`, 5200);
-}
-function lpUndoEventResize(){
-  if(!__evResizeUndo) return;
-  DB.events=__evResizeUndo;
-  __evResizeUndo=null;
-  save();
-  rescheduleAllEventReminders();
-  renderCalendar();
-  toast('↩️ برگردانده شد');
+  lpAnnounceEventChange(`${multiDay?'📌 این روز جدا شد — ':''}⏱️ «${esc(ev.title)}» شد ${calClockLabel(ns)} تا ${calClockLabel(ne)} (${lpDurationLabel(ne-ns)})`);
 }
 // swallow the click that follows a finished drag, without touching the block's own handler
 (function(){
@@ -4930,6 +5094,29 @@ function lpUndoEventResize(){
     if(Date.now()<lpDragState.suppressClickUntil){ e.stopPropagation(); e.preventDefault(); }
   }, true);
 })();
+
+/* v21.2 — the undo button in a toast is wired here, by delegation, instead of an
+   inline onclick: the listener survives re-translation and re-rendering, and it
+   does not depend on a global name being reachable from markup. */
+(function(){
+  const t=document.getElementById('toast');
+  if(!t) return;
+  t.addEventListener('click', e=>{
+    const btn=e.target?.closest?.('[data-lp-undo]');
+    if(!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    if(btn.dataset.lpUndo==='event') lpUndoEventResize();
+  });
+})();
+
+/* Escape drops whatever calendar gesture is in flight — including an edge that
+   has been grabbed but not yet judged — and puts the block back as it was. */
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Escape') return;
+  if(lpDragState.drag){ e.preventDefault(); lpDragCancel(); return; }
+  if(lpDragState.resize){ e.preventDefault(); lpResizeCancel(); return; }
+  if(lpDragState.edgeGrab){ lpEdgeGrabCleanup(lpDragState.edgeGrab); }
+});
 
 function renderCalendar(){
   const START=CAL_START_HOUR,END=CAL_END_HOUR,PX_HOUR=CAL_PX_HOUR;
@@ -4996,7 +5183,7 @@ function renderCalendar(){
       el.className='ev-block'+sizeClass+(from>=CAL_DAY_MIN?' ev-night':'');
       el.style.top=((from-START*60)/60*PX_HOUR)+'px';
       el.style.height=Math.max(10,(to-from)/60*PX_HOUR-2)+'px';
-      el.title=`${e.title} — ${dayNames[d]} ${calClockLabel(s)} تا ${calClockLabel(en)} · لبه بالا یا پایین را بکش تا ساعت شروع یا پایان عوض شود`;
+      el.title=`${e.title} — ${dayNames[d]} ${calClockLabel(s)} تا ${calClockLabel(en)} · لبه را نگه دار و بکش تا زمانش عوض شود؛ وسط را بکش تا جابه‌جا شود`;
       el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
       if(eventDesc(e)){
         // v16.6: small hint that tapping the block reveals a description
@@ -5449,7 +5636,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='21.1';
+const LP_APP_VERSION='21.2';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

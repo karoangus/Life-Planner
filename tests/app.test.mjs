@@ -639,6 +639,180 @@ if (!useFallback) {
   check('v18.3 calendar guidance and no-free-space message translate to English',
     v183.english.intro.includes('first free minute')&&v183.english.noFree==='⚠️ There is no free time left in this hour',JSON.stringify(v183.english));
 
+
+  // ---------- v21.2: an edge never steals a move, and «↩️ برگرداندن» really works ----------
+  const v212 = await page.evaluate(async () => {
+    showView('calendar');
+    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+    const mk = (id, title, days, s, e) => ({ id, title, days, startMin: s, endMin: e,
+      startHour: Math.floor(s / 60), endHour: Math.min(24, Math.floor(e / 60)) });
+    const get = (id) => DB.events.find(x => x.id === id);
+    const col = (d) => document.querySelector(`#weekGrid .lp-cal-day[data-day="${d}"]`);
+    const block = (d) => col(d).querySelector('.ev-block');
+    const yFor = (d, m) => col(d).getBoundingClientRect().top + (m - 360) / 60 * 52;
+    const midX = (d) => { const r = col(d).getBoundingClientRect(); return r.left + r.width / 2; };
+    const ptr = (type, target, x, y, pointerType) => target.dispatchEvent(new PointerEvent(type, {
+      bubbles: true, cancelable: true, pointerType, button: 0,
+      buttons: (type === 'pointerup' || type === 'pointercancel') ? 0 : 1, clientX: x, clientY: y
+    }));
+    /* save() repaints on the next frame, so a gesture that follows it must be
+       given the fresh grid — otherwise it measures blocks that are already gone. */
+    const fresh = async (events) => {
+      DB.events = events; save(); await wait(320); renderCalendar();
+      lpDragState.suppressClickUntil = 0;
+    };
+    const out = {};
+
+    /* 1 — the reported annoyance: on touch, a drag that happens to start on the
+       edge moves the block; it no longer changes the event's time. */
+    await fresh([mk('v212-a', 'لبهٔ لمسی', [2], 600, 660)]);
+    let b = block(2), h = b.querySelector('.ev-resize-handle-bottom');
+    ptr('pointerdown', h, midX(2), yFor(2, 660), 'touch');
+    ptr('pointermove', document, midX(2), yFor(2, 700), 'touch');
+    ptr('pointermove', document, midX(2), yFor(2, 760), 'touch');
+    ptr('pointerup', document, midX(2), yFor(2, 760), 'touch');
+    out.touchEdgeMoves = get('v212-a').days.join(',') === '2' &&
+      get('v212-a').startMin === 705 && get('v212-a').endMin === 765;
+    out.moveOffersUndo = !!document.querySelector('#toast .dp-undo-btn');
+    out.moveUndoMsg = (document.querySelector('#toast .dp-undo-msg') || {}).textContent || '';
+
+    /* 2 — touch resizes only when the edge is deliberately held: the block lights
+       up, the grip appears, and from then on the drag stretches it. */
+    await fresh([mk('v212-b', 'نگه‌داشتن لبه', [2], 600, 660)]);
+    b = block(2); h = b.querySelector('.ev-resize-handle-bottom');
+    ptr('pointerdown', h, midX(2), yFor(2, 660), 'touch');
+    await wait(430);
+    out.armedClass = b.classList.contains('lp-edge-armed');
+    out.armedGrip = getComputedStyle(b.querySelector('.ev-resize-grip')).display === 'block';
+    ptr('pointermove', document, midX(2), yFor(2, 750), 'touch');
+    out.armedPreview = Math.abs(parseFloat(b.style.height) - 128) < 2;
+    ptr('pointerup', document, midX(2), yFor(2, 750), 'touch');
+    out.holdResizes = get('v212-b').startMin === 600 && get('v212-b').endMin === 750;
+    out.armedCleared = !document.querySelector('#weekGrid .lp-edge-armed');
+
+    /* 3 — with a mouse the edge still resizes, but a clearly sideways first
+       movement is handed over to the move. */
+    await fresh([mk('v212-c', 'sideways', [2], 600, 660)]);
+    b = block(2); h = b.querySelector('.ev-resize-handle-bottom');
+    const r3 = col(3).getBoundingClientRect(), y2 = yFor(2, 660);
+    ptr('pointerdown', h, midX(2), y2, 'mouse');
+    ptr('pointermove', document, r3.left + r3.width / 2, y2 + 2, 'mouse');
+    ptr('pointerup', document, r3.left + r3.width / 2, y2 + 2, 'mouse');
+    out.mouseSidewaysMoves = get('v212-c').days.join(',') === '3' &&
+      get('v212-c').endMin - get('v212-c').startMin === 60;
+
+    await fresh([mk('v212-d', 'vertical', [2], 600, 660)]);
+    b = block(2); h = b.querySelector('.ev-resize-handle-bottom');
+    ptr('pointerdown', h, midX(2), yFor(2, 660), 'mouse');
+    ptr('pointermove', document, midX(2), yFor(2, 705), 'mouse');
+    ptr('pointerup', document, midX(2), yFor(2, 705), 'mouse');
+    out.mouseVerticalResizes = get('v212-d').startMin === 600 && get('v212-d').endMin === 705;
+
+    /* 4 — a tap or finger jitter on the edge changes nothing and still opens the event */
+    await fresh([mk('v212-e', 'tap', [2], 600, 660)]);
+    b = block(2); h = b.querySelector('.ev-resize-handle-bottom');
+    ptr('pointerdown', h, midX(2), yFor(2, 656), 'touch');
+    ptr('pointermove', document, midX(2), yFor(2, 662), 'touch');
+    ptr('pointerup', document, midX(2), yFor(2, 662), 'touch');
+    out.jitterIgnored = get('v212-e').startMin === 600 && get('v212-e').endMin === 660 &&
+      lpDragState.edgeGrab === null;
+    b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    out.tapOpensEvent = document.getElementById('eventActionModalBg').classList.contains('open');
+    closeModal('eventActionModalBg');
+
+    /* 5 — undo gives back exactly the one event it came from, and only once */
+    await fresh([mk('v212-f', 'target', [2], 600, 660), mk('v212-g', 'other', [4], 600, 660)]);
+    lpApplyEventResize(get('v212-f'), 2, 0, 600, 720, 'end');
+    get('v212-g').startMin = 480; get('v212-g').endMin = 540; save();   // unrelated edit while the toast is up
+    document.querySelector('#toast .dp-undo-btn').click();
+    out.undoIsSurgical = get('v212-f').startMin === 600 && get('v212-f').endMin === 660 &&
+      get('v212-g').startMin === 480 && get('v212-g').endMin === 540;
+    out.undoSaidRestored = document.getElementById('toast').textContent.includes('برگردانده شد');
+    out.undoButtonGone = !document.querySelector('#toast .dp-undo-btn');
+
+    /* 6 — undoing a split day merges it back into the series */
+    await fresh([mk('v212-h', 'series', [1, 3], 900, 960)]);
+    lpApplyEventResize(get('v212-h'), 3, 0, 900, 1020, 'end');
+    out.splitHappened = DB.events.filter(e => e.title === 'series').length === 2;
+    document.querySelector('#toast .dp-undo-btn').click();
+    const back = DB.events.filter(e => e.title === 'series');
+    out.splitUndone = back.length === 1 && back[0].days.join(',') === '1,3' && back[0].endMin === 960;
+
+    /* 7 — the undo step expires together with the toast that offers it */
+    await fresh([mk('v212-i', 'expire', [2], 600, 660)]);
+    lpApplyEventResize(get('v212-i'), 2, 0, 600, 720, 'end');
+    lpEventUndoRecord.at = Date.now() - 60000;
+    lpUndoEventResize();
+    out.undoExpires = get('v212-i').endMin === 720 &&
+      document.getElementById('toast').textContent.includes('مهلت');
+
+    /* 8 — Escape drops a running gesture and leaves the event alone */
+    await fresh([mk('v212-j', 'escape', [2], 600, 660)]);
+    b = block(2); h = b.querySelector('.ev-resize-handle-bottom');
+    ptr('pointerdown', h, midX(2), yFor(2, 660), 'mouse');
+    ptr('pointermove', document, midX(2), yFor(2, 750), 'mouse');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    out.escapeCancels = get('v212-j').endMin === 660 && lpDragState.resize === null &&
+      !document.querySelector('.ev-resize-tip');
+
+    DB.events = []; save(); renderCalendar();
+    return out;
+  });
+  check('v21.2 on touch, dragging off the edge moves the event instead of resizing it',
+    v212.touchEdgeMoves && v212.moveOffersUndo && v212.moveUndoMsg.includes('منتقل شد'), JSON.stringify(v212));
+  check('v21.2 holding the edge arms the resize: grip shows, block lights up, drag stretches it',
+    v212.armedClass && v212.armedGrip && v212.armedPreview && v212.holdResizes && v212.armedCleared, JSON.stringify(v212));
+  check('v21.2 with a mouse the edge still resizes, and a sideways drag moves instead',
+    v212.mouseVerticalResizes && v212.mouseSidewaysMoves, JSON.stringify(v212));
+  check('v21.2 a tap or finger jitter on the edge changes nothing and still opens the event',
+    v212.jitterIgnored && v212.tapOpensEvent, JSON.stringify(v212));
+  check('v21.2 undo restores only its own event, once, and says so',
+    v212.undoIsSurgical && v212.undoSaidRestored && v212.undoButtonGone, JSON.stringify(v212));
+  check('v21.2 undo merges a split day back into its series', v212.splitHappened && v212.splitUndone, JSON.stringify(v212));
+  check('v21.2 a stale undo is refused instead of rolling back later edits', v212.undoExpires, JSON.stringify(v212));
+  check('v21.2 Escape cancels a running resize', v212.escapeCancels, JSON.stringify(v212));
+
+  /* The undo button used to be painted but unreachable: the toast strip is
+     pointer-events:none and, with no max-width, a long message pushed the button
+     outside the viewport. Prove it is hittable with a real mouse click. */
+  const v212btn = await page.evaluate(async () => {
+    showView('calendar');
+    DB.events = [{ id: 'v212-btn', title: 'دکمهٔ بازگشت', days: [2], startMin: 600, endMin: 660, startHour: 10, endHour: 11 }];
+    save(); renderCalendar();
+    lpApplyEventResize(DB.events[0], 2, 0, 600, 750, 'end');
+    const toastEl = document.getElementById('toast');
+    const btn = toastEl.querySelector('.dp-undo-btn');
+    const r = btn.getBoundingClientRect();
+    return {
+      shown: toastEl.classList.contains('show'),
+      wired: btn.dataset.lpUndo === 'event' && !btn.getAttribute('onclick'),
+      wrapped: !!toastEl.querySelector('.dp-undo-msg'),
+      takesPointer: getComputedStyle(btn).pointerEvents === 'auto',
+      stripIsClickThrough: getComputedStyle(toastEl).pointerEvents === 'none',
+      fitsViewport: r.width > 0 && r.left >= 0 && r.right <= window.innerWidth && r.bottom <= window.innerHeight,
+      toastFits: toastEl.getBoundingClientRect().width <= window.innerWidth,
+      hitTarget: document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === btn,
+      center: { x: r.left + r.width / 2, y: r.top + r.height / 2 },
+      resized: DB.events[0].endMin
+    };
+  });
+  check('v21.2 the undo button is on-screen, hit-testable and wired by delegation',
+    v212btn.shown && v212btn.wired && v212btn.wrapped && v212btn.takesPointer &&
+    v212btn.stripIsClickThrough && v212btn.fitsViewport && v212btn.toastFits && v212btn.hitTarget &&
+    v212btn.resized === 750, JSON.stringify(v212btn));
+  if (v212btn.hitTarget) {
+    await page.mouse.click(v212btn.center.x, v212btn.center.y);
+    const clicked = await page.evaluate(() => ({
+      start: DB.events[0].startMin, end: DB.events[0].endMin,
+      toast: document.getElementById('toast').textContent
+    }));
+    check('v21.2 a real click on «↩️ برگرداندن» puts the previous time back',
+      clicked.start === 600 && clicked.end === 660 && clicked.toast.includes('برگردانده شد'), JSON.stringify(clicked));
+  } else {
+    check('v21.2 a real click on «↩️ برگرداندن» puts the previous time back', false, 'button was not hittable');
+  }
+  check('no fatal JS errors after the calendar gesture tests', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
+
   // ---------- v20: the per-day calendar plan is completely gone ----------
   const v20browser = await page.evaluate(() => {
     showView('calendar');
@@ -1226,6 +1400,36 @@ if (!useFallback) {
   check('v18.3 new calendar guidance and error translate to English',
     langJs.includes('Every day is blocked out from 6 AM to 3 AM; hold and drag an event to move it') &&
     langJs.includes('There is no free time left in this hour'));
+
+  // ---------- v21.2: the edge is judged before it resizes, and the undo button works ----------
+  check('v21.2 an edge press is judged before it becomes a resize or a move',
+    coreJs.includes('function lpBeginEdgeGrab') && coreJs.includes('function lpEdgeGrabToResize') &&
+    coreJs.includes('function lpEdgeGrabToMove') && coreJs.includes('function lpDragBindPointer') &&
+    coreJs.includes('const CAL_EDGE_ARM_MS=300, CAL_EDGE_MOVE_PX=10, CAL_EDGE_SIDE_PX=6') &&
+    coreJs.includes('lpDragState={ drag:null, resize:null, edgeGrab:null,') &&
+    coreJs.includes('// the edge runs its own gesture (lpBeginEdgeGrab)') &&
+    coreJs.includes('if(lpGestureBusy()) return;') &&
+    appCss.includes('.ev-block.lp-edge-armed .ev-resize-grip{display:block;') &&
+    appCss.includes('@media(hover:none){.ev-resize-handle{height:9px;}}'));
+  check('v21.2 the undo button is a reachable tap target inside the click-through toast',
+    appCss.includes('.toast .dp-undo-btn{') &&
+    /pointer-events:auto/.test(appCss.slice(appCss.indexOf('.toast .dp-undo-btn{'))) &&
+    appCss.includes('max-width:min(92vw,540px)') && appCss.includes('flex-wrap:wrap') &&
+    appCss.includes('.toast .dp-undo-msg{flex:1 1 auto;min-width:0;}') &&
+    coreJs.includes('data-lp-undo="event"') && coreJs.includes("t.addEventListener('click'") &&
+    !coreJs.includes('onclick=\\"lpUndoEventResize'));
+  check('v21.2 undo is one surgical step that expires with its toast',
+    coreJs.includes('function lpCaptureEventUndo') && coreJs.includes('const LP_UNDO_WINDOW_MS=8000') &&
+    coreJs.includes('undo.removedIds.push(newId)') && coreJs.includes('Date.now()-rec.at>LP_UNDO_WINDOW_MS') &&
+    (coreJs.match(/lpAnnounceEventChange\(/g) || []).length >= 3 &&
+    !coreJs.includes('__evResizeUndo') &&
+    coreJs.includes("if(lpDragState.edgeGrab){ lpEdgeGrabCleanup(lpDragState.edgeGrab); }"));
+  check('v21.2 the new gesture hints and undo messages translate to English',
+    langJs.includes('"لبه را نگه دار و بکش تا زمانش عوض شود"') && langJs.includes('"وسط را بکش تا جابه‌جا شود"') &&
+    langJs.includes('hold its top or bottom edge for a moment') && langJs.includes('The undo window has closed') &&
+    langJs.includes('There is nothing to undo') &&
+    indexHtml.includes('لبهٔ بالا یا پایینش را یک لحظه نگه دار و بعد بکش') &&
+    coreJs.includes('· لبه را نگه دار و بکش تا زمانش عوض شود؛ وسط را بکش تا جابه‌جا شود'));
 
   // ---------- v17: «مرخصی» (time off) tick on the quest card ----------
   const questBoxBody = (coreJs.match(/function renderQuestBox\(\)\{[\s\S]*?\n\}/) || [''])[0];
