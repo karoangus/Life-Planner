@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/design-system.css">
-<link rel="stylesheet" href="css/v19.css?v=19.0">
+<link rel="stylesheet" href="css/v20.css?v=20.0">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -77,7 +77,7 @@ try{
     <!-- DASHBOARD -->
     <div class="view active" id="view-dashboard">
 
-      <!-- ░░ HERO ░░ سلام + سطح/XP + حلقه‌ی پیشرفت + آمار سریع + میان‌برها -->
+      <!-- ░░ HERO ░░ سلام + تاریخ (v20: keep it that simple) -->
       <header class="dash-hero">
         <div class="topbar dash-hero-top">
           <div class="dash-hero-titles">
@@ -89,33 +89,6 @@ try{
           </div>
         </div>
 
-        <div class="dash-xp" onclick="showView('profile')">
-          <div class="dash-xp-badge"><span class="num" id="dashXpLevel">1</span><span class="dash-xp-badge-ic" id="dashXpTitleIcon">🌱</span></div>
-          <div class="dash-xp-main">
-            <div class="dash-xp-row"><span id="dashXpTitleName">تازه‌کار</span><span class="num" id="dashXpText">0/100</span></div>
-            <div class="dash-xp-track"><div class="dash-xp-fill" id="dashXpBar"></div></div>
-          </div>
-        </div>
-
-        <div class="dash-metrics">
-          <div class="progress-ring-wrap dash-ring">
-            <div class="donut" id="donutWrap"><span id="donutText">0٪</span></div>
-            <div class="dash-ring-cap">پیشرفت کل · <b class="num" id="doneTasksN">0</b> از <b class="num" id="totalTasksN">0</b></div>
-          </div>
-          <div class="grid g4 dash-stats">
-            <div class="stat-card dash-stat dash-stat-done"><div class="glow" style="background:#00e5ff"></div><div class="ic">✅</div><div class="val num" id="statDone">0</div><div class="lbl">تسک انجام‌شده امروز</div></div>
-            <div class="stat-card dash-stat dash-stat-streak"><div class="glow" style="background:#8b6bff"></div><div class="ic">🔥</div><div class="val num" id="statStreak">0</div><div class="lbl">بلندترین استریک فعال</div></div>
-            <div class="stat-card dash-stat dash-stat-goals"><div class="glow" style="background:#2ee6a6"></div><div class="ic">🎯</div><div class="val num" id="statGoals">0٪</div><div class="lbl">میانگین پیشرفت اهداف</div></div>
-            <div class="stat-card dash-stat dash-stat-score"><div class="glow" style="background:#ffb545"></div><div class="ic">⚡</div><div class="val num" id="statScore">0</div><div class="lbl">امتیاز بهره‌وری امروز</div></div>
-          </div>
-        </div>
-
-        <div class="dash-quick">
-          <button class="dash-q" type="button" onclick="openInboxQuickAdd()"><span class="dash-q-ic">📥</span>Inbox سریع</button>
-          <button class="dash-q" type="button" onclick="showView('pomodoro')"><span class="dash-q-ic">🍅</span>تمرکز</button>
-          <button class="dash-q" type="button" onclick="showView('habits')"><span class="dash-q-ic">🔥</span>عادت‌ها</button>
-          <button class="dash-q" type="button" onclick="showView('calendar')"><span class="dash-q-ic">📅</span>تقویم</button>
-        </div>
       </header>
 
       <div class="card motivation-card dash-motivation">
@@ -161,15 +134,6 @@ try{
           <div id="todayTasks"><div class="lp-sk lp-sk-row"><i class="lp-sk-dot"></i><i class="lp-sk-line"></i></div><div class="lp-sk lp-sk-row"><i class="lp-sk-dot"></i><i class="lp-sk-line w80"></i></div><div class="lp-sk lp-sk-row"><i class="lp-sk-dot"></i><i class="lp-sk-line w60"></i></div></div>
         </section>
 
-        <section class="dash-tile dash-tile-habits">
-          <div class="card-head"><h3>🔥 استریک عادت‌ها</h3><button class="dash-more" type="button" onclick="showView('habits')">همه ›</button></div>
-          <div id="habitMini"><div class="lp-sk lp-sk-mini"><i class="lp-sk-line w60"></i><i class="lp-sk-tag"></i></div><div class="lp-sk lp-sk-mini"><i class="lp-sk-line w80"></i><i class="lp-sk-tag"></i></div></div>
-        </section>
-
-        <section class="dash-tile dash-tile-goals">
-          <div class="card-head"><h3>🎯 اهداف در جریان</h3><button class="dash-more" type="button" onclick="showView('goals')">همه ›</button></div>
-          <div id="goalMini"><div class="lp-sk lp-sk-goal"><i class="lp-sk-line w60"></i><i class="lp-sk-bar"></i></div><div class="lp-sk lp-sk-goal"><i class="lp-sk-line w80"></i><i class="lp-sk-bar"></i></div></div>
-        </section>
       </div>
     </div>
 
@@ -178,7 +142,6 @@ try{
       <div class="topbar">
         <div><h1>مدیریت تسک‌ها</h1><div class="sub">همه‌ی کارها، اولویت‌ها و ددلاین‌ها یک‌جا</div></div>
         <div class="top-actions">
-          <button class="btn ghost" onclick="pickRandomTask()" title="انتخاب تصادفی یک تسک برای شروع">🎲 رندوم</button>
           <button class="btn" onclick="openTaskModal()">➕ تسک جدید</button>
         </div>
       </div>
@@ -203,69 +166,24 @@ try{
     <div class="view" id="view-calendar">
       <div class="topbar calendar-topbar">
         <div><h1>تقویم هفتگی</h1><div class="sub">بلوک‌بندی ساعتی از ۶ صبح تا ۳ بامداد</div></div>
-        <div class="top-actions"><button class="btn ghost calendar-now-btn" type="button" onclick="scrollCalendarToNow()">🕒 الان</button><button class="btn ghost" onclick="openCatManager()">🏷️ دسته‌ها</button><button class="btn" onclick="openEventModal()">➕ رویداد جدید</button></div>
+        <div class="top-actions"><button class="btn ghost calendar-now-btn" type="button" onclick="scrollCalendarToNow()">🕒 الان</button><button class="icon-btn" type="button" onclick="openCatManager()" title="دسته‌ها و رنگ‌ها" aria-label="دسته‌ها و رنگ‌ها">🏷️</button><button class="btn" onclick="openEventModal()">➕ رویداد جدید</button></div>
       </div>
       <div class="calendar-intro" aria-label="راهنمای تقویم">
-        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><strong>هفته‌ات را یک‌جا ببین</strong><span>هر روز از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ رویداد را نگه دار و بکش تا جابه‌جا شود، لبه‌ی بالا یا پایینش را بکش تا ساعتش عوض شود. روی خانه‌ی خالی هر ساعت بزن تا رویداد از ابتدای ساعت یا اولین دقیقه‌ی آزاد شروع شود و مدت آن با فاصله تا رویداد بعدی (حداکثر یک ساعت) هماهنگ شود.</span><span class="calendar-intro-plan">برای نوشتن کارهای هر روز، روی نام آن روز بزن — «برنامه روز» جدا از تسک‌های اصلی است.</span></div></div>
-        <div class="calendar-legend"><span><i class="legend-dot legend-dot-event"></i>رویداد</span><span><i class="legend-dot legend-dot-today"></i>امروز</span><span><i class="legend-dot legend-dot-now"></i>زمان فعلی</span><span><i class="legend-dot legend-dot-night"></i>بامداد</span></div>
+        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><span>رویداد را بکش تا جابه‌جا شود؛ روی خانه‌ی خالی بزن تا رویداد جدید بسازی.</span></div></div>
+        <div class="calendar-legend"><span><i class="legend-dot legend-dot-today"></i>امروز</span><span><i class="legend-dot legend-dot-now"></i>زمان فعلی</span><span><i class="legend-dot legend-dot-night"></i>بامداد</span></div>
       </div>
       <div class="card calendar-card">
+        <div class="cal-week-bar">
+          <button class="cal-week-btn" type="button" onclick="calWeekStep(-1)" aria-label="هفته قبل">› <span>هفته قبل</span></button>
+          <div class="cal-week-now">
+            <strong id="calWeekLabel">این هفته</strong>
+            <button class="cal-week-today" type="button" id="calWeekTodayBtn" onclick="calWeekToday()">امروز</button>
+          </div>
+          <button class="cal-week-btn" type="button" onclick="calWeekStep(1)" aria-label="هفته بعد"><span>هفته بعد</span> ‹</button>
+        </div>
         <div id="weekGrid"></div>
       </div>
-      <!-- v18.1 «برنامه روز»: a day plan of its own. It is stored per date in
-           DB.dayPlans and is deliberately separate from the main Tasks section
-           (no Inbox, no statuses, no categories, no XP). -->
-      <section class="card cal-day-tasks-card dplan-card" id="calDayTasksCard" style="display:none;" aria-labelledby="calDayTasksTitle">
-        <div class="dplan-head">
-          <div class="dplan-head-main">
-            <div class="dplan-date" id="calDayTasksDate" aria-hidden="true">📅</div>
-            <div class="dplan-head-copy">
-              <h3 id="calDayTasksTitle">برنامه این روز</h3>
-              <div class="muted dplan-summary" id="calDayTasksSub">
-                <span id="calDayTasksSubRel" class="dplan-rel" style="display:none;"></span>
-                <span id="calDayTasksSubDay"></span>
-                <span id="calDayTasksSubDate"></span>
-                <span id="calDayTasksSubOpen"></span>
-              </div>
-            </div>
-          </div>
-          <div class="dplan-head-actions">
-            <button class="dplan-icon-btn" type="button" id="calDayTasksToggleDone" onclick="toggleDayPlanDone()" aria-pressed="true" title="نمایش یا پنهان کردن انجام‌شده‌ها" aria-label="نمایش یا پنهان کردن انجام‌شده‌ها">👁️</button>
-            <button class="dplan-icon-btn" type="button" id="calDayTasksClose" onclick="closeCalDayTasks()" aria-label="بستن برنامه این روز">✕</button>
-          </div>
-        </div>
-
-        <div class="dplan-progress" id="calDayProgressWrap">
-          <div class="dplan-progress-top">
-            <span class="dplan-progress-txt" id="calDayTasksProgressTxt">هنوز کاری ننوشتی</span>
-            <span class="dplan-progress-pct num" id="calDayTasksProgressPct"></span>
-          </div>
-          <div class="dplan-bar"><div class="dplan-bar-fill" id="calDayTasksBar" style="width:0%"></div></div>
-        </div>
-
-        <div class="dplan-add">
-          <input type="text" id="calDayAddInput" class="dplan-add-input" maxlength="120" autocomplete="off"
-                 placeholder="چه کاری برای این روز؟ (مثال: ۱۴:۳۰ تمرین پیانو)"
-                 aria-label="افزودن کار به برنامه این روز">
-          <button class="dplan-add-btn" type="button" id="calDayAddBtn" aria-label="افزودن به برنامه این روز">＋</button>
-        </div>
-        <div class="dplan-hint muted" id="calDayAddHint">زمان را اول بنویس و «!» بگذار برای مهم‌ها — بعد Enter بزن.</div>
-
-        <div class="dplan-quick" id="calDayQuickActions" style="display:none;"></div>
-
-        <div class="dplan-list" id="calDayTasksList" aria-live="polite"></div>
-
-        <div class="dplan-foot">
-          <button class="dplan-foot-btn" type="button" id="calDayClearDoneBtn" onclick="dpClearDone(window.__calOpenDayISO)">🧹 حذف انجام‌شده‌ها</button>
-          <button class="dplan-foot-btn" type="button" id="calDayLinkBtn" onclick="toggleDayPlanLinked()" aria-expanded="false">👀 <span>ددلاین‌های تسک‌های اصلی</span> <span class="num" id="calDayLinkCount">۰</span></button>
-        </div>
-        <div class="dplan-linked" id="calDayLinkedWrap" style="display:none;"></div>
-
-        <details class="dplan-note-wrap" id="calDayNoteWrap">
-          <summary class="dplan-note-sum">📝 یادداشت این روز</summary>
-          <textarea class="dplan-note" id="calDayNoteInput" rows="2" maxlength="600" placeholder="هر چیزی که باید درباره‌ی این روز به خاطر بسپری..."></textarea>
-        </details>
-      </section>
+      <!-- v20: calendar day plan UI removed (data remains for migration) -->
     </div>
 
     <!-- HABITS -->
@@ -974,7 +892,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">19.0</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">20.0</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1013,10 +931,7 @@ try{
       <div class="chip-opt" data-v="paused">⏸️ متوقف</div>
     </div>
   </div>
-  <div class="row2">
-    <div class="field"><label>زمان تخمینی (دقیقه)</label><input type="number" id="tEst" placeholder="۳۰"></div>
-    <div class="field"><label>یادداشت</label><input type="text" id="tNote" placeholder="اختیاری"></div>
-  </div>
+  <div class="field"><label>زمان تخمینی (دقیقه)</label><input type="number" id="tEst" placeholder="۳۰"></div>
   <div class="field">
     <label>ددلاین‌های اضافه <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری)</span></label>
     <div id="extraDeadlinesWrap" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
@@ -1279,7 +1194,7 @@ try{
 <script src="js/sw-register.js"></script>
 
 <script src="js/pomodoro.js"></script>
-<script src="js/v19.js?v=19.0"></script>
+<!-- v20: v19 script removed -->
 <script src="js/lang.js"></script>
 <script src="js/v16.js"></script>
 <script src="js/v162.js"></script>

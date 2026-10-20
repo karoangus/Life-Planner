@@ -1,0 +1,118 @@
+/* ============================================================
+   Life Planner — v20 «ساده‌سازی»
+   The goal of this release is calm, not decoration:
+   fewer borders, fewer glows, fewer gradients and one clear
+   action per row. Everything here is additive and cheap —
+   no animation on layout, no backdrop-filter, no large blurs —
+   so a Redmi Note 14 Pro (or any mid-range phone) stays smooth.
+   ============================================================ */
+
+/* ---- 1) quieter surfaces ------------------------------------------------ */
+
+#view-dashboard .dash-hero{
+  background:var(--card);
+  border:1px solid var(--line);
+  box-shadow:none;
+  padding:14px;
+  border-radius:16px;
+}
+#view-dashboard .dash-hero::before{display:none;}      /* no decorative glow */
+
+#view-dashboard .dash-tile,
+#view-dashboard .dash-motivation{
+  background:var(--card);
+  box-shadow:none;
+}
+
+/* the dashboard is a single, predictable column at every width */
+#view-dashboard .dash-grid{grid-template-columns:minmax(0,1fr) !important;}
+#view-dashboard .dash-grid > section{grid-column:1 / -1 !important; grid-row:auto !important;}
+
+#view-dashboard .dash-tile .card-head h3{font-size:14px; font-weight:800;}
+
+/* ---- 2) flat, readable cards everywhere --------------------------------- */
+
+.stat-card .glow{display:none;}
+.card .glow{display:none;}
+
+/* no hover lift: on touch it does nothing, on desktop it was noise */
+.card:hover,
+.dash-tile:hover,
+.stat-card:hover{transform:none;}
+
+/* ---- 3) calendar week bar ----------------------------------------------- */
+
+.cal-week-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:0 0 10px;
+  margin-bottom:8px;
+  border-bottom:1px solid var(--line);
+}
+.cal-week-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:7px 10px;
+  font:inherit;
+  font-size:12px;
+  font-weight:700;
+  color:var(--txt-dim);
+  background:transparent;
+  border:1px solid var(--line);
+  border-radius:10px;
+  cursor:pointer;
+}
+.cal-week-btn:active{background:var(--track);}
+.cal-week-now{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  min-width:0;
+}
+.cal-week-now strong{
+  font-size:12.5px;
+  font-weight:800;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:42vw;
+}
+.cal-week-today{
+  font:inherit;
+  font-size:11px;
+  font-weight:700;
+  color:var(--neon);
+  background:none;
+  border:0;
+  padding:2px 4px;
+  cursor:pointer;
+}
+.cal-week-today.sel{color:var(--txt-dim2);}          /* already on this week */
+
+/* ---- 4) simpler calendar chrome ----------------------------------------- */
+
+.calendar-intro{padding:10px 12px;}
+.calendar-intro-copy{font-size:11.5px; line-height:1.8; color:var(--txt-dim);}
+.calendar-intro-copy strong{font-size:12.5px;}
+.calendar-legend{font-size:10.5px; gap:10px;}
+
+/* ---- 5) Tasks: one clear action, calm list ------------------------------ */
+
+#view-tasks .topbar .top-actions .btn{padding:9px 14px;}
+
+/* ---- 6) small screens --------------------------------------------------- */
+
+@media (max-width:380px){
+  .cal-week-btn{padding:6px 8px; font-size:11px;}
+  .cal-week-now strong{max-width:34vw;}
+  .calendar-legend{display:none;}                    /* the dots repeat what the grid shows */
+}
+
+/* ---- 7) performance mode / lite phone ---------------------------------- */
+
+html.lp-perf .cal-week-btn,
+html.lp-perf .cal-week-today{transition:none;}

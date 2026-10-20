@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-19.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 19.0" />
+  <img src="https://img.shields.io/badge/نسخه-20.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 20.0" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -154,7 +154,7 @@ https://karoangus.github.io/Life-Planner/
 
 ### 4. 📅 تقویم تعاملی و زمان‌بندی هوشمند
 - تقویم جلالی (شمسی) و میلادی کامل و دقیق.
-- **«برنامه روز» — دفترچه‌ی مستقل هر روزِ تقویم (بازطراحی‌شده در v18.1):** با زدن روی سربرگ هر روز، یک چک‌لیست سبکِ مخصوص همان روز باز می‌شود که **کاملاً جدا از بخش تسک‌های اصلی** است و در `DB.dayPlans` ذخیره می‌شود: خبری از Inbox، وضعیت‌های کاری، دسته‌بندی، زیرتسک و XP نیست. افزودن سریع با تشخیص خودکارِ ساعت (`۱۴:۳۰ تمرین پیانو`) و علامتِ مهم (`!خرید نان`)، نوار پیشرفتِ روز، نشانِ تعدادِ کارهای مانده روی سربرگِ روز، مرتب‌سازی با کشیدن، انتقال به فردا، انتقالِ مانده‌های دیروز، کپیِ برنامه‌ی دیروز، ویرایشِ درجا، یادداشتِ روز، حذفِ انجام‌شده‌ها با امکانِ برگرداندن، و پنجره‌ی اختیاریِ «ددلاین‌های تسک‌های اصلی» (فقط نمایش).
+- **تقویم ساده‌تر (v20):** هفته را با دو دکمه‌ی «هفته قبل» / «هفته بعد» جابه‌جا کن و با «امروز» برگرد. بخش «برنامه روز» و نماهای Agenda و قالب‌ها حذف شدند تا تقویم فقط یک چیز باشد: رویدادهای هفته.
 - **بلوک‌بندی ساعتی ۶ صبح تا ۳ بامداد (جدید در v17.1):** هر ستونِ روز ۲۱ بلوک یک‌ساعته دارد که از ۰۶:۰۰ شروع می‌شود و تا ۰۳:۰۰ بامدادِ روز بعد ادامه دارد؛ ساعت‌های بعد از نیمه‌شب با رنگ بنفش جدا شده‌اند و رویدادهای شبانه یک‌تکه کشیده می‌شوند.
 - **نشانگر دقیق زمان و افزودن سریع (جدید در v17.2):** خط زمانِ فعلی دقیقه‌به‌دقیقه و هم‌زمان با رفتن به ساعت بعد جابه‌جا می‌شود؛ تاریخ جلالی هر روز هم در سربرگ دیده می‌شود. روی بخش خالی هر ساعت بزن تا فرم «رویداد جدید» با روز و زمان همان بخش آماده شود.
 - **کشیدن و رها کردن رویدادها (Drag & Drop):** تغییر زمان یا روز رویدادها با نگه‌داشتن و کشیدن در شبکه هفتگی، همراه با اسنپ ۱۵ دقیقه‌ای و بررسی تداخل ساعت‌ها.
@@ -289,14 +289,14 @@ npm test
 
 هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **همه‌ی محل‌های زیر با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"19.0"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '19.0';`
-3. فایل `package.json` و نسخه‌ی ریشه در `package-lock.json` ➔ مثلاً `"19.0.0"`.
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"20.0"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '20.0';`
+3. فایل `package.json` و نسخه‌ی ریشه در `package-lock.json` ➔ مثلاً `"20.0.0"`.
 4. فایل `index.html` ➔ مقدار `id="settingsVersion"`.
 5. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 6. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v77';
+   const CACHE_NAME = 'life-planner-cache-v79';
    ```
 
 > ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ همه‌ی تست‌ها باید سبز باشند.
@@ -304,6 +304,16 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 20.0 — «ساده‌سازی»: داشبورد و تسک‌ها و تقویم، بدون شلوغی
+این نسخه اول از یک مسیر چندمرحله‌ای است: به‌جای اضافه‌کردن قابلیت، چیزهایی که فقط صفحه را شلوغ می‌کردند حذف می‌شوند تا کاربر گم نشود.
+
+- 🧹 **داشبورد ساده شد:** نوار XP، دوناتِ پیشرفت کل، چهار کارت آماری، میان‌برهای سریع، کاشیِ استریک عادت‌ها، کاشیِ اهداف در جریان و ویجت «فوکوس امروز» حذف شدند. داشبورد حالا فقط سلام + جمله‌ی انگیزشی + مأموریت روزانه + برنامه‌ی امروز است.
+- ✅ **تسک‌ها ساده شد:** فیلد «یادداشت» از فرم تسک، دکمه‌ی «🎲 رندوم» و تمام افزوده‌های نسخه ۱۹ (جستجو، فیلتر آیزنهاور، تکمیل دسته‌ای، خروجی متنی) حذف شدند. فقط تب‌های همه / شروع نشده / Inbox / تکمیل‌شده و فیلتر دسته‌بندی مانده است.
+- 📅 **«برنامه روز» تقویم حذف شد:** پنل مستقل هر روز (چک‌لیست، نوار پیشرفت، یادداشت روز، انتقال مانده‌ها، ددلاین‌های تسک) کاملاً برداشته شد؛ داده‌های قدیمی در `DB.dayPlans` دست‌نخورده می‌مانند ولی جایی نمایش داده نمی‌شوند.
+- 🗓️ **تقویم فقط یک نما دارد:** گرید هفتگی. ناوبری هفته (قبل/بعد/امروز) به‌صورت یک نوار ساده باقی ماند؛ Agenda و قالب‌های سریع حذف شدند.
+- 🎨 **رابط کاربری آرام‌تر:** حذف درخشش‌های تزئینی، سایه‌های سنگین و افکت‌های hover روی کارت‌ها؛ چیدمان داشبورد در همه‌ی عرض‌ها یک ستون ساده است. این تغییرها فقط در `css/v20.css` هستند و روی Redmi Note 14 Pro بدون افت فریم اجرا می‌شوند.
+- 🌐 **ترجمه‌ی انگلیسی** برای متن‌های جدید نوار هفته اضافه شد.
 
 ### ✨ نسخه 19.0 — «Redmi Note 14 Pro» ۱۲۰ هرتز + هر بخش +۱ قابلیت کاربردی
 - 🚀 **بهینه برای ردمی نوت ۱۴ پرو:** انیمیشن‌ها فقط با `transform`/`opacity` (GPU)، `content-visibility:auto` برای لیست‌های بلند، `contain:layout paint`، کاهش `backdrop-blur` روی موبایل، حالت پرفورمنس برای ۱۲۰Hz بدون لگ؛ همه‌ی قابلیت‌های قبلی دست‌نخورده.
@@ -466,11 +476,10 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
-- **🚀 Redmi Note 14 Pro — 120Hz, zero-lag (new in v19.0):** Every view gets +1 useful feature (dashboard quick-add + today's focus, task search + Eisenhower + bulk, calendar week nav + list view + templates, habit 30-day heatmap, goal milestones, notes export + tag cloud, pomodoro auto-start + weekly streak, profile share, city inspector + perf toggle, shop daily deal, skills reset, boss archive, YVY monthly compare, settings haptics + stats). Pure-CSS fancy UI with GPU-only transforms and `content-visibility`.
+- **🧹 Simpler by design (new in v20.0):** The Dashboard keeps only the greeting, the daily quote, the quest and today's tasks — the XP strip, progress donut, four stat cards, quick shortcuts, habit/goal tiles and focus widget are gone. Tasks dropped the note field, the random picker and every v19 toolbar extra. The calendar dropped the per-day plan, the agenda view and template chips, and kept one simple week switch (prev / next / today).
 - **🆕 Smarter calendar quick-add (new in v18.3):** Tapping anywhere in an hour starts at that hour's beginning, or at the first free minute if an event is already in progress. The duration fits the gap before the next event, so a 45-minute gap becomes a 45-minute event without overlap.
 - **🫧 Quieter, safer resize handles (new in v18.3):** The persistent edge lines are gone on touch screens and the small desktop affordance appears only on hover/focus. Taps and small finger jitter no longer change event times; resizing requires an intentional drag.
 - **↔️ Drag-to-resize calendar events (new in v18.2):** Drag a block's top or bottom edge on the weekly grid to change its start or end — no event form needed. Live «start to end · duration» bubble with 15-minute snapping, a red warning on overlaps, after-midnight support, splitting only the resized day out of multi-day series, keyboard resizing (`↑`/`↓`, `Shift+↑`/`↓` for the start) and an undo button after every change.
-- **🗒️ “Day plan” — the calendar's own per-day notebook (redesigned in v18.1):** Tap a weekday header to open a lightweight checklist for that day which is **completely separate from the main Tasks section** and stored in `DB.dayPlans`: no Inbox, no workflow statuses, no categories, no subtasks and no XP. Quick-add with automatic time parsing (`14:30 piano practice`) and an importance marker (`!buy bread`), a per-day progress bar, a remaining-count badge on every day header, drag-to-reorder, move to tomorrow, carry over yesterday's leftovers, copy yesterday's plan, inline editing, a per-day note, clear-completed with undo, and an optional read-only strip for main-task deadlines.
 - **🔴 Live Inbox count (new in v18):** The Tasks Inbox tab shows a red, immediately refreshed count of items waiting in the Inbox.
 - **📱 Two-button quick bar (new in v18):** Choose 2, 3 or 4 main shortcuts; the two-button setting keeps exactly two shortcuts plus More. Extra second-row links remain optional, and the choice is backed up.
 - **🌴 Time off for quests (new in v17):** A single tick named «🌴 مرخصی» (Time off) under the quest card pauses the random quests completely — no new quest, no timer, no notification and **no XP deducted**, not even for the quest you were holding. Untick it and the next quest arrives after the usual short 5-minute break. The choice is saved with your data and travels inside the backup file.
