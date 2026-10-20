@@ -562,9 +562,13 @@ if (!useFallback) {
   // ---------- v18.3: quiet resize edges + hour-start / free-gap quick-add ----------
   const v183 = await page.evaluate(async () => {
     showView('calendar');
+    /* the previous block ended with real drags: those deliberately swallow the
+       trailing click for 600 ms (a drag must never count as a tap). Clear that
+       window, otherwise every simulated tap below is ignored by design. */
+    lpDragState.suppressClickUntil = 0;
     DB.events=[]; save(); renderCalendar();
     const mk=(id,title,day,s,e)=>{
-      const ev={id,title,days:[day],startMin:s,endMin:e,
+      const ev={id,title,days:[].concat(day),startMin:s,endMin:e,
         startHour:Math.floor(s/60),endHour:Math.min(24,Math.floor(e/60))};
       DB.events.push(ev); return ev;
     };
@@ -674,6 +678,108 @@ if (!useFallback) {
   });
   check('v18 selected two-button quick bar is restored after reopening the app', navReloadOk);
   check('no fatal JS errors after quick-bar reload', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
+
+  // ---------- v21: «کیبورد آرام» — no self-opening keyboard, no Chrome bar ----------
+  const v21 = await page.evaluate(async () => {
+    const typing = el => {
+      if (!el) return false;
+      if (el.tagName === 'TEXTAREA') return true;
+      if (el.tagName !== 'INPUT') return false;
+      const t = (el.getAttribute('type') || 'text').toLowerCase();
+      return ['text','search','number','email','tel','url','password','date','time'].includes(t);
+    };
+    const fields = [...document.querySelectorAll('input, textarea')].filter(typing);
+    const hardened = fields.filter(el => el.getAttribute('autocomplete') === 'off' &&
+      el.getAttribute('spellcheck') === 'false' && el.getAttribute('autocorrect') === 'off' &&
+      el.getAttribute('data-lp-kb') === '1');
+
+    const focusedId = () => (document.activeElement && document.activeElement.id) || '';
+    const after = fn => { document.activeElement?.blur?.(); fn(); return focusedId(); };
+    const sheets = {};
+    sheets.task = after(() => openTaskModal());
+    sheets.inbox = after(() => openInboxQuickAdd());
+    sheets.note = after(() => openNoteModal());
+    sheets.event = after(() => openEventModal());
+    ['taskModalBg','inboxQuickModalBg','noteModalBg','eventModalBg'].forEach(id => closeModal(id));
+
+    /* adding a subtask row must not jump into the fresh input either */
+    openTaskModal();
+    sheets.subtask = after(() => addSubtaskInput());
+    /* rows built in JS (subtask title + extra deadline) must be hardened too */
+    addExtraDeadline();
+    await new Promise(r => setTimeout(r, 0));
+    const dynamic = [...document.querySelectorAll('#subtaskWrap .subtask-edit-title, #extraDeadlinesWrap input[type="text"]')];
+    const dynamicOk = dynamic.length >= 2 && dynamic.every(el =>
+      el.getAttribute('data-lp-kb') === '1' && el.getAttribute('autocomplete') === 'off' &&
+      el.getAttribute('spellcheck') === 'false');
+    openTaskModal(); /* resets both wrappers */
+    closeModal('taskModalBg');
+
+    /* the guard itself: a script focus without a tap is refused, a tapped
+       field takes focus normally, and the helper can opt a field in */
+    openModal('taskModalBg');
+    const title = document.getElementById('tTitle');
+    document.activeElement?.blur?.();
+    title.focus();
+    const autoBlocked = document.activeElement !== title;
+    /* a tap somewhere else in the sheet does not authorise the field either */
+    document.querySelector('#taskModalBg button')
+      ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    const allowNoTap = !lpKbFocusAllowed(title);
+    /* but a tap on the field itself does */
+    title.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    title.focus();
+    const tapAllowed = document.activeElement === title;
+    title.blur();
+    lpFocusField(title);
+    const helperAllowed = document.activeElement === title;
+    title.blur();
+    title.removeAttribute('data-lp-allow-focus');
+    closeModal('taskModalBg');
+
+    return {
+      fields: fields.length,
+      hardened: hardened.length,
+      forms: document.querySelectorAll('form').length,
+      dynamic: dynamic.length,
+      dynamicOk,
+      sheets,
+      autoBlocked, tapAllowed, helperAllowed,
+      hasGuard: typeof lpKbFocusAllowed === 'function',
+      allowNoTap
+    };
+  });
+  check('v21 every typing field is hardened for a plain keyboard (no autofill bar)',
+    v21.fields >= 20 && v21.hardened === v21.fields,
+    `fields=${v21.fields} hardened=${v21.hardened}`);
+  check('v21 the app stays form-free, so Chrome has nothing to autofill',
+    v21.forms === 0, 'forms=' + v21.forms);
+  check('v21 rows created in JS are hardened on arrival (subtask + extra deadline)',
+    v21.dynamicOk, `dynamic=${v21.dynamic}`);
+  check('v21 opening a task / inbox / note / event sheet never opens the keyboard',
+    Object.values(v21.sheets).every(id => id === ''),
+    JSON.stringify(v21.sheets));
+  check('v21 a programmatic focus without a tap is refused, a tap is honoured',
+    v21.hasGuard && v21.autoBlocked && v21.allowNoTap && v21.tapAllowed && v21.helperAllowed,
+    JSON.stringify(v21));
+
+  /* the old automatic focus calls must not come back */
+  const v21CoreJs = fs.readFileSync(path.join(ROOT, 'js/core.js'), 'utf-8');
+  const v21Enh = fs.readFileSync(path.join(ROOT, 'js/enhancements.js'), 'utf-8');
+  const v21Js = fs.readFileSync(path.join(ROOT, 'js/v21.js'), 'utf-8');
+  const leftoverFocus = [
+    ...v21CoreJs.matchAll(/getElementById\('(tTitle|inboxTitle|nTitle|eTitle)'\)[^;]{0,40}\.focus\(\)/g),
+    ...v21Enh.matchAll(/getElementById\('dashboardMotivationInput'\)[^;]{0,40}\.focus\(\)/g)
+  ];
+  check('v21 no sheet focuses a field by itself any more', leftoverFocus.length === 0,
+    leftoverFocus.map(m => m[0]).join(' | '));
+  const v21IndexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf-8');
+  check('v21 the calm-keyboard module is loaded before the page ends',
+    /js\/v21\.js\?v=\d/.test(v21IndexHtml) &&
+    /\.\/js\/v21\.js\?v=\$\{VERSION\}/.test(fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf-8')));
+  check('v21 the guard and the hardening are both implemented',
+    v21Js.includes('HTMLElement.prototype.focus') && v21Js.includes('autocomplete'),
+    'v21.js');
 
   await browser.close();
 } else {
@@ -1106,8 +1212,9 @@ if (!useFallback) {
     assetRefs.length >= 9 && assetRefs.every(u => /\?v=\d/.test(u)),
     assetRefs.filter(u => !/\?v=\d/.test(u)).join(', '));
 
+  const assetVer = (indexHtml.match(/[?&]v=([\d.]+)/) || [])[1];
   check('v20.1 the service worker is network-first for code and cache-first for media',
-    /const VERSION = '20\.1';/.test(swJs) &&
+    assetVer && swJs.includes(`const VERSION = '${assetVer}';`) &&
     swJs.includes('const CACHE_NAME') && swJs.includes("cache: 'no-store'") &&
     swJs.includes("cache: 'reload'") && swJs.includes('isFreshFirst') &&
     swJs.includes('caches.keys()') && swJs.includes('self.skipWaiting()') &&
@@ -1122,6 +1229,21 @@ if (!useFallback) {
     swJsRegister.includes("controllerchange") && swJsRegister.includes('lpForceUpdate') &&
     swJsRegister.includes('15 * 60 * 1000') &&
     coreJs.includes('window.lpForceUpdate'));
+
+  // ---------- v21: «کیبورد آرام» — plain keyboard, no self-focus ----------
+  const v21JsSrc = fs.readFileSync(path.join(ROOT, 'js/v21.js'), 'utf-8');
+  const v21Tags = [...indexHtml.matchAll(/<(input|textarea)\b[^>]*>/g)].map(m => m[0]).filter(t => {
+    if (t.startsWith('<textarea')) return true;
+    const type = ((t.match(/type="([^"]+)"/) || [ , 'text'])[1]).toLowerCase();
+    return ['text','search','number','email','tel','url','password','date','time'].includes(type);
+  });
+  check('v21 every typing field asks the browser for a plain keyboard',
+    v21Tags.length >= 20 && v21Tags.every(t => t.includes('autocomplete="off"') && t.includes('spellcheck="false"')),
+    `${v21Tags.filter(t => !t.includes('autocomplete="off"')).length}/${v21Tags.length} missing`);
+  check('v21 the app is form-free and no sheet focuses a field by itself',
+    !/<form\b/i.test(indexHtml) &&
+    !/getElementById\('(tTitle|inboxTitle|nTitle|eTitle)'\)[^;]{0,40}\.focus\(\)/.test(coreJs) &&
+    v21JsSrc.includes('HTMLElement.prototype.focus') && /js\/v21\.js\?v=\d/.test(indexHtml));
 
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];
