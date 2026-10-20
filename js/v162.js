@@ -8,7 +8,10 @@
         for weak phones. Turning it on adds `html.lp-perf`, which
         stops every animation/transition, drops the shimmer and the
         scroll-reveal, and removes the blurred glass layers that
-        cost the most GPU time while a list is moving.
+        cost the most GPU time while a list is moving. Because a
+        removed blur leaves a see-through panel, css/app.css gives
+        every floating surface an opaque background and a heavier
+        dim behind it — no GPU cost, but the text stays readable.
      2. SCROLL SMOOTHNESS — typing in the notes search no longer
         rebuilds the grid on every keystroke, the fixed bottom bar
         stops blurring content while a scroll is in flight, and more

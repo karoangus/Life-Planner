@@ -1,5 +1,5 @@
 /* ============================================================
-   Life Planner — service worker (v21.0)
+   Life Planner — service worker (v21.1)
 
    Why this file was rewritten:
    The old worker served *everything* cache-first. After a new
@@ -20,8 +20,8 @@
    • a new worker takes over immediately (skipWaiting + claim).
    ============================================================ */
 
-const VERSION = '21.0';
-const CACHE_NAME = 'life-planner-cache-v81';
+const VERSION = '21.1';
+const CACHE_NAME = 'life-planner-cache-v82';
 const OFFLINE_URL = './index.html';
 
 self.addEventListener('message', e => {
