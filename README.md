@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-18.3-00e5ff?style=for-the-badge&logoColor=white" alt="Version 18.3" />
+  <img src="https://img.shields.io/badge/نسخه-19.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 19.0" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -289,14 +289,14 @@ npm test
 
 هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **همه‌ی محل‌های زیر با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"18.3"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '18.3';`
-3. فایل `package.json` و نسخه‌ی ریشه در `package-lock.json` ➔ مثلاً `"18.3.0"`.
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"19.0"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '19.0';`
+3. فایل `package.json` و نسخه‌ی ریشه در `package-lock.json` ➔ مثلاً `"19.0.0"`.
 4. فایل `index.html` ➔ مقدار `id="settingsVersion"`.
 5. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 6. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v76';
+   const CACHE_NAME = 'life-planner-cache-v77';
    ```
 
 > ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ همه‌ی تست‌ها باید سبز باشند.
@@ -304,6 +304,25 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 19.0 — «Redmi Note 14 Pro» ۱۲۰ هرتز + هر بخش +۱ قابلیت کاربردی
+- 🚀 **بهینه برای ردمی نوت ۱۴ پرو:** انیمیشن‌ها فقط با `transform`/`opacity` (GPU)، `content-visibility:auto` برای لیست‌های بلند، `contain:layout paint`، کاهش `backdrop-blur` روی موبایل، حالت پرفورمنس برای ۱۲۰Hz بدون لگ؛ همه‌ی قابلیت‌های قبلی دست‌نخورده.
+- 📋 **داشبورد:** افزودن سریع تسک از داشبورد (بدون مودال) + ویجت «🎯 فوکوس امروز» (تسک‌های باز، بحرانی، رویداد امروز، پیشرفت) + جمع/باز شدن کاشی‌ها با یک لمس.
+- ✅ **تسک‌ها:** جستجوی زنده + فیلتر آیزنهاور (فوری/مهم/هر دو) + تکمیل دسته‌ای + خروجی متنی لیست؛ Inbox و تب‌ها مثل قبل.
+- 📅 **تقویم:** ناوبری هفته (قبل/بعد/امروز) + تغییر نما گرید/لیست (Agenda) + قالب‌های سریع رویداد (مطالعه/ورزش/...) + «برنامه روز» سبک‌تر با جمع‌شوندگی؛ حذف افزونگیِ Inboxِ تکراریِ قدیمی از تقویم (اکنون فقط `DB.dayPlans` مستقل).
+- 🔥 **عادت‌ها:** نقشه حرارتی ۳۰ روزه + بینش‌ها (فعال/بهترین استریک/روزهای با عادت).
+- 🎯 **اهداف:** گام‌های ۲۵٪ پیشنهادی با یک کلیک + پاداش XP.
+- 📝 **یادداشت‌ها:** خروجی/چاپ + ابر برچسب‌ها + آمار کلمات.
+- 🍅 **پومودورو:** شروع خودکار جلسه بعد + رگبار هفتگی (۷ مربع).
+- 👤 **پروفایل:** کارت اشتراک‌گذاری دستاورد (Web Share API + کپی).
+- 🏙️ **شهر:** بازرسی سطح + دکمه کاهش جلوه‌ها برای گوشی‌های ضعیف.
+- 🛍️ **فروشگاه:** پیشنهاد روزانه چرخشی ۲۰٪ تخفیف.
+- 🌳 **مهارت:** بازتنظیم با ۱۰۰ XP.
+- ⚔️ **باس:** آرشیو ۱۰ نبرد آخر.
+- 🪞 **YVY:** مقایسه ماهانه (این ماه vs ماه قبل).
+- ⚙️ **تنظیمات:** بازخورد لمسی (هاپتیک) مخصوص شیائومی + خلاصه داده‌ها + بهینه‌سازی لمس و فونت.
+- 🎨 **UI فاخر سبک:** گوشه‌های XL، شیشه‌ی سبک، سایه‌ی نرم، میکرو-انیمیشن‌های GPU، فوکوس قابل دید، حالت کاهش حرکت.
+- 🌐 **ترجمه کامل انگلیسی** برای همه‌ی متن‌های جدید v19.
 
 ### ✨ نسخه 18.3 — افزودن سریع از فضای خالی و ریزایز مطمئن‌تر
 - 📅 **زمان شروع قابل‌پیش‌بینی:** با زدن هر جای خانه‌ی یک ساعت، شروع رویداد از سرِ همان ساعت است، نه از ربع‌ساعتی که انگشت به آن خورده. اگر آن زمان داخل رویداد دیگری باشد، برنامه از اولین دقیقه‌ی آزاد بعد از آن شروع می‌کند.
@@ -447,6 +466,7 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
+- **🚀 Redmi Note 14 Pro — 120Hz, zero-lag (new in v19.0):** Every view gets +1 useful feature (dashboard quick-add + today's focus, task search + Eisenhower + bulk, calendar week nav + list view + templates, habit 30-day heatmap, goal milestones, notes export + tag cloud, pomodoro auto-start + weekly streak, profile share, city inspector + perf toggle, shop daily deal, skills reset, boss archive, YVY monthly compare, settings haptics + stats). Pure-CSS fancy UI with GPU-only transforms and `content-visibility`.
 - **🆕 Smarter calendar quick-add (new in v18.3):** Tapping anywhere in an hour starts at that hour's beginning, or at the first free minute if an event is already in progress. The duration fits the gap before the next event, so a 45-minute gap becomes a 45-minute event without overlap.
 - **🫧 Quieter, safer resize handles (new in v18.3):** The persistent edge lines are gone on touch screens and the small desktop affordance appears only on hover/focus. Taps and small finger jitter no longer change event times; resizing requires an intentional drag.
 - **↔️ Drag-to-resize calendar events (new in v18.2):** Drag a block's top or bottom edge on the weekly grid to change its start or end — no event form needed. Live «start to end · duration» bubble with 15-minute snapping, a red warning on overlaps, after-midnight support, splitting only the resized day out of multi-day series, keyboard resizing (`↑`/`↓`, `Shift+↑`/`↓` for the start) and an undo button after every change.
