@@ -5448,7 +5448,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='20.0';
+const LP_APP_VERSION='20.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
@@ -5459,6 +5459,15 @@ function showLifePlannerUpdate(v){
   x.innerHTML=`<div><b>🆕 نسخه جدید Life Planner</b><div style="color:var(--txt-dim)">نسخه ${esc(v)} آماده است.</div></div><button class="btn" id="lpUpdateNow">به‌روزرسانی</button>`;
   document.body.appendChild(x);
   document.getElementById('lpUpdateNow').onclick=async()=>{
+    /* v20.1: ask the worker for a new build, wait (briefly) for it to take
+       control, then reload. If anything stalls, reload anyway — the reloaded
+       page fetches CSS/JS with a fresh ?v= query, so it can never show the
+       previous release out of an old cache. */
+    const btn=document.getElementById('lpUpdateNow');
+    if(btn){ btn.disabled=true; btn.textContent='در حال به‌روزرسانی…'; }
+    try{
+      if(window.lpForceUpdate){ await window.lpForceUpdate(); return; }
+    }catch(_){}
     try{
       const reg=await navigator.serviceWorker?.getRegistration();
       if(reg) await reg.update();

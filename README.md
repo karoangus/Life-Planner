@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-20.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 20.0" />
+  <img src="https://img.shields.io/badge/نسخه-20.1-00e5ff?style=for-the-badge&logoColor=white" alt="Version 20.1" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -289,14 +289,14 @@ npm test
 
 هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **همه‌ی محل‌های زیر با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"20.0"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '20.0';`
-3. فایل `package.json` و نسخه‌ی ریشه در `package-lock.json` ➔ مثلاً `"20.0.0"`.
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"20.1"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '20.1';`
+3. فایل `package.json` و نسخه‌ی ریشه در `package-lock.json` ➔ مثلاً `"20.1.0"`.
 4. فایل `index.html` ➔ مقدار `id="settingsVersion"`.
 5. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 6. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v79';
+   const CACHE_NAME = 'life-planner-cache-v80';
    ```
 
 > ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ همه‌ی تست‌ها باید سبز باشند.
@@ -304,6 +304,13 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 20.1 — «به‌روزرسانی بدون گیر کردن»
+- 🚀 **دیگر لازم نیست کش را دستی پاک کنی:** همه‌ی فایل‌های `css` و `js` با `?v=` نسخه صدا زده می‌شوند؛ بنابراین بعد از هر انتشار، مرورگر نمی‌تواند نسخه‌ی قبلی را از کش قدیمی برگرداند.
+- 🌐 **سرویس‌ورکر بازنویسی شد:** HTML و CSS و JS حالا *network-first* هستند (آنلاین = همیشه آخرین نسخه، آفلاین = نسخه‌ی ذخیره‌شده). فقط آیکون‌ها و صداها cache-first مانده‌اند.
+- 🔄 **بروزرسانی خودکار:** سرویس‌ورکر جدید بلافاصله کنترل را می‌گیرد و صفحه یک‌بار خودکار نوسازی می‌شود؛ اگر تب مدتی باز مانده باشد، با برگشتن به برنامه هم دنبال نسخه‌ی تازه می‌رود.
+- 🧊 **کش نصب بدون فایل کهنه:** هنگام نصب، فایل‌ها با `cache:'reload'` گرفته می‌شوند تا کش ۱۰ دقیقه‌ای GitHub Pages یک نسخه‌ی قدیمی را در حافظه‌ی آفلاین قفل نکند.
+- 🔘 **دکمه‌ی «به‌روزرسانی»** در پیام نسخه‌ی جدید حالا واقعاً منتظر نصب سرویس‌ورکر جدید می‌ماند و بعد صفحه را نوسازی می‌کند.
 
 ### ✨ نسخه 20.0 — «ساده‌سازی»: داشبورد و تسک‌ها و تقویم، بدون شلوغی
 این نسخه اول از یک مسیر چندمرحله‌ای است: به‌جای اضافه‌کردن قابلیت، چیزهایی که فقط صفحه را شلوغ می‌کردند حذف می‌شوند تا کاربر گم نشود.
