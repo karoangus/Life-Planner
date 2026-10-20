@@ -112,7 +112,9 @@ function openCustomMotivationComposer(){
   const input=document.getElementById('dashboardMotivationInput');
   if(!box)return;
   box.classList.add('open');
-  if(input){ input.value=DB.motivation.custom||''; setTimeout(()=>input.focus(),0); }
+  /* v21 — no focus(): the composer slides open with the keyboard closed and
+     the user taps the box when they want to write (see js/v21.js). */
+  if(input){ input.value=DB.motivation.custom||''; }
 }
 function saveDashboardCustomMotivation(){
   ensureV64Data();

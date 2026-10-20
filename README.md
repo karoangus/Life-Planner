@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-20.1-00e5ff?style=for-the-badge&logoColor=white" alt="Version 20.1" />
+  <img src="https://img.shields.io/badge/نسخه-21.0-00e5ff?style=for-the-badge&logoColor=white" alt="Version 21.0" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -289,21 +289,28 @@ npm test
 
 هنگام توسعه ویژگی‌های جدید و انتشار نسخه جدید، شماره نسخه باید در **همه‌ی محل‌های زیر با هم** ارتقا پیدا کند تا کاربرها به‌طور خودکار پیام به‌روزرسانی بگیرند:
 
-1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"20.1"`).
-2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '20.1';`
-3. فایل `package.json` و نسخه‌ی ریشه در `package-lock.json` ➔ مثلاً `"20.1.0"`.
+1. فایل `app-version.json` ➔ کلید `"version"` (مثلاً `"21.0"`).
+2. فایل `js/core.js` ➔ `const LP_APP_VERSION = '21.0';`
+3. فایل `package.json` و نسخه‌ی ریشه در `package-lock.json` ➔ مثلاً `"21.0.0"`.
 4. فایل `index.html` ➔ مقدار `id="settingsVersion"`.
 5. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 6. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v80';
+   const CACHE_NAME = 'life-planner-cache-v81';
    ```
+7. اگر فایل `css`/`js` جدیدی اضافه شد، آن را هم در `index.html` (با `?v=`) و هم در لیست `SHELL` داخل `sw.js` قرار بده.
 
 > ✅ پیش از باز کردن Pull Request حتماً `npm ci` و سپس `npm test` را اجرا کنید؛ همه‌ی تست‌ها باید سبز باشند.
 
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 21.0 — «کیبورد آرام»
+- ⌨️ **کیبورد دیگر خودش باز نمی‌شود:** زدن «➕ تسک جدید»، Inbox، «📝 یادداشت جدید»، «📅 رویداد جدید» (چه از دکمه و چه از خانه‌ی خالی تقویم) و «افزودن زیرتسک» فقط فرم را باز می‌کند؛ کیبورد بسته می‌ماند و هر وقت خودت روی فیلد زدی باز می‌شود. همه‌ی `focus()`های خودکار از `core.js` و `enhancements.js` حذف شدند.
+- 🛡️ **نگهبان سراسری در `js/v21.js`:** هر `focus()` برنامه‌ای روی فیلدهای متنی که از دل همان لمس کاربر نیامده باشد رد می‌شود؛ پس این رفتار در هیچ بخشی و در نسخه‌های بعدی هم برنمی‌گردد. برای موارد استثنایی `lpFocusField(el)` در دسترس است.
+- 🧼 **کیبورد خالی، بدون نوار کروم:** همه‌ی فیلدهای متنی (تسک، عادت، هدف، یادداشت، رویداد، پومودورو، تنظیمات، جستجو و حتی فیلدهایی که در زمان اجرا ساخته می‌شوند) با `autocomplete="off"`، `spellcheck="false"` و `autocorrect="off"` علامت‌گذاری شدند و هیچ `<form>`ی در برنامه وجود ندارد؛ بنابراین کروم دیگر نوار مدیریت پسورد/اتو‌فیل را بالای کیبورد نمی‌آورد.
+- ♻️ فایل جدید `js/v21.js` به `index.html` و لیست کش سرویس‌ورکر اضافه شد و نسخه‌ی کش به `life-planner-cache-v81` رفت. تست‌های خودکار هم سه چیز را چک می‌کنند: باز نشدن خودکار کیبورد در هیچ فرمی، علامت‌گذاری همه‌ی فیلدها و کار کردن نگهبان.
 
 ### ✨ نسخه 20.1 — «به‌روزرسانی بدون گیر کردن»
 - 🚀 **دیگر لازم نیست کش را دستی پاک کنی:** همه‌ی فایل‌های `css` و `js` با `?v=` نسخه صدا زده می‌شوند؛ بنابراین بعد از هر انتشار، مرورگر نمی‌تواند نسخه‌ی قبلی را از کش قدیمی برگرداند.
@@ -483,6 +490,7 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
+- **⌨️ Calm keyboard (new in v21.0):** Opening “New task”, Inbox, “New note”, “New event” or “Add subtask” no longer pops the on-screen keyboard by itself — the sheet opens, and you tap the field when you are ready. Every text field is also marked `autocomplete="off"` / `spellcheck="false"` in a form-free page, so Chrome's password-manager / autofill strip stays out of the way and you get a plain, empty keyboard.
 - **🧹 Simpler by design (new in v20.0):** The Dashboard keeps only the greeting, the daily quote, the quest and today's tasks — the XP strip, progress donut, four stat cards, quick shortcuts, habit/goal tiles and focus widget are gone. Tasks dropped the note field, the random picker and every v19 toolbar extra. The calendar dropped the per-day plan, the agenda view and template chips, and kept one simple week switch (prev / next / today).
 - **🆕 Smarter calendar quick-add (new in v18.3):** Tapping anywhere in an hour starts at that hour's beginning, or at the first free minute if an event is already in progress. The duration fits the gap before the next event, so a 45-minute gap becomes a 45-minute event without overlap.
 - **🫧 Quieter, safer resize handles (new in v18.3):** The persistent edge lines are gone on touch screens and the small desktop affordance appears only on hover/focus. Taps and small finger jitter no longer change event times; resizing requires an intentional drag.

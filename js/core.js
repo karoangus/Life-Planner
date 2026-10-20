@@ -2944,8 +2944,8 @@ function addSubtaskInput(){
   row.innerHTML = `<input type="checkbox" class="subtask-edit-check"><input type="text" class="subtask-edit-title" placeholder="عنوان زیرتسک" value="${esc(val)}"><button class="btn ghost sm" type="button" onclick="removeSubtaskEditRow(this)">✕</button>`;
   wrap.appendChild(row);
   if(titleInput) titleInput.value='';
-  const inp = row.querySelector('.subtask-edit-title');
-  if(inp) setTimeout(()=>inp.focus(),0);
+  /* v21 — the new row is added, the keyboard stays down: the user taps the
+     row when they are ready to type (see js/v21.js). */
 }
 function removeSubtaskEditRow(btn){
   const row = btn.closest('.subtask-edit-row');
@@ -2991,8 +2991,9 @@ function saveTask(){
 function openInboxQuickAdd(){
   const input = document.getElementById('inboxTitle');
   if(input) input.value='';
+  /* v21 — no focus() here: the sheet opens with the keyboard closed and the
+     user taps the field when they are ready to type (see js/v21.js). */
   openModal('inboxQuickModalBg');
-  setTimeout(()=>{ input?.focus(); }, 120);
 }
 function saveInboxTask(){
   const input = document.getElementById('inboxTitle');
@@ -3760,9 +3761,8 @@ function openNoteModal(id=null){
   renderNoteColorRow();
   updateNoteBodyCounter();
   openModal('noteModalBg');
-  /* Focus lands on the title so typing starts immediately; harmless when the
-     element is missing and never steals focus from a filled-in edit form. */
-  setTimeout(()=>{ try{ document.getElementById('nTitle')?.focus(); }catch(_){ } },60);
+  /* v21 — the sheet no longer grabs focus: it opens with the keyboard closed,
+     and the user taps the title when they are ready to write (js/v21.js). */
 }
 function saveNote(){
   const title=document.getElementById('nTitle').value.trim();
@@ -4461,7 +4461,8 @@ function openCalendarSlot(dayIdx,gridHour,clientY,slotEl){
   document.querySelectorAll('#eDays .chip-opt').forEach(chip=>chip.classList.toggle('sel',Number(chip.dataset.v)===addWindow.start.day));
   document.getElementById('eHourStart').value=formatTimeMinutes(addWindow.start.min);
   document.getElementById('eHourEnd').value=formatTimeMinutes(addWindow.end.min);
-  document.getElementById('eTitle').focus();
+  /* v21 — no focus(): the event sheet opens with the keyboard closed, so the
+     form is never half covered before the user starts typing (js/v21.js). */
 }
 function scrollCalendarToNow(){
   if(!viewActive('calendar')){
@@ -5448,7 +5449,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='20.1';
+const LP_APP_VERSION='21.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

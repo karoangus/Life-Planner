@@ -8,9 +8,9 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=20.1">
-<link rel="stylesheet" href="css/design-system.css?v=20.1">
-<link rel="stylesheet" href="css/v20.css?v=20.1">
+<link rel="stylesheet" href="css/app.css?v=21.0">
+<link rel="stylesheet" href="css/design-system.css?v=21.0">
+<link rel="stylesheet" href="css/v20.css?v=21.0">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -112,7 +112,7 @@ try{
           <div class="chip-opt" data-mood="supportive">💪 حمایتی</div>
         </div>
         <div class="motivation-custom-box" id="motivationCustomBox">
-          <textarea id="dashboardMotivationInput" maxlength="220" placeholder="مثلاً: امروز فقط یک قدم جلوتر."></textarea>
+          <textarea autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="dashboardMotivationInput" maxlength="220" placeholder="مثلاً: امروز فقط یک قدم جلوتر."></textarea>
           <div class="settings-actions">
             <button class="btn sm" type="button" onclick="saveDashboardCustomMotivation()">✅ اعمال پیام</button>
             <button class="btn ghost sm" type="button" onclick="resetCustomMotivationFromDashboard()">🎲 برگشت به رندوم</button>
@@ -225,7 +225,7 @@ try{
       <div class="card notes-tools">
         <div class="notes-tools-row">
           <div class="field notes-search-field" style="margin:0;">
-            <input type="search" id="noteSearch" placeholder="🔎 جستجو در عنوان، متن یا برچسب..." oninput="renderNotes()">
+            <input type="search" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="noteSearch" placeholder="🔎 جستجو در عنوان، متن یا برچسب..." oninput="renderNotes()">
           </div>
           <button class="btn ghost notes-view-btn" id="noteViewToggle" onclick="toggleNoteViewMode()" title="تغییر حالت نمایش" aria-label="تغییر حالت نمایش">▦</button>
         </div>
@@ -311,14 +311,14 @@ try{
           <p class="muted" style="font-size:12.5px;line-height:1.9;margin-top:0;">اگر بیرون از تایمر پومودورو مطالعه یا استراحت کردی، اینجا ثبتش کن تا آمار روزت از قلم نیفته.</p>
           <div class="row2">
             <div class="field"><label>نوع فعالیت</label><select id="pomoManualKind"><option value="focus">📚 مطالعه</option><option value="break">☕ استراحت</option></select></div>
-            <div class="field"><label>مدت (دقیقه)</label><input type="number" id="pomoManualMinutes" min="1" max="1440" step="1" placeholder="مثلاً 45"></div>
+            <div class="field"><label>مدت (دقیقه)</label><input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="pomoManualMinutes" min="1" max="1440" step="1" placeholder="مثلاً 45"></div>
           </div>
           <div class="row2">
-            <div class="field"><label>تاریخ</label><input type="date" id="pomoManualDate"></div>
+            <div class="field"><label>تاریخ</label><input type="date" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="pomoManualDate"></div>
             <div class="field"><label>تسک مرتبط (اختیاری)</label><select id="pomoManualTask"><option value="">بدون تسک</option></select></div>
           </div>
           <div class="row2">
-            <div class="field" style="grid-column:1/-1"><label>توضیح (اختیاری)</label><input type="text" id="pomoManualNote" maxlength="120" placeholder="مثلاً ریاضی — فصل معادلات"></div>
+            <div class="field" style="grid-column:1/-1"><label>توضیح (اختیاری)</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="pomoManualNote" maxlength="120" placeholder="مثلاً ریاضی — فصل معادلات"></div>
           </div>
           <button class="btn" style="width:100%;justify-content:center;" onclick="addManualPomoData()">➕ ثبت داده</button>
         </div>
@@ -334,17 +334,17 @@ try{
         <div class="card">
           <div class="card-head"><h3>⚙️ تنظیمات پومودورو (مدل Focus To-Do)</h3></div>
           <div class="row2">
-            <div class="field"><label>مدت فوکوس (دقیقه)</label><input type="number" id="pomoSetFocus" min="1" max="180" value="25"></div>
-            <div class="field"><label>مدت استراحت کوتاه (دقیقه)</label><input type="number" id="pomoSetBreak" min="1" max="60" value="5"></div>
+            <div class="field"><label>مدت فوکوس (دقیقه)</label><input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="pomoSetFocus" min="1" max="180" value="25"></div>
+            <div class="field"><label>مدت استراحت کوتاه (دقیقه)</label><input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="pomoSetBreak" min="1" max="60" value="5"></div>
           </div>
           <div class="row2">
-            <div class="field"><label>مدت استراحت طولانی (دقیقه)</label><input type="number" id="pomoSetLongBreak" min="1" max="90" value="15"></div>
-            <div class="field"><label>تعداد جلسات هر دور</label><input type="number" id="pomoSetCycleCount" min="1" max="12" value="4"></div>
+            <div class="field"><label>مدت استراحت طولانی (دقیقه)</label><input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="pomoSetLongBreak" min="1" max="90" value="15"></div>
+            <div class="field"><label>تعداد جلسات هر دور</label><input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="pomoSetCycleCount" min="1" max="12" value="4"></div>
           </div>
           <div class="field"><label>هدف روزانه</label>
             <div class="row2">
-              <input type="number" id="pomoSetGoalH" min="0" max="24" placeholder="ساعت">
-              <input type="number" id="pomoSetGoalM" min="0" max="59" placeholder="دقیقه">
+              <input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="pomoSetGoalH" min="0" max="24" placeholder="ساعت">
+              <input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="pomoSetGoalM" min="0" max="59" placeholder="دقیقه">
             </div>
           </div>
           <button class="btn" style="width:100%; justify-content:center;" onclick="savePomoSettings()">💾 ذخیره تنظیمات</button>
@@ -892,7 +892,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">20.1</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">21.0</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -904,11 +904,11 @@ try{
 <!-- MODALS -->
 <div class="modal-bg" id="taskModalBg"><div class="modal">
   <h2>✅ تسک جدید</h2>
-  <div class="field"><label>عنوان تسک</label><input type="text" id="tTitle" placeholder="مثلاً: مطالعه فصل ۳ ریاضی"></div>
+  <div class="field"><label>عنوان تسک</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="tTitle" placeholder="مثلاً: مطالعه فصل ۳ ریاضی"></div>
   <div class="row2">
-    <div class="field"><label>دسته‌بندی</label><input type="text" id="tCat" placeholder="درس، کار، شخصی..."></div>
+    <div class="field"><label>دسته‌بندی</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="tCat" placeholder="درس، کار، شخصی..."></div>
     <div class="field"><label>ددلاین اول</label>
-      <input type="text" id="tDateDisplay" readonly placeholder="انتخاب ددلاین" onclick="openJalaliPicker('tDate','tDateDisplay')">
+      <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="tDateDisplay" readonly placeholder="انتخاب ددلاین" onclick="openJalaliPicker('tDate','tDateDisplay')">
       <input type="hidden" id="tDate" value="">
     </div>
   </div>
@@ -931,7 +931,7 @@ try{
       <div class="chip-opt" data-v="paused">⏸️ متوقف</div>
     </div>
   </div>
-  <div class="field"><label>زمان تخمینی (دقیقه)</label><input type="number" id="tEst" placeholder="۳۰"></div>
+  <div class="field"><label>زمان تخمینی (دقیقه)</label><input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="tEst" placeholder="۳۰"></div>
   <div class="field">
     <label>ددلاین‌های اضافه <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری)</span></label>
     <div id="extraDeadlinesWrap" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
@@ -941,7 +941,7 @@ try{
     <label>زیرتسک‌ها <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری — با تیک زدن همه، تسک اصلی خودکار انجام می‌شود)</span></label>
     <div id="subtaskWrap" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
     <div style="display:flex; gap:8px;">
-      <input type="text" id="newSubtaskTitle" placeholder="مثلاً: جمع‌آوری منابع">
+      <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="newSubtaskTitle" placeholder="مثلاً: جمع‌آوری منابع">
       <button class="btn ghost sm" type="button" onclick="addSubtaskInput()" style="flex-shrink:0;">➕ اضافه</button>
     </div>
   </div>
@@ -952,13 +952,13 @@ try{
 <div class="modal-bg" id="inboxQuickModalBg"><div class="modal">
   <h2>📥 تسک سریع — Inbox</h2>
   <p class="muted" style="font-size:12.5px; margin:6px 0 14px;">فقط عنوان رو بنویس، سریع ذخیره می‌شه. بعداً از بخش تسک‌ها کاملش کن و وارد برنامه اصلی کن.</p>
-  <div class="field"><label>عنوان تسک</label><input type="text" id="inboxTitle" placeholder="مثلاً: ایده ویدیو جدید، خرید کتاب، تماس با..."></div>
+  <div class="field"><label>عنوان تسک</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="inboxTitle" placeholder="مثلاً: ایده ویدیو جدید، خرید کتاب، تماس با..."></div>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('inboxQuickModalBg')">انصراف</button><button class="btn" onclick="saveInboxTask()">➕ افزودن به Inbox</button></div>
 </div></div>
 
 <div class="modal-bg" id="habitModalBg"><div class="modal">
   <h2 id="habitModalTitle">🔥 عادت جدید</h2>
-  <div class="field"><label>نام عادت</label><input type="text" id="hName" placeholder="مثلاً: مطالعه، ورزش، خواب به‌موقع"></div>
+  <div class="field"><label>نام عادت</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="hName" placeholder="مثلاً: مطالعه، ورزش، خواب به‌موقع"></div>
   <div class="field"><label>ایموجی</label>
     <div class="chip-group" id="hIcon">
       <div class="chip-opt sel" data-v="📚">📚</div><div class="chip-opt" data-v="🏃">🏃</div><div class="chip-opt" data-v="💧">💧</div>
@@ -972,7 +972,7 @@ try{
 
 <div class="modal-bg" id="goalModalBg"><div class="modal">
   <h2 id="goalModalTitle">🎯 هدف جدید</h2>
-  <div class="field"><label>عنوان هدف</label><input type="text" id="gTitle" placeholder="مثلاً: یادگیری زبان انگلیسی"></div>
+  <div class="field"><label>عنوان هدف</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="gTitle" placeholder="مثلاً: یادگیری زبان انگلیسی"></div>
   <div class="field"><label>سطح هدف</label>
     <div class="chip-group" id="gLevel">
       <div class="chip-opt" data-v="daily">روزانه</div>
@@ -982,15 +982,15 @@ try{
       <div class="chip-opt" data-v="life">زندگی</div>
     </div>
   </div>
-  <div class="field"><label>پیشرفت فعلی (٪)</label><input type="number" id="gProgress" min="0" max="100" value="0"></div>
+  <div class="field"><label>پیشرفت فعلی (٪)</label><input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="gProgress" min="0" max="100" value="0"></div>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('goalModalBg')">انصراف</button><button class="btn" onclick="saveGoal()">ذخیره</button></div>
 </div></div>
 
 <div class="modal-bg" id="noteModalBg"><div class="modal">
   <h2 id="noteModalTitle">📝 یادداشت جدید</h2>
-  <div class="field"><label>عنوان</label><input type="text" id="nTitle" placeholder="عنوان یادداشت"></div>
-  <div class="field"><label>محتوا</label><textarea id="nBody" style="min-height:140px;" placeholder="هر چی دوست داری بنویس..." oninput="updateNoteBodyCounter()"></textarea><div class="muted notes-counter" id="nBodyCounter">📄 ۰ کلمه · ۰ کاراکتر</div></div>
-  <div class="field"><label>برچسب</label><input type="text" id="nTag" placeholder="مثلاً: کار، ایده، درس"></div>
+  <div class="field"><label>عنوان</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="nTitle" placeholder="عنوان یادداشت"></div>
+  <div class="field"><label>محتوا</label><textarea autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="nBody" style="min-height:140px;" placeholder="هر چی دوست داری بنویس..." oninput="updateNoteBodyCounter()"></textarea><div class="muted notes-counter" id="nBodyCounter">📄 ۰ کلمه · ۰ کاراکتر</div></div>
+  <div class="field"><label>برچسب</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="nTag" placeholder="مثلاً: کار، ایده، درس"></div>
   <div class="field"><label>رنگ یادداشت (اختیاری)</label><div class="chip-group lp-color-row" id="nColorRow"></div></div>
   <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="nPinned"><span>📌 سنجاق کردن یادداشت</span></label>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('noteModalBg')">انصراف</button><button class="btn" onclick="saveNote()">ذخیره</button></div>
@@ -999,8 +999,8 @@ try{
 <div class="modal-bg" id="eventModalBg"><div class="modal">
   <h2 id="eventModalTitle">📅 رویداد جدید</h2>
   <div class="lp-scope-hint" id="eEditScopeHint" style="display:none;"></div>
-  <div class="field"><label>عنوان</label><input type="text" id="eTitle" placeholder="مثلاً: کلاس زبان"></div>
-  <div class="field"><label>توضیحات (اختیاری) — با زدن روی بلوک در تقویم نمایش داده می‌شود</label><textarea id="eDesc" dir="auto" maxlength="1000" placeholder="مثلاً: فصل ۳ کتاب، مرور لغت‌ها و ۲۰ دقیقه لیسنینگ"></textarea></div>
+  <div class="field"><label>عنوان</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="eTitle" placeholder="مثلاً: کلاس زبان"></div>
+  <div class="field"><label>توضیحات (اختیاری) — با زدن روی بلوک در تقویم نمایش داده می‌شود</label><textarea autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="eDesc" dir="auto" maxlength="1000" placeholder="مثلاً: فصل ۳ کتاب، مرور لغت‌ها و ۲۰ دقیقه لیسنینگ"></textarea></div>
   <div class="field"><label>دسته‌بندی (اختیاری) — با انتخاب دسته، رنگ پیش‌فرض همان دسته می‌شود</label>
     <div class="chip-group" id="eCats"></div>
   </div>
@@ -1019,8 +1019,8 @@ try{
     </div>
   </div>
   <div class="row2">
-    <div class="field"><label>ساعت شروع</label><input type="time" id="eHourStart" value="09:00"></div>
-    <div class="field"><label>ساعت پایان</label><input type="time" id="eHourEnd" value="12:00"></div>
+    <div class="field"><label>ساعت شروع</label><input type="time" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="eHourStart" value="09:00"></div>
+    <div class="field"><label>ساعت پایان</label><input type="time" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="eHourEnd" value="12:00"></div>
   </div>
   <div class="lp-night-hint">🌙 هر روزِ تقویم از ۶ صبح تا ۳ بامداد بلوک‌بندی شده؛ ساعت‌های بعد از نیمه‌شب در انتهای ستونِ شبِ قبلش می‌نشینند.</div>
   <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="eReminder" onchange="requestEventReminderPermission(this)"><span>🔔 یادآوری این رویداد</span></label>
@@ -1046,7 +1046,7 @@ try{
 <div class="modal-bg" id="catManagerModalBg"><div class="modal">
   <h2>🏷️ دسته‌بندی‌ها و رنگ‌ها</h2>
   <div id="catManagerList"></div>
-  <div class="field"><label id="catFormLabel">دسته‌ی جدید</label><input type="text" id="catNameInput" placeholder="مثلاً: درس، کار، ورزش..."></div>
+  <div class="field"><label id="catFormLabel">دسته‌ی جدید</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="catNameInput" placeholder="مثلاً: درس، کار، ورزش..."></div>
   <div class="field"><label>رنگ پیش‌فرض دسته</label>
     <div class="chip-group lp-color-row" id="catColorRow"></div>
   </div>
@@ -1118,7 +1118,7 @@ try{
 
 <div class="modal-bg" id="bossSetupModalBg"><div class="modal">
   <h2 id="bossSetupTitle">⚔️ باس این هفته رو بساز</h2>
-  <div class="field"><label>اسم باس (مثلاً: مطالعه فصل ۳ ریاضی)</label><input type="text" id="bossNameInput" placeholder="اسم هدف بزرگت..."></div>
+  <div class="field"><label>اسم باس (مثلاً: مطالعه فصل ۳ ریاضی)</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="bossNameInput" placeholder="اسم هدف بزرگت..."></div>
   <div class="field">
     <label>چندتا تسک انتخاب کن که هرکدوم بهش ضربه بزنه <span id="bossTaskCount" class="num">(۰ تسک)</span></label>
     <div id="bossTaskPicker" style="max-height:260px; overflow-y:auto;"></div>
@@ -1189,15 +1189,16 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=20.1"></script>
-<script src="js/enhancements.js?v=20.1"></script>
-<script src="js/sw-register.js?v=20.1"></script>
+<script src="js/core.js?v=21.0"></script>
+<script src="js/enhancements.js?v=21.0"></script>
+<script src="js/sw-register.js?v=21.0"></script>
 
-<script src="js/pomodoro.js?v=20.1"></script>
+<script src="js/pomodoro.js?v=21.0"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=20.1"></script>
-<script src="js/v16.js?v=20.1"></script>
-<script src="js/v162.js?v=20.1"></script>
+<script src="js/lang.js?v=21.0"></script>
+<script src="js/v16.js?v=21.0"></script>
+<script src="js/v162.js?v=21.0"></script>
+<script src="js/v21.js?v=21.0"></script>
 
 </body>
 </html>
