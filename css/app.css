@@ -1099,14 +1099,14 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 /* ===== block: id="lp-v65-css" ===== */
 
 :root{--lp-ui-scale:1;}
-.motivation-custom-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
-.motivation-custom-actions .btn{flex:1;min-width:120px;justify-content:center;}
+/* v21.3: .motivation-custom-actions is gone — the «پیام سفارشی» button moved
+   inside #moodPicker, so the closed quote card shows one control instead of
+   two (its rule lives in css/v213.css now). */
 .motivation-custom-box{display:none;margin-top:10px;padding:11px;border:1px solid var(--line);background:rgba(255,255,255,.025);border-radius:12px;}
 .motivation-custom-box.open{display:block;}
 .motivation-custom-box textarea{width:100%;min-height:78px;resize:vertical;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:10px;padding:10px;font:inherit;outline:none;line-height:1.9;}
 /* UI scale is applied only to content wrappers, leaving the fixed bottom nav stable and clickable. */
 .main{zoom:var(--lp-ui-scale,1);}
-@media(max-width:520px){.motivation-custom-actions .btn{min-width:100%;}}
 
 /* ============================================================
    DASHBOARD v9.1 — hero + mosaic layout
@@ -1227,7 +1227,6 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 #view-dashboard .dash-motivation .motivation-ic{width:34px; height:34px; border-radius:11px; font-size:16px;}
 #view-dashboard .dash-motivation .motivation-text{font-size:13px; line-height:1.85;}
 #view-dashboard .dash-motivation .motivation-mood-toggle{margin-top:5px; font-size:10.5px;}
-#view-dashboard .dash-motivation .motivation-custom-actions{margin-top:8px;}
 
 /* ---------- MOSAIC TILES ---------- */
 #view-dashboard .dash-grid{display:grid; gap:10px; grid-template-columns:minmax(0,1fr);}

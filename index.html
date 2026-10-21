@@ -8,9 +8,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=21.2">
-<link rel="stylesheet" href="css/design-system.css?v=21.2">
-<link rel="stylesheet" href="css/v20.css?v=21.2">
+<link rel="stylesheet" href="css/app.css?v=21.3">
+<link rel="stylesheet" href="css/design-system.css?v=21.3">
+<link rel="stylesheet" href="css/v20.css?v=21.3">
+<link rel="stylesheet" href="css/v213.css?v=21.3">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -86,10 +87,16 @@ try{
           </div>
           <div class="top-actions">
             <div class="icon-btn" onclick="openInboxQuickAdd()">📥</div>
+            <!-- v21.3: every simplified section keeps one ❓ that explains it -->
+            <button class="guide-btn" type="button" onclick="openGuide('dashboard')" title="راهنمای داشبورد" aria-label="راهنمای داشبورد">❓</button>
           </div>
         </div>
 
       </header>
+
+      <!-- v21.3: one slot for the two welcome layers — «سه قدم اول» on an
+           empty account, otherwise the one-time hint. Both retire themselves. -->
+      <div class="guide-slot" id="guideSlot-dashboard"></div>
 
       <div class="card motivation-card dash-motivation">
         <div class="motivation-row">
@@ -99,17 +106,18 @@ try{
             <div class="motivation-mood-toggle" onclick="toggleMoodPicker()">
               <span id="motivationMoodLabel">⚡ شارژکننده</span> · تغییر حال‌وهوا
             </div>
-            <div class="motivation-custom-actions">
-              <button class="btn ghost sm" type="button" onclick="openCustomMotivationComposer()">💬 پیام سفارشی</button>
-            </div>
           </div>
         </div>
+        <!-- v21.3: the quote card shows one control, not two. «پیام سفارشی»
+             lives inside the picker it belongs to, so the closed card is just
+             the sentence and a single small line under it. -->
         <div class="chip-group" id="moodPicker" style="display:none; margin-top:12px;">
           <div class="chip-opt" data-mood="strict">🔥 سخت‌گیر</div>
           <div class="chip-opt" data-mood="energize">⚡ شارژکننده</div>
           <div class="chip-opt" data-mood="calm">🧘 آرام</div>
           <div class="chip-opt" data-mood="focus">🎯 تمرکزی</div>
           <div class="chip-opt" data-mood="supportive">💪 حمایتی</div>
+          <button class="btn ghost sm" type="button" onclick="openCustomMotivationComposer()">💬 پیام سفارشی</button>
         </div>
         <div class="motivation-custom-box" id="motivationCustomBox">
           <textarea autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="dashboardMotivationInput" maxlength="220" placeholder="مثلاً: امروز فقط یک قدم جلوتر."></textarea>
@@ -142,9 +150,13 @@ try{
       <div class="topbar">
         <div><h1>مدیریت تسک‌ها</h1><div class="sub">همه‌ی کارها، اولویت‌ها و ددلاین‌ها یک‌جا</div></div>
         <div class="top-actions">
+          <!-- v21.3: one ❓ next to the one action, nothing else -->
+          <button class="guide-btn" type="button" onclick="openGuide('tasks')" title="راهنمای تسک‌ها" aria-label="راهنمای تسک‌ها">❓</button>
           <button class="btn" onclick="openTaskModal()">➕ تسک جدید</button>
         </div>
       </div>
+      <!-- v21.3: the one-time hint for a first visit to this section -->
+      <div class="guide-slot" id="guideSlot-tasks"></div>
       <!-- v16: "Completed" is a tab now, not a permanently open block. The
            in-progress / queued / paused tabs were removed — the status of a
            single task is still editable from its own details menu. -->
@@ -168,8 +180,11 @@ try{
         <div><h1>تقویم هفتگی</h1><div class="sub">بلوک‌بندی ساعتی از ۶ صبح تا ۳ بامداد</div></div>
         <div class="top-actions"><button class="btn ghost calendar-now-btn" type="button" onclick="scrollCalendarToNow()">🕒 الان</button><button class="icon-btn" type="button" onclick="openCatManager()" title="دسته‌ها و رنگ‌ها" aria-label="دسته‌ها و رنگ‌ها">🏷️</button><button class="btn" onclick="openEventModal()">➕ رویداد جدید</button></div>
       </div>
+      <!-- v21.3: one quiet line instead of three; the full gesture text moved
+           into the guide, where a new user actually looks for it. -->
       <div class="calendar-intro" aria-label="راهنمای تقویم">
-        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><span>رویداد را بکش تا جابه‌جا شود؛ لبهٔ بالا یا پایینش را یک لحظه نگه دار و بعد بکش تا مدتش کم‌وزیاد شود. روی خانه‌ی خالی بزن تا رویداد جدید بسازی.</span></div></div>
+        <div class="calendar-intro-copy"><span class="calendar-spark">✦</span><div><span>رویداد را بکش تا جابه‌جا شود؛ لبه‌اش را نگه دار تا مدتش عوض شود.</span></div></div>
+        <button class="btn ghost sm guide-open-btn" type="button" onclick="openGuide('calendar')" title="راهنمای تقویم" aria-label="راهنمای تقویم">❓ راهنما</button>
         <div class="calendar-legend"><span><i class="legend-dot legend-dot-today"></i>امروز</span><span><i class="legend-dot legend-dot-now"></i>زمان فعلی</span><span><i class="legend-dot legend-dot-night"></i>بامداد</span></div>
       </div>
       <div class="card calendar-card">
@@ -891,8 +906,21 @@ try{
         </div>
       </div>
 
+      <!-- v21.3: the three section guides also live here, so they can be found
+           without hunting for a ❓ in each section. -->
+      <div class="card settings-card">
+        <div class="card-head"><h3>❓ راهنمای بخش‌ها</h3></div>
+        <p class="muted settings-help">راهنمای کوتاهِ داشبورد، تسک‌ها و تقویم. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.</p>
+        <div class="settings-actions">
+          <button class="btn ghost" type="button" onclick="openGuide('dashboard')">🏠 داشبورد</button>
+          <button class="btn ghost" type="button" onclick="openGuide('tasks')">✅ تسک‌ها</button>
+          <button class="btn ghost" type="button" onclick="openGuide('calendar')">📅 تقویم</button>
+        </div>
+        <button class="btn ghost sm" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="lpResetGuides()">↩️ نمایش دوباره‌ی راهنمای خودکار</button>
+      </div>
+
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">21.2</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">21.3</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -906,8 +934,8 @@ try{
   <h2>✅ تسک جدید</h2>
   <div class="field"><label>عنوان تسک</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="tTitle" placeholder="مثلاً: مطالعه فصل ۳ ریاضی"></div>
   <div class="row2">
-    <div class="field"><label>دسته‌بندی</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="tCat" placeholder="درس، کار، شخصی..."></div>
-    <div class="field"><label>ددلاین اول</label>
+    <div class="field"><label>دسته‌بندی <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری)</span></label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="tCat" placeholder="درس، کار، شخصی..."></div>
+    <div class="field"><label>ددلاین اول <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری)</span></label>
       <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="tDateDisplay" readonly placeholder="انتخاب ددلاین" onclick="openJalaliPicker('tDate','tDateDisplay')">
       <input type="hidden" id="tDate" value="">
     </div>
@@ -915,7 +943,7 @@ try{
   <div class="field"><label>رنگ تسک (اختیاری) — اگر انتخاب نکنی، رنگ دسته‌بندی استفاده می‌شود</label>
     <div class="chip-group lp-color-row" id="tColorRow"></div>
   </div>
-  <div class="field"><label>اولویت</label>
+  <div class="field"><label>اولویت <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری)</span></label>
     <div class="chip-group" id="tPriority">
       <div class="chip-opt" data-v="low">پایین</div>
       <div class="chip-opt sel" data-v="medium">متوسط</div>
@@ -923,7 +951,7 @@ try{
       <div class="chip-opt" data-v="critical">بحرانی</div>
     </div>
   </div>
-  <div class="field"><label>وضعیت</label>
+  <div class="field"><label>وضعیت <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری)</span></label>
     <div class="chip-group" id="tStatus">
       <div class="chip-opt sel" data-v="notstarted">⬜ شروع نشده</div>
       <div class="chip-opt" data-v="inprogress">▶️ در حال انجام</div>
@@ -931,7 +959,7 @@ try{
       <div class="chip-opt" data-v="paused">⏸️ متوقف</div>
     </div>
   </div>
-  <div class="field"><label>زمان تخمینی (دقیقه)</label><input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="tEst" placeholder="۳۰"></div>
+  <div class="field"><label>زمان تخمینی (دقیقه) <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری)</span></label><input type="number" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="tEst" placeholder="۳۰"></div>
   <div class="field">
     <label>ددلاین‌های اضافه <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری)</span></label>
     <div id="extraDeadlinesWrap" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
@@ -1163,6 +1191,57 @@ try{
 </div></div>
 
 
+<!-- v21.3: راهنمای بخش‌ها — one modal, three panels, opened by the ❓ of the
+     Dashboard / Tasks / Calendar (and from Settings). Every string here is
+     static on purpose: the guide still reads if js/v213.js never loads. -->
+<div class="modal-bg" id="guideModalBg"><div class="modal guide-modal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+  <div class="guide-head">
+    <h2 id="guideTitle">📖 راهنمای داشبورد</h2>
+    <button class="btn ghost sm" type="button" onclick="closeGuide()" aria-label="بستن راهنما">✕</button>
+  </div>
+  <div class="chip-group guide-tabs" id="guideTabs" role="tablist" aria-label="بخش‌های راهنما">
+    <div class="chip-opt sel" data-g="dashboard" role="tab" tabindex="0" aria-selected="true">🏠 داشبورد</div>
+    <div class="chip-opt" data-g="tasks" role="tab" tabindex="0" aria-selected="false">✅ تسک‌ها</div>
+    <div class="chip-opt" data-g="calendar" role="tab" tabindex="0" aria-selected="false">📅 تقویم</div>
+  </div>
+
+  <section class="guide-panel sel" data-g="dashboard" role="tabpanel">
+    <p class="guide-lead">داشبورد یعنی «امروز چه‌کار داری؟» — همین سه کارت، نه چیز دیگر.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">👋</span><div class="guide-row-txt"><b>سلام و جمله‌ی امروز</b><span>تاریخ امروز و یک جمله‌ی انگیزشی؛ با «تغییر حال‌وهوا» فقط لحن جمله عوض می‌شود.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🎯</span><div class="guide-row-txt"><b>مأموریت روزانه</b><span>یک کار کوچک با جایزه‌ی XP: «انجامش دادم» جایزه می‌دهد و «ردش کن» کمی XP کم می‌کند. با تیک «مرخصی» هیچ مأموریتی نمی‌آید.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📋</span><div class="guide-row-txt"><b>برنامه‌ی امروز</b><span>تسک‌هایی که امروز پیش رو داری. دایره‌ی کنار هر کدام را بزن تا انجام شود و XP بگیری.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📥</span><div class="guide-row-txt"><b>اینباکس سریع</b><span>دکمه‌ی 📥 بالا برای فکرهای یکهویی است: فقط بنویس، بعداً در بخش تسک‌ها مرتبش کن.</span></div></div>
+    </div>
+  </section>
+
+  <section class="guide-panel" data-g="tasks" role="tabpanel">
+    <p class="guide-lead">یک لیست از همه‌ی کارها با چهار تب. هیچ گزینه‌ی اجباری‌ای وجود ندارد.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">➕</span><div class="guide-row-txt"><b>تسک جدید</b><span>فقط عنوان را بنویس و «ذخیره» را بزن؛ دسته، ددلاین، اولویت و بقیه همه اختیاری‌اند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🗂️</span><div class="guide-row-txt"><b>چهار تب</b><span>همه، شروع نشده، Inbox و تکمیل‌شده. شمارنده‌ی قرمز یعنی چند کار در Inbox منتظر مرتب شدن است.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">✅</span><div class="guide-row-txt"><b>تیک یعنی XP</b><span>با تیک زدن، تسک به تب «تکمیل‌شده» می‌رود و XP می‌گیری؛ از همان‌جا هم برمی‌گردد.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">⋯</span><div class="guide-row-txt"><b>جزئیات بیشتر</b><span>روی عنوان تسک بزن تا وضعیت، زیرتسک، ددلاین اضافه، ویرایش و حذف را یک‌جا ببینی.</span></div></div>
+    </div>
+  </section>
+
+  <section class="guide-panel" data-g="calendar" role="tabpanel">
+    <p class="guide-lead">یک هفته، ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد. همه‌چیز با کشیدن انگشت انجام می‌شود.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">➕</span><div class="guide-row-txt"><b>رویداد جدید</b><span>بالا «رویداد جدید» را بزن؛ عنوان، روز و ساعت کافی است.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🖐️</span><div class="guide-row-txt"><b>جابه‌جایی و تغییر مدت</b><span>رویداد را بکش تا جابه‌جا شود؛ لبهٔ بالا یا پایینش را یک لحظه نگه دار و بعد بکش تا مدتش کم‌وزیاد شود. روی خانه‌ی خالی بزن تا رویداد جدید بسازی.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🕒</span><div class="guide-row-txt"><b>«الان» و «امروز»</b><span>«🕒 الان» شبکه را به ساعت فعلی می‌برد و «امروز» به هفته‌ی جاری برمی‌گرداند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🏷️</span><div class="guide-row-txt"><b>دسته‌ها و رنگ‌ها</b><span>با 🏷️ برای رویدادها دسته و رنگ بساز تا یک هفته‌ی شلوغ خوانا بماند.</span></div></div>
+    </div>
+    <p class="muted guide-note">🌙 ساعت‌های بعد از نیمه‌شب، پایینِ ستونِ همان شب می‌نشینند.</p>
+  </section>
+
+  <div class="guide-foot">
+    <button class="btn" type="button" id="guideCta" onclick="guidePrimaryAction()">📥 اینباکس سریع</button>
+    <button class="btn ghost" type="button" onclick="closeGuide()">بستن</button>
+  </div>
+</div></div>
+
 <div class="modal-bg" id="pinnedNavModalBg">
   <div class="modal" style="max-width:430px;">
     <h2 style="text-align:center;">📌 نوار دسترسی سریع</h2>
@@ -1189,16 +1268,18 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=21.2"></script>
-<script src="js/enhancements.js?v=21.2"></script>
-<script src="js/sw-register.js?v=21.2"></script>
+<script src="js/core.js?v=21.3"></script>
+<script src="js/enhancements.js?v=21.3"></script>
+<script src="js/sw-register.js?v=21.3"></script>
 
-<script src="js/pomodoro.js?v=21.2"></script>
+<script src="js/pomodoro.js?v=21.3"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=21.2"></script>
-<script src="js/v16.js?v=21.2"></script>
-<script src="js/v162.js?v=21.2"></script>
-<script src="js/v21.js?v=21.2"></script>
+<script src="js/lang.js?v=21.3"></script>
+<script src="js/v16.js?v=21.3"></script>
+<script src="js/v162.js?v=21.3"></script>
+<script src="js/v21.js?v=21.3"></script>
+<!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
+<script src="js/v213.js?v=21.3"></script>
 
 </body>
 </html>

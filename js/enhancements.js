@@ -112,6 +112,11 @@ function openCustomMotivationComposer(){
   const input=document.getElementById('dashboardMotivationInput');
   if(!box)return;
   box.classList.add('open');
+  /* v21.3 — the composer moved inside the mood picker, and the two are
+     alternatives: writing your own line replaces the mood. Closing the picker
+     leaves one thing on screen at a time. */
+  const picker=document.getElementById('moodPicker');
+  if(picker) picker.style.display='none';
   /* v21 — no focus(): the composer slides open with the keyboard closed and
      the user taps the box when they want to write (see js/v21.js). */
   if(input){ input.value=DB.motivation.custom||''; }

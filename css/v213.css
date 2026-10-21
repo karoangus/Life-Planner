@@ -1,0 +1,188 @@
+/* ============================================================
+   Life Planner — v21.3 «راهنمای سه بخش»
+   Dashboard / Tasks / Calendar get one shared help layer, and
+   the three sections lose a little more noise on the way:
+
+     1. ❓ one button per section opens the same guide modal;
+     2. a slim one-time hint (never a blocking popup) tells a
+        first-time visitor what the section is for;
+     3. «سه قدم اول» — a three-step card that only ever appears
+        on an empty account and retires itself when it is done;
+     4. two small declutters: the calendar intro shrinks to a
+        single line (the long gesture text moved into the guide)
+        and an empty category row no longer leaves a gap.
+
+   Additive and cheap, like v20.css: no animation on layout, no
+   backdrop-filter, no new blur — a mid-range phone stays smooth
+   and «⚡ پرفورمنس» keeps working without a single extra rule.
+   ============================================================ */
+
+/* ---- 1) the ❓ button that opens a section guide ------------------------ */
+
+/* Same footprint as .icon-btn, but it sits inside a row of text buttons and
+   must never push «➕ تسک جدید» off the screen on a narrow phone. */
+.guide-btn{
+  width:40px;
+  height:40px;
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--txt-dim);
+  font:inherit;
+  font-size:15px;
+  cursor:pointer;
+}
+.guide-btn:hover{color:var(--neon);border-color:var(--neon-35, rgba(0,229,255,.35));}
+.guide-btn:active{background:var(--track);}
+#view-dashboard .dash-hero-top .guide-btn{width:36px;height:36px;border-radius:11px;}
+
+/* the calendar keeps its own inline hint, so its ❓ is a text button */
+.guide-open-btn{white-space:nowrap;flex:0 0 auto;}
+
+/* ---- 2) one-time hint + quick start live in one slot per view ----------- */
+
+.guide-slot{margin:0 0 14px;}
+.guide-slot:empty{display:none;}          /* no card → no empty gap either */
+
+.guide-hint{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--panel);
+}
+.guide-hint-ic{font-size:16px;line-height:1;flex:0 0 auto;}
+.guide-hint-txt{
+  flex:1;
+  min-width:0;
+  font-size:11.8px;
+  line-height:1.85;
+  color:var(--txt-dim);
+}
+.guide-hint-x,
+.qs-x{
+  width:30px;
+  height:30px;
+  flex:0 0 auto;
+  border-radius:9px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--txt-dim2);
+  font:inherit;
+  font-size:12px;
+  cursor:pointer;
+}
+.guide-hint-x:hover,
+.qs-x:hover{color:var(--txt);border-color:var(--line2);}
+
+/* ---- 3) «سه قدم اول» — the new-user card ------------------------------- */
+
+.qs-card{
+  padding:13px;
+  border:1px solid rgba(0,229,255,.22);
+  border-radius:16px;
+  background:linear-gradient(120deg, rgba(0,229,255,.06), rgba(139,107,255,.06));
+}
+html[data-theme="light"] .qs-card{border-color:rgba(8,145,178,.24);}
+.qs-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.qs-title{font-size:13.5px;font-weight:800;}
+.qs-sub{font-size:11.5px;line-height:1.85;color:var(--txt-dim);margin-top:4px;}
+.qs-steps{display:grid;gap:8px;margin-top:11px;}
+.qs-step{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 11px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--panel2);
+}
+.qs-step.done{border-color:rgba(46,230,166,.3);}
+.qs-num{
+  width:24px;height:24px;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:8px;
+  background:var(--track);
+  color:var(--txt-dim);
+  font-size:11.5px;font-weight:800;
+}
+.qs-step.done .qs-num{background:rgba(46,230,166,.16);color:var(--ok);}
+.qs-name{flex:1;min-width:0;font-size:12.3px;font-weight:700;line-height:1.7;}
+.qs-step.done .qs-name{color:var(--txt-dim);}
+.qs-done-tag{font-size:11px;font-weight:800;color:var(--ok);white-space:nowrap;}
+
+/* ---- 4) the guide modal ------------------------------------------------- */
+
+.guide-modal{max-width:520px;}
+.guide-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.guide-head h2{margin:0;font-size:16px;}
+.guide-tabs{margin-bottom:14px;}
+.guide-panel{display:none;}
+.guide-panel.sel{display:block;}
+.guide-lead{
+  margin:0 0 12px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  font-size:12.3px;
+  line-height:1.95;
+  color:var(--txt);
+}
+.guide-rows{display:grid;gap:9px;}
+.guide-row{
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+  padding:11px 12px;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:var(--panel2);
+}
+.guide-ic{font-size:16px;line-height:1.5;flex:0 0 auto;}
+.guide-row-txt{min-width:0;}
+.guide-row-txt b{display:block;font-size:12.6px;margin-bottom:3px;}
+.guide-row-txt span{display:block;font-size:11.5px;line-height:1.9;color:var(--txt-dim);}
+.guide-foot{display:flex;gap:9px;margin-top:15px;}
+.guide-foot .btn{flex:1;justify-content:center;}
+.guide-note{margin:11px 0 0;font-size:11.3px;line-height:1.9;}   /* the calendar's extra note */
+
+/* ---- 5) two small declutters ------------------------------------------- */
+
+/* Tasks: an empty category row used to leave a 16px hole above the list. */
+#categoryFilters:empty{display:none;}
+
+/* Calendar: the intro is one quiet line now — the long gesture text lives in
+   the guide, where a new user actually looks for it. The line takes whatever
+   width is left, so the ❓ beside it never gets squeezed off the row. */
+.calendar-intro{gap:10px;}
+.calendar-intro-copy{flex:1 1 auto;}
+.calendar-intro-copy>div>span{font-size:11.3px;}
+
+/* Dashboard: the quote card shows one control, not two. The custom-message
+   button sits inside the mood picker it belongs to. */
+#moodPicker .btn{flex:1 1 100%;justify-content:center;margin-top:2px;}
+
+/* ---- 6) small screens --------------------------------------------------- */
+
+@media (max-width:380px){
+  .guide-hint{flex-wrap:wrap;}
+  .guide-hint .btn{flex:1 1 100%;justify-content:center;}
+  .qs-step{flex-wrap:wrap;}
+  .qs-step .btn{flex:1 1 100%;justify-content:center;}
+  .guide-foot{flex-direction:column;}
+}
+
+/* ---- 7) performance mode / lite phone ---------------------------------- */
+
+html.lp-perf .guide-btn,
+html.lp-perf .guide-hint-x,
+html.lp-perf .qs-x,
+html.lp-perf .qs-card{transition:none;animation:none;}
+html.lp-perf .qs-card{background:var(--panel);}
