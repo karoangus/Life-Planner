@@ -8,10 +8,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=21.3">
-<link rel="stylesheet" href="css/design-system.css?v=21.3">
-<link rel="stylesheet" href="css/v20.css?v=21.3">
-<link rel="stylesheet" href="css/v213.css?v=21.3">
+<link rel="stylesheet" href="css/app.css?v=21.4">
+<link rel="stylesheet" href="css/design-system.css?v=21.4">
+<link rel="stylesheet" href="css/v20.css?v=21.4">
+<link rel="stylesheet" href="css/v213.css?v=21.4">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -205,8 +205,14 @@ try{
     <div class="view" id="view-habits">
       <div class="topbar">
         <div><h1>ردیاب عادت‌ها</h1><div class="sub">هر روزی که تیک بزنی، استریکت قوی‌تر می‌شه</div></div>
-        <div class="top-actions"><button class="btn" onclick="openHabitModal()">➕ عادت جدید</button></div>
+        <div class="top-actions">
+          <!-- v21.4: the same single ❓ the other simplified sections carry -->
+          <button class="guide-btn" type="button" onclick="openGuide('habits')" title="راهنمای عادت‌ها" aria-label="راهنمای عادت‌ها">❓</button>
+          <button class="btn" onclick="openHabitModal()">➕ عادت جدید</button>
+        </div>
       </div>
+      <!-- v21.4: one slot for the first-visit hint — it retires itself for good -->
+      <div class="guide-slot" id="guideSlot-habits"></div>
       <div class="card habit-shield-card" id="habitShieldSection" style="margin-bottom:14px; padding:12px 16px;">
         <label class="check-row" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin:0; user-select:none;">
           <div style="display:flex; align-items:center; gap:12px;">
@@ -226,8 +232,14 @@ try{
     <div class="view" id="view-goals">
       <div class="topbar">
         <div><h1>مدیریت اهداف</h1><div class="sub">از هدف بزرگ زندگی تا اکشن روزانه</div></div>
-        <div class="top-actions"><button class="btn" onclick="openGoalModal()">➕ هدف جدید</button></div>
+        <div class="top-actions">
+          <!-- v21.4 -->
+          <button class="guide-btn" type="button" onclick="openGuide('goals')" title="راهنمای اهداف" aria-label="راهنمای اهداف">❓</button>
+          <button class="btn" onclick="openGoalModal()">➕ هدف جدید</button>
+        </div>
       </div>
+      <!-- v21.4 -->
+      <div class="guide-slot" id="guideSlot-goals"></div>
       <div class="card"><div id="goalList"></div></div>
     </div>
 
@@ -235,8 +247,14 @@ try{
     <div class="view" id="view-notes">
       <div class="topbar">
         <div><h1>یادداشت‌ها</h1><div class="sub">پایگاه دانش شخصی تو</div></div>
-        <div class="top-actions"><button class="btn" onclick="openNoteModal()">➕ یادداشت جدید</button></div>
+        <div class="top-actions">
+          <!-- v21.4 -->
+          <button class="guide-btn" type="button" onclick="openGuide('notes')" title="راهنمای یادداشت‌ها" aria-label="راهنمای یادداشت‌ها">❓</button>
+          <button class="btn" onclick="openNoteModal()">➕ یادداشت جدید</button>
+        </div>
       </div>
+      <!-- v21.4 -->
+      <div class="guide-slot" id="guideSlot-notes"></div>
       <div class="card notes-tools">
         <div class="notes-tools-row">
           <div class="field notes-search-field" style="margin:0;">
@@ -906,21 +924,24 @@ try{
         </div>
       </div>
 
-      <!-- v21.3: the three section guides also live here, so they can be found
-           without hunting for a ❓ in each section. -->
+      <!-- v21.3: the section guides also live here, so they can be found
+           without hunting for a ❓ in each section (v21.4: six of them now). -->
       <div class="card settings-card">
         <div class="card-head"><h3>❓ راهنمای بخش‌ها</h3></div>
-        <p class="muted settings-help">راهنمای کوتاهِ داشبورد، تسک‌ها و تقویم. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.</p>
+        <p class="muted settings-help">راهنمای کوتاهِ داشبورد، تسک‌ها، تقویم، عادت‌ها، اهداف و یادداشت‌ها. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.</p>
         <div class="settings-actions">
           <button class="btn ghost" type="button" onclick="openGuide('dashboard')">🏠 داشبورد</button>
           <button class="btn ghost" type="button" onclick="openGuide('tasks')">✅ تسک‌ها</button>
           <button class="btn ghost" type="button" onclick="openGuide('calendar')">📅 تقویم</button>
+          <button class="btn ghost" type="button" onclick="openGuide('habits')">🔥 عادت‌ها</button>
+          <button class="btn ghost" type="button" onclick="openGuide('goals')">🎯 اهداف</button>
+          <button class="btn ghost" type="button" onclick="openGuide('notes')">📝 یادداشت‌ها</button>
         </div>
         <button class="btn ghost sm" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="lpResetGuides()">↩️ نمایش دوباره‌ی راهنمای خودکار</button>
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">21.3</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">21.4</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -994,7 +1015,6 @@ try{
       <div class="chip-opt" data-v="🎯">🎯</div><div class="chip-opt" data-v="💻">💻</div>
     </div>
   </div>
-  <div id="hShieldHabits" class="shield-habit-options" style="display:none;"></div>
   <div class="modal-actions"><button class="btn ghost" onclick="closeModal('habitModalBg')">انصراف</button><button class="btn" onclick="saveHabit()">ذخیره</button></div>
 </div></div>
 
@@ -1191,8 +1211,8 @@ try{
 </div></div>
 
 
-<!-- v21.3: راهنمای بخش‌ها — one modal, three panels, opened by the ❓ of the
-     Dashboard / Tasks / Calendar (and from Settings). Every string here is
+<!-- v21.3: راهنمای بخش‌ها — one modal, one panel per section, opened by the ❓ of
+     each section (and from Settings). v21.4 added Habits, Goals and Notes. Every string here is
      static on purpose: the guide still reads if js/v213.js never loads. -->
 <div class="modal-bg" id="guideModalBg"><div class="modal guide-modal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
   <div class="guide-head">
@@ -1203,6 +1223,10 @@ try{
     <div class="chip-opt sel" data-g="dashboard" role="tab" tabindex="0" aria-selected="true">🏠 داشبورد</div>
     <div class="chip-opt" data-g="tasks" role="tab" tabindex="0" aria-selected="false">✅ تسک‌ها</div>
     <div class="chip-opt" data-g="calendar" role="tab" tabindex="0" aria-selected="false">📅 تقویم</div>
+    <!-- v21.4: habits, goals and notes joined the same guide -->
+    <div class="chip-opt" data-g="habits" role="tab" tabindex="0" aria-selected="false">🔥 عادت‌ها</div>
+    <div class="chip-opt" data-g="goals" role="tab" tabindex="0" aria-selected="false">🎯 اهداف</div>
+    <div class="chip-opt" data-g="notes" role="tab" tabindex="0" aria-selected="false">📝 یادداشت‌ها</div>
   </div>
 
   <section class="guide-panel sel" data-g="dashboard" role="tabpanel">
@@ -1234,6 +1258,40 @@ try{
       <div class="guide-row"><span class="guide-ic">🏷️</span><div class="guide-row-txt"><b>دسته‌ها و رنگ‌ها</b><span>با 🏷️ برای رویدادها دسته و رنگ بساز تا یک هفته‌ی شلوغ خوانا بماند.</span></div></div>
     </div>
     <p class="muted guide-note">🌙 ساعت‌های بعد از نیمه‌شب، پایینِ ستونِ همان شب می‌نشینند.</p>
+  </section>
+
+
+  <!-- v21.4: the three remaining complex sections, same shape as the others -->
+  <section class="guide-panel" data-g="habits" role="tabpanel">
+    <p class="guide-lead">عادت یعنی کاری که هر روز تکرارش می‌کنی — تنها کار تو تیک زدن خانه‌ی امروز است.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">➕</span><div class="guide-row-txt"><b>عادت جدید</b><span>یک نام و یک ایموجی از هشت ایموجی آماده؛ فقط همین دو تا. با ✏️ هر وقت خواستی عوضشان می‌کنی، بدون این‌که تیک‌ها و استریکت بپرند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🔲</span><div class="guide-row-txt"><b>خانه‌ی امروز</b><span>روی هر کارت هفت خانه‌ی شنبه تا جمعه است، ولی فقط خانه‌ی امروز (که روشن‌تر است) تیک می‌خورد؛ بقیه برای دیدنِ هفته‌اند و همیشه هفته‌ی جاری می‌مانند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🔥</span><div class="guide-row-txt"><b>استریک و XP</b><span>«N روز پیاپی» یعنی چند روز پشت‌سرهم تیک زده‌ای. هر تیک ۶ XP می‌دهد — برای هر عادت روزی یک بار — و رکورد بهترین استریک را در پروفایل بالا می‌برد.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🛡️</span><div class="guide-row-txt"><b>محافظت Streak Shield</b><span>کلید بالای لیست را روشن نگه دار؛ اگر سپر داشته باشی و یک روز را جا بیندازی، برنامه خودش دیروز را تیک می‌زند تا زنجیره نشکند (با یک سپر، همه‌ی عادت‌های جا‌مانده نجات پیدا می‌کنند).</span></div></div>
+    </div>
+    <p class="muted guide-note">🛍️ سپر را از XP Shop (۵۰۰ XP)، از درخت مهارت «محافظ استریک» یا از جعبه‌ی شانسی می‌گیری — حداکثر ۱ سپر در دست و ۳ خرید در هفته.</p>
+  </section>
+
+  <section class="guide-panel" data-g="goals" role="tabpanel">
+    <p class="guide-lead">هدف یعنی یک درصد که کم‌کم به ۱۰۰ می‌رسد — با چهار دکمه، بدون فرم و بدون عدد نوشتن.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">🎯</span><div class="guide-row-txt"><b>هدف جدید</b><span>عنوان + یک افق زمانی (روزانه، هفتگی، ماهانه، سالانه، زندگی) + درصد شروع. پیش‌فرض هفتگی است و جز عنوان هیچ‌کدام اجباری نیست.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">➕</span><div class="guide-row-txt"><b>چهار دکمه روی کارت</b><span>-۱۰٪ / -۲٪ / +۲٪ / +۱۰٪ — با یک کلیک درصد عوض می‌شود و لازم نیست مودال را باز کنی. مقدار همیشه بین ۰ و ۱۰۰ می‌ماند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📈</span><div class="guide-row-txt"><b>پیشرفتِ امروز جدا ثبت می‌شود</b><span>هر درصدی که امروز اضافه کنی برای همان روز نگه داشته می‌شود، پس «امروز چقدر جلو رفتم» با درصدِ کلیِ هدف قاطی نمی‌شود.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🎁</span><div class="guide-row-txt"><b>پاداش و روز عالی</b><span>رسیدن به ۱۰۰٪ یعنی ۴۰ XP. یکی از شرط‌های «روز عالی» هم این است که حداقل یک هدف را امروز ۱۰٪ جلو ببری.</span></div></div>
+    </div>
+  </section>
+
+  <section class="guide-panel" data-g="notes" role="tabpanel">
+    <p class="guide-lead">دفترچه‌ی شخصی تو: بنویس، برچسب بزن و هر وقت خواستی پیدایش کن.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">✍️</span><div class="guide-row-txt"><b>یادداشت جدید</b><span>فقط عنوان اجباری است؛ متن، برچسب، رنگ و سنجاق اختیاری‌اند. زیر متن هم تعداد کلمه و کاراکتر زنده نوشته می‌شود.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🔎</span><div class="guide-row-txt"><b>جست‌وجو و برچسب</b><span>جست‌وجو هم‌زمان در عنوان، متن و برچسب می‌گردد و هر جا پیدا کند هایلایت می‌کند. چیپسِ هر برچسب تعداد یادداشت‌هایش را هم نشان می‌دهد.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📌</span><div class="guide-row-txt"><b>سنجاق و ترتیب</b><span>سنجاق‌شده‌ها همیشه اول می‌آیند، هر ترتیبی که انتخاب کرده باشی. ترتیب هم چهار حالت دارد: جدیدترین، قدیمی‌ترین، عنوان، طولانی‌ترین.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">👆</span><div class="guide-row-txt"><b>کارت‌ها</b><span>روی کارت بزن تا کامل باز شود. ▦ نمای شبکه‌ای/لیستی را عوض می‌کند و پنج دکمه‌ی پایین کارت کارهای سریع‌اند: ویرایش، سنجاق، کپی، گرفتن متن و حذف.</span></div></div>
+    </div>
+    <p class="muted guide-note">🧹 «پاک کردن فیلتر» فقط وقتی جست‌وجو یا برچسب فعال باشد ظاهر می‌شود؛ حذف یادداشت هم تأیید می‌خواهد.</p>
   </section>
 
   <div class="guide-foot">
@@ -1268,18 +1326,18 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=21.3"></script>
-<script src="js/enhancements.js?v=21.3"></script>
-<script src="js/sw-register.js?v=21.3"></script>
+<script src="js/core.js?v=21.4"></script>
+<script src="js/enhancements.js?v=21.4"></script>
+<script src="js/sw-register.js?v=21.4"></script>
 
-<script src="js/pomodoro.js?v=21.3"></script>
+<script src="js/pomodoro.js?v=21.4"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=21.3"></script>
-<script src="js/v16.js?v=21.3"></script>
-<script src="js/v162.js?v=21.3"></script>
-<script src="js/v21.js?v=21.3"></script>
+<script src="js/lang.js?v=21.4"></script>
+<script src="js/v16.js?v=21.4"></script>
+<script src="js/v162.js?v=21.4"></script>
+<script src="js/v21.js?v=21.4"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=21.3"></script>
+<script src="js/v213.js?v=21.4"></script>
 
 </body>
 </html>

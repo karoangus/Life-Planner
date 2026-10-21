@@ -39,7 +39,7 @@
     "❓ راهنما": "❓ Guide",
     "بستن راهنما": "Close the guide",
     "بخش‌های راهنما": "Guide sections",
-    "راهنمای کوتاهِ داشبورد، تسک‌ها و تقویم. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.": "Short guides for the Dashboard, Tasks and the Calendar. Inside each section the same guide opens with its ❓ button.",
+    "راهنمای کوتاهِ داشبورد، تسک‌ها، تقویم، عادت‌ها، اهداف و یادداشت‌ها. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.": "Short guides for the Dashboard, Tasks, the Calendar, Habits, Goals and Notes. Inside each section the same guide opens with its ❓ button.",
     "↩️ نمایش دوباره‌ی راهنمای خودکار": "↩️ Show the automatic guides again",
     "↩️ راهنمای خودکار بخش‌ها دوباره فعال شد": "↩️ The automatic section guides are on again",
     "⚠️ این بخش در دسترس نیست": "⚠️ This section is not available",
@@ -1235,7 +1235,57 @@
     '✏️ هدف ویرایش شد': '✏️ Goal updated'
   };
   for(var _k in EXTRA){ if(Object.prototype.hasOwnProperty.call(EXTRA, _k)) EXACT[_k] = EXTRA[_k]; }
+  /* v21.4: Habits, Goals and Notes joined the section guides. Icon-prefixed
+     cores ("📖 راهنمای عادت‌ها", "🔥 عادت‌ها") are still handled by compose();
+     a paragraph that *starts* with an icon is listed in full instead. */
+  var EXTRA_V214 = {
+    /* the ❓ button and the modal title of each new section */
+    "راهنمای عادت‌ها": "Habits guide",
+    "راهنمای اهداف": "Goals guide",
+    "راهنمای یادداشت‌ها": "Notes guide",
+    /* the guide panels — one lead, four rows and (where useful) a closing note */
+    "عادت یعنی کاری که هر روز تکرارش می‌کنی — تنها کار تو تیک زدن خانه‌ی امروز است.": "A habit is something you repeat every day — all you have to do is tick today’s box.",
+    "عادت جدید": "New habit",
+    "یک نام و یک ایموجی از هشت ایموجی آماده؛ فقط همین دو تا. با ✏️ هر وقت خواستی عوضشان می‌کنی، بدون این‌که تیک‌ها و استریکت بپرند.": "A name and one emoji out of eight ready-made ones; that is all. With ✏️ you can change both whenever you like, without losing your ticks or your streak.",
+    "خانه‌ی امروز": "Today’s box",
+    "روی هر کارت هفت خانه‌ی شنبه تا جمعه است، ولی فقط خانه‌ی امروز (که روشن‌تر است) تیک می‌خورد؛ بقیه برای دیدنِ هفته‌اند و همیشه هفته‌ی جاری می‌مانند.": "Each card shows seven boxes, Saturday to Friday, but only today’s box (the brighter one) can be ticked; the rest are there to read the week and always stay on the current week.",
+    "استریک و XP": "Streak and XP",
+    "«N روز پیاپی» یعنی چند روز پشت‌سرهم تیک زده‌ای. هر تیک ۶ XP می‌دهد — برای هر عادت روزی یک بار — و رکورد بهترین استریک را در پروفایل بالا می‌برد.": "“N days in a row” is how many days you have ticked without a gap. Each tick gives 6 XP — once a day per habit — and lifts your best-streak record in the profile.",
+    "کلید بالای لیست را روشن نگه دار؛ اگر سپر داشته باشی و یک روز را جا بیندازی، برنامه خودش دیروز را تیک می‌زند تا زنجیره نشکند (با یک سپر، همه‌ی عادت‌های جا‌مانده نجات پیدا می‌کنند).": "Keep the switch above the list on; if you own a shield and miss a day, the app ticks yesterday for you so the chain does not break (one shield saves every habit that was missed).",
+    "🛍️ سپر را از XP Shop (۵۰۰ XP)، از درخت مهارت «محافظ استریک» یا از جعبه‌ی شانسی می‌گیری — حداکثر ۱ سپر در دست و ۳ خرید در هفته.": "🛍️ You get a shield from the XP Shop (500 XP), from the “Streak Guard” skill or from a mystery box — at most 1 shield held and 3 purchases a week.",
+    "هدف یعنی یک درصد که کم‌کم به ۱۰۰ می‌رسد — با چهار دکمه، بدون فرم و بدون عدد نوشتن.": "A goal is a percentage that slowly reaches 100 — with four buttons, no form and no typing numbers.",
+    "هدف جدید": "New goal",
+    "عنوان + یک افق زمانی (روزانه، هفتگی، ماهانه، سالانه، زندگی) + درصد شروع. پیش‌فرض هفتگی است و جز عنوان هیچ‌کدام اجباری نیست.": "A title + a time frame (daily, weekly, monthly, yearly, life) + a starting percentage. Weekly is the default, and nothing but the title is required.",
+    "چهار دکمه روی کارت": "The four buttons on the card",
+    "-۱۰٪ / -۲٪ / +۲٪ / +۱۰٪ — با یک کلیک درصد عوض می‌شود و لازم نیست مودال را باز کنی. مقدار همیشه بین ۰ و ۱۰۰ می‌ماند.": "-10% / -2% / +2% / +10% — one click changes the percentage, no need to open the sheet. The value always stays between 0 and 100.",
+    "پیشرفتِ امروز جدا ثبت می‌شود": "Today’s progress is kept separately",
+    "هر درصدی که امروز اضافه کنی برای همان روز نگه داشته می‌شود، پس «امروز چقدر جلو رفتم» با درصدِ کلیِ هدف قاطی نمی‌شود.": "Every percentage you add today is stored for that day, so “how far did I get today” never mixes with the goal’s overall percentage.",
+    "پاداش و روز عالی": "Rewards and the perfect day",
+    "رسیدن به ۱۰۰٪ یعنی ۴۰ XP. یکی از شرط‌های «روز عالی» هم این است که حداقل یک هدف را امروز ۱۰٪ جلو ببری.": "Reaching 100% means 40 XP. One of the “perfect day” conditions is also moving at least one goal forward by 10% today.",
+    "دفترچه‌ی شخصی تو: بنویس، برچسب بزن و هر وقت خواستی پیدایش کن.": "Your personal notebook: write it, tag it and find it whenever you need it.",
+    "یادداشت جدید": "New note",
+    "فقط عنوان اجباری است؛ متن، برچسب، رنگ و سنجاق اختیاری‌اند. زیر متن هم تعداد کلمه و کاراکتر زنده نوشته می‌شود.": "Only the title is required; the body, tag, colour and pin are all optional. The word and character count is written live under the body.",
+    "جست‌وجو و برچسب": "Search and tags",
+    "جست‌وجو هم‌زمان در عنوان، متن و برچسب می‌گردد و هر جا پیدا کند هایلایت می‌کند. چیپسِ هر برچسب تعداد یادداشت‌هایش را هم نشان می‌دهد.": "Search looks through the title, the body and the tag at once and highlights every hit. Each tag chip also shows how many notes it has.",
+    "سنجاق و ترتیب": "Pins and order",
+    "سنجاق‌شده‌ها همیشه اول می‌آیند، هر ترتیبی که انتخاب کرده باشی. ترتیب هم چهار حالت دارد: جدیدترین، قدیمی‌ترین، عنوان، طولانی‌ترین.": "Pinned notes always come first, whatever order you pick. The order itself has four modes: newest, oldest, title, longest.",
+    "کارت‌ها": "The cards",
+    "روی کارت بزن تا کامل باز شود. ▦ نمای شبکه‌ای/لیستی را عوض می‌کند و پنج دکمه‌ی پایین کارت کارهای سریع‌اند: ویرایش، سنجاق، کپی، گرفتن متن و حذف.": "Tap a card to open it in full. ▦ switches between the grid and the list view, and the five buttons at the bottom are shortcuts: edit, pin, duplicate, copy the text and delete.",
+    "🧹 «پاک کردن فیلتر» فقط وقتی جست‌وجو یا برچسب فعال باشد ظاهر می‌شود؛ حذف یادداشت هم تأیید می‌خواهد.": "🧹 “Clear the filter” only appears while a search or a tag is active; deleting a note asks for confirmation too.",
+    /* the one-time hints of the three new sections */
+    "فقط خانه‌ی امروز را تیک بزن؛ استریک و XP خودش می‌آید.": "Just tick today’s box; the streak and the XP take care of themselves.",
+    "یک هدف بساز و هر روز با +۲٪ یا +۱۰٪ جلویش ببر — همین.": "Create a goal and move it forward with +2% or +10% each day — that is all.",
+    "یک عنوان بنویس و ذخیره کن؛ برچسب و رنگ و سنجاق همه اختیاری‌اند.": "Write a title and save it; the tag, the colour and the pin are all optional.",
+    /* core.js: the two deletes that now ask, and the notes layout toggle */
+    "🗑️ عادت حذف شد": "🗑️ Habit deleted",
+    "🗑️ هدف حذف شد": "🗑️ Goal deleted",
+    "تغییر به نمای لیستی": "Switch to the list view",
+    "تغییر به نمای شبکه‌ای": "Switch to the grid view",
+    "نمای لیستی": "the list view",
+    "نمای شبکه‌ای": "the grid view"
+  };
   for(var _k16 in EXTRA_V16){ if(Object.prototype.hasOwnProperty.call(EXTRA_V16, _k16)) EXACT[_k16] = EXTRA_V16[_k16]; }
+  for(var _k214 in EXTRA_V214){ if(Object.prototype.hasOwnProperty.call(EXTRA_V214, _k214)) EXACT[_k214] = EXTRA_V214[_k214]; }
 
   /* ---------- digits ---------- */
   var FA_D = '۰۱۲۳۴۵۶۷۸۹';

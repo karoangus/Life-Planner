@@ -77,6 +77,10 @@ if (!useFallback) {
 
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(e.message));
+  /* v21.4: deleting a habit or a goal asks first, like tasks and notes already did.
+     The questions are recorded so a test can prove the dialog really appeared. */
+  const dialogs = [];
+  page.on('dialog', async d => { dialogs.push(d.message()); await d.accept(); });
 
   // 1) loads without fatal JS errors
   await page.goto(URL, { waitUntil: 'load', timeout: 30000 });
@@ -1024,8 +1028,9 @@ if (!useFallback) {
     const out = {};
 
     out.helpButtons = document.querySelectorAll(
-      '#view-dashboard .guide-btn, #view-tasks .guide-btn, #view-calendar .guide-open-btn').length;
-    out.slotAnchors = ['guideSlot-dashboard', 'guideSlot-tasks']
+      '#view-dashboard .guide-btn, #view-tasks .guide-btn, #view-calendar .guide-open-btn,' +
+      ' #view-habits .guide-btn, #view-goals .guide-btn, #view-notes .guide-btn').length;
+    out.slotAnchors = ['guideSlot-dashboard', 'guideSlot-tasks', 'guideSlot-habits', 'guideSlot-goals', 'guideSlot-notes']
       .filter(id => document.getElementById(id)).length;
     out.panels = [...document.querySelectorAll('#guideModalBg .guide-panel[data-g]')].map(p => p.dataset.g).join(',');
     out.rowsPerPanel = [...document.querySelectorAll('#guideModalBg .guide-panel')].map(p => p.querySelectorAll('.guide-row').length).join(',');
@@ -1072,9 +1077,10 @@ if (!useFallback) {
     out.noNewPopupBlur = getComputedStyle(q('#guideModalBg .modal')).backdropFilter;
     return out;
   });
-  check('v21.3 every simplified section has its own ❓ and one guide modal explains all three',
-    v213.helpButtons === 3 && v213.slotAnchors === 2 && v213.panels === 'dashboard,tasks,calendar' &&
-    v213.rowsPerPanel === '4,4,4', JSON.stringify(v213));
+  check('v21.3 every simplified section has its own ❓ and one guide modal explains them all',
+    v213.helpButtons === 6 && v213.slotAnchors === 5 &&
+    v213.panels === 'dashboard,tasks,calendar,habits,goals,notes' &&
+    v213.rowsPerPanel === '4,4,4,4,4,4', JSON.stringify(v213));
   check('v21.3 the calendar intro is one quiet line and the guide kept the full gestures',
     v213.introChars < 90 && v213.guideKeepsGestures, JSON.stringify(v213));
   check('v21.3 opening the guide shows exactly one panel with the right action',
@@ -1209,7 +1215,7 @@ if (!useFallback) {
     const out = {};
     out.slot = document.getElementById('guideSlot-dashboard').innerHTML;
     out.settingsCard = [...document.querySelectorAll('#view-settings .settings-card')]
-      .some(c => c.textContent.includes('راهنمای بخش‌ها') && c.querySelectorAll('[onclick^="openGuide("]').length === 3);
+      .some(c => c.textContent.includes('راهنمای بخش‌ها') && c.querySelectorAll('[onclick^="openGuide("]').length === 6);
     /* «نمایش دوباره» brings the automatic guides back */
     window.lpResetGuides();
     out.resetState = JSON.parse(localStorage.getItem('lifePlannerGuides_v213'));
@@ -1217,7 +1223,11 @@ if (!useFallback) {
     /* English mode reads the whole guide */
     localStorage.setItem('lifePlannerLang_v1', 'en');
     out.translated = ['سه قدم اول', 'راهنمای بخش‌ها', 'راهنمای تسک‌ها', 'تیکش بزن',
-      'داشبورد یعنی «امروز چه‌کار داری؟» — همین سه کارت، نه چیز دیگر.']
+      'داشبورد یعنی «امروز چه‌کار داری؟» — همین سه کارت، نه چیز دیگر.',
+      /* v21.4: the three new guides and their strings */
+      'راهنمای عادت‌ها', '📖 راهنمای اهداف', '🔥 عادت‌ها', '🗑️ هدف حذف شد',
+      'خانه‌ی امروز', 'استریک و XP', 'چهار دکمه روی کارت', 'سنجاق و ترتیب',
+      'تغییر به نمای لیستی', 'فقط خانه‌ی امروز را تیک بزن؛ استریک و XP خودش می‌آید.']
       .map(s => window.lpTranslate(s));
     localStorage.setItem('lifePlannerLang_v1', 'fa');
     return out;
@@ -1227,6 +1237,181 @@ if (!useFallback) {
     v213after.cardIsBack, JSON.stringify(v213after));
   check('v21.3 every new string has an English translation',
     v213after.translated.every(t => t && !/[\u0600-\u06FF]/.test(t)), JSON.stringify(v213after.translated));
+
+  /* ---------- v21.4: habits, goals and notes joined the same guide ---------- */
+  /* Nothing was removed from those three sections; they only became explainable. */
+  const v214 = await page.evaluate(() => {
+    const clean = () => document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    clean();
+    const q = sel => document.querySelector(sel);
+    const out = {};
+    const trip = (sec) => {
+      window.openGuide(sec);
+      return [q('#guideModalBg .guide-panel.sel').dataset.g, q('#guideTitle').textContent, q('#guideCta').textContent].join('|');
+    };
+    out.habits = trip('habits');
+    out.goals = trip('goals');
+    out.notes = trip('notes');
+    out.tabs = [...document.querySelectorAll('#guideTabs [data-g]')].map(t => t.dataset.g).join(',');
+    out.visiblePanels = [...document.querySelectorAll('#guideModalBg .guide-panel')]
+      .filter(p => getComputedStyle(p).display !== 'none').length;
+    /* the closing button of a guide opens that section's own sheet */
+    window.openGuide('goals');
+    q('#guideCta').click();
+    out.ctaClosedGuide = !document.getElementById('guideModalBg').classList.contains('open');
+    out.ctaOpenedSheet = document.getElementById('goalModalBg').classList.contains('open');
+    clean();
+    /* a real click on another tab follows with panel, title and action */
+    window.openGuide('tasks');
+    q('#guideTabs [data-g="notes"]').click();
+    out.afterTab = q('#guideModalBg .guide-panel.sel').dataset.g + '|' + q('#guideTitle').textContent + '|' + q('#guideCta').textContent;
+    out.readingMarksSeen = window.lpGuide.state().seen.notes === 1;
+    clean();
+    return out;
+  });
+  check('v21.4 each new section opens its own panel, title and action',
+    v214.habits === 'habits|📖 راهنمای عادت‌ها|➕ عادت جدید' &&
+    v214.goals === 'goals|📖 راهنمای اهداف|➕ هدف جدید' &&
+    v214.notes === 'notes|📖 راهنمای یادداشت‌ها|➕ یادداشت جدید', JSON.stringify(v214));
+  check('v21.4 six tabs, one visible panel, and the action opens that section’s sheet',
+    v214.tabs === 'dashboard,tasks,calendar,habits,goals,notes' && v214.visiblePanels === 1 &&
+    v214.ctaClosedGuide && v214.ctaOpenedSheet, JSON.stringify(v214));
+  check('v21.4 switching tab follows panel, title and action together, and reading marks it seen',
+    v214.afterTab === 'notes|📖 راهنمای یادداشت‌ها|➕ یادداشت جدید' && v214.readingMarksSeen,
+    JSON.stringify(v214));
+
+  /* the one-time hint of the three new sections: once, and gone for good */
+  const v214hint = await page.evaluate(() => {
+    localStorage.removeItem('lifePlannerGuides_v213');
+    window.lpGuide.reset();
+    const seen = (k) => JSON.parse(localStorage.getItem('lifePlannerGuides_v213')).seen[k] === 1;
+    const slot = (s) => document.getElementById('guideSlot-' + s).innerHTML;
+    const out = {};
+    window.showView('habits');
+    out.habitsHint = slot('habits').includes('خانه‌ی امروز را تیک بزن') && slot('habits').includes('guide-hint');
+    out.hintInsideView = !!document.getElementById('guideSlot-habits').closest('#view-habits');
+    /* ✕ retires it for good */
+    document.querySelector('#guideSlot-habits [data-hint-x]').click();
+    out.habitsGone = slot('habits') === '';
+    out.habitsStored = seen('habits');
+    /* walking away retires it too */
+    window.showView('goals');
+    out.goalsHint = slot('goals').includes('یک هدف بساز');
+    window.showView('notes');
+    out.goalsGoneAfterWalk = slot('goals') === '';
+    out.goalsStored = seen('goals');
+    /* reading the guide retires it */
+    out.notesHint = slot('notes').includes('یک عنوان بنویس');
+    window.openGuide('notes'); window.closeGuide();
+    out.notesGoneAfterRead = slot('notes') === '';
+    out.notesStored = seen('notes');
+    /* and none of them ever comes back — a hint is not a nag */
+    window.showView('habits'); window.showView('goals'); window.showView('notes');
+    out.neverNags = slot('habits') === '' && slot('goals') === '' && slot('notes') === '';
+    out.nothingModalOpen = !document.querySelector('.modal-bg.open');
+    return out;
+  });
+  check('v21.4 a first visit to habits / goals / notes gets one slim hint, inside the section',
+    v214hint.habitsHint && v214hint.goalsHint && v214hint.notesHint &&
+    v214hint.hintInsideView && v214hint.nothingModalOpen, JSON.stringify(v214hint));
+  check('v21.4 each hint retires for good on ✕, on walking away and on reading the guide',
+    v214hint.habitsGone && v214hint.habitsStored && v214hint.goalsGoneAfterWalk && v214hint.goalsStored &&
+    v214hint.notesGoneAfterRead && v214hint.notesStored && v214hint.neverNags, JSON.stringify(v214hint));
+
+  /* the five behaviours that were made honest */
+  const v214fix = await page.evaluate(() => {
+    const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const today = iso(new Date());
+    const out = {};
+
+    /* (1) the habit week grid belongs to the habits, not to the calendar's week switch */
+    DB.habits = [{ id: 'v214-habit', name: 'آزمون v21.4', icon: '📚', log: {} }];
+    window.calWeekShift(0);                /* start from this week, whatever ran before */
+    window.calWeekStep(1);                 /* the calendar walks to next week… */
+    window.showView('habits');
+    const cells = () => [...document.querySelectorAll('#habitList .week-dots .wd')];
+    out.cells = cells().length;
+    out.days = cells().map(c => c.textContent).join('');
+    out.todayMarked = cells().filter(c => c.classList.contains('today')).length;
+    out.todayClickable = cells().filter(c => (c.getAttribute('onclick') || '').includes('toggleHabitDay')).length;
+    /* the calendar itself must still follow its own week switch */
+    out.calendarFollowsOffset = window.weekDates()[0] !== window.weekDates(0)[0];
+    window.calWeekStep(-1);                /* …and back */
+    out.calendarOffsetBack = window.weekDates()[0] !== window.weekDates(1)[0];
+
+    /* (2) the 6 XP is earned once per habit per day, not on every re-tick.
+       Measured on totalXPEarned, which a level-up cannot subtract from, and
+       with the XP boost off so the expected number is exactly 6. */
+    DB.xpBoost = { activeUntil: 0 };
+    const earned0 = DB.stats.totalXPEarned || 0;
+    window.toggleHabitDay('v214-habit', today);
+    const afterFirst = (DB.stats.totalXPEarned || 0) - earned0;
+    window.toggleHabitDay('v214-habit', today);      /* un-tick */
+    window.toggleHabitDay('v214-habit', today);      /* tick the same day again */
+    out.xpFirstTick = afterFirst;
+    out.xpReTick = (DB.stats.totalXPEarned || 0) - earned0 - afterFirst;
+    out.rewardFlag = DB.habits[0].rewardDate === today;
+    out.stillTicked = DB.habits[0].log[today] === true;
+    out.streakText = document.querySelector('#habitList .habit-streak').textContent.trim();
+    out.streakFaDigits = /[۰-۹]/.test(out.streakText);
+    out.bestStreak = DB.stats.bestStreak;
+    out.noHabitCounter = !Object.prototype.hasOwnProperty.call(DB.history[today] || {}, 'habits');
+
+    /* (3) deleting a habit asks first, then reports */
+    window.deleteHabit('v214-habit');
+    out.habitDeleted = DB.habits.length === 0;
+    out.habitToast = document.getElementById('toast').textContent;
+
+    /* (4) goals: Persian digits on the card, and the same question before deleting */
+    DB.goals = [{ id: 'v214-goal', title: 'آزمون v21.4', level: 'weekly', progress: 45 }];
+    window.showView('goals');
+    out.goalPct = document.querySelector('#goalList .num').textContent.trim();
+    out.goalFaDigits = /[۰-۹]/.test(out.goalPct);
+    out.goalBar = document.querySelector('#goalList .bar-fill').style.width;
+    window.deleteGoal('v214-goal');
+    out.goalDeleted = DB.goals.length === 0;
+    out.goalToast = document.getElementById('toast').textContent;
+
+    /* (5) the ▦ button tells you which view you are in */
+    window.showView('notes');
+    const vt = document.getElementById('noteViewToggle');
+    const snap = () => [vt.textContent, vt.title, vt.getAttribute('aria-pressed'),
+      document.getElementById('noteGrid').classList.contains('notes-list')].join('|');
+    out.toggleGrid = snap();
+    window.toggleNoteViewMode();
+    out.toggleList = snap();
+    window.toggleNoteViewMode();
+    out.toggleBack = snap();
+
+    /* (6) the dead layer is really gone at runtime, the live chart painter is not */
+    out.deadGone = ['renderCharts', 'renderHabitMini', 'renderGoalMini', 'drawDoughnut', 'drawLineChart', 'drawHBarChart']
+      .every(fn => typeof window[fn] === 'undefined') && !document.getElementById('hShieldHabits');
+    out.pomoChartAlive = ['drawBarChart', 'last7', 'setupCanvas', 'cssVar', 'roundRect']
+      .every(fn => typeof window[fn] === 'function');
+    return out;
+  });
+  check('v21.4 the habit week grid stays on the current week and only today is clickable',
+    v214fix.cells === 7 && v214fix.days === ['ش','ی','د','س','چ','پ','ج'].join('') &&
+    v214fix.todayMarked === 1 && v214fix.todayClickable === 1 &&
+    v214fix.calendarFollowsOffset && v214fix.calendarOffsetBack, JSON.stringify(v214fix));
+  check('v21.4 a habit pays 6 XP once a day, keeps its streak and stops writing a dead counter',
+    v214fix.xpFirstTick === 6 && v214fix.xpReTick === 0 && v214fix.rewardFlag && v214fix.stillTicked &&
+    v214fix.streakFaDigits && v214fix.streakText === '🔥 ۱ روز پیاپی' && v214fix.bestStreak >= 1 &&
+    v214fix.noHabitCounter, JSON.stringify(v214fix));
+  check('v21.4 deleting a habit or a goal asks first and then says what happened',
+    dialogs.includes('این عادت حذف بشه؟') && dialogs.includes('این هدف حذف بشه؟') &&
+    v214fix.habitDeleted && v214fix.habitToast.includes('عادت حذف شد') &&
+    v214fix.goalDeleted && v214fix.goalToast.includes('هدف حذف شد'),
+    JSON.stringify({ dialogs, habit: v214fix.habitToast, goal: v214fix.goalToast }));
+  check('v21.4 goal percentages read like the rest of the app and the bar still follows',
+    v214fix.goalFaDigits && v214fix.goalPct === '۴۵٪' && v214fix.goalBar === '45%', JSON.stringify(v214fix));
+  check('v21.4 the notes layout button shows the view you are in and the one a tap leads to',
+    v214fix.toggleGrid === '▦|تغییر به نمای لیستی|false|false' &&
+    v214fix.toggleList === '☰|تغییر به نمای شبکه‌ای|true|true' &&
+    v214fix.toggleBack === v214fix.toggleGrid, JSON.stringify(v214fix));
+  check('v21.4 the dead chart layer and its leftovers are gone, the Pomodoro chart is not',
+    v214fix.deadGone && v214fix.pomoChartAlive, JSON.stringify(v214fix));
+  check('no fatal JS errors after the v21.4 flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
   await browser.close();
 } else {
@@ -1565,7 +1750,10 @@ if (!useFallback) {
     indexHtml.includes('onclick="calWeekStep(-1)"') && indexHtml.includes('onclick="calWeekStep(1)"') &&
     indexHtml.includes('onclick="calWeekToday()"') && indexHtml.includes('id="calWeekLabel"') &&
     coreJs.includes('function calWeekStep(') && coreJs.includes('let CAL_WEEK_OFFSET = 0;') &&
-    coreJs.includes('CAL_WEEK_OFFSET*7') &&
+    /* v21.4: one week is still exactly 7 days of offset — the offset just became
+       a parameter, so the Habits grid can ask for the current week. */
+    coreJs.includes('function weekDates(offset=CAL_WEEK_OFFSET)') &&
+    coreJs.includes('(Number(offset)||0)*7') &&
     !indexHtml.includes('v19AgendaToggle') && !indexHtml.includes('v19CalTemplates') &&
     !coreJs.includes('v19Agenda'));
 
@@ -1737,25 +1925,27 @@ if (!useFallback) {
   const v213Css = fs.readFileSync(path.join(ROOT, 'css/v213.css'), 'utf-8');
 
   check('v21.3 every simplified section carries its own ❓ into one shared guide',
-    ["onclick=\"openGuide('dashboard')\"", "onclick=\"openGuide('tasks')\"", "onclick=\"openGuide('calendar')\""]
-      .every(h => indexHtml.includes(h)) &&
+    ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes']
+      .every(v => indexHtml.includes(`onclick="openGuide('${v}')"`)) &&
     indexHtml.includes('id="guideSlot-dashboard"') && indexHtml.includes('id="guideSlot-tasks"') &&
     indexHtml.includes('id="guideModalBg"') && indexHtml.includes('id="guideTabs"') &&
     indexHtml.includes('id="guideCta"') && indexHtml.includes('onclick="guidePrimaryAction()"'));
 
-  check('v21.3 one guide modal holds three panels of four short rows each',
-    ['dashboard', 'tasks', 'calendar'].every(g => indexHtml.includes(`data-g="${g}" role="tabpanel"`)) &&
-    (indexHtml.match(/class="guide-row"/g) || []).length === 12 &&
-    (indexHtml.match(/class="guide-lead"/g) || []).length === 3 &&
-    v213Js.includes("var SECTIONS = ['dashboard', 'tasks', 'calendar'];"));
+  check('v21.3 one guide modal holds one panel per section, four short rows each',
+    ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes']
+      .every(g => indexHtml.includes(`data-g="${g}" role="tabpanel"`)) &&
+    (indexHtml.match(/class="guide-row"/g) || []).length === 24 &&
+    (indexHtml.match(/class="guide-lead"/g) || []).length === 6 &&
+    v213Js.includes("var SECTIONS = ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes'];"));
 
   check('v21.3 each guide ends in the action it explains, not in more reading',
-    ['openInboxQuickAdd', 'openTaskModal', 'openEventModal'].every(fn => v213Js.includes(`fn: '${fn}'`)) &&
+    ['openInboxQuickAdd', 'openTaskModal', 'openEventModal', 'openHabitModal', 'openGoalModal', 'openNoteModal']
+      .every(fn => v213Js.includes(`fn: '${fn}'`)) &&
     v213Js.includes('function guidePrimaryAction') && v213Js.includes('closeGuide();'));
 
   check('v21.3 a first visit gets a slim hint that is gone for good',
     v213Js.includes("'lifePlannerGuides_v213'") && v213Js.includes('function markSeen') &&
-    v213Js.includes('var HINTED = { dashboard: true, tasks: true };') &&
+    v213Js.includes('var HINTED = { dashboard: true, tasks: true, habits: true, goals: true, notes: true };') &&
     v213Js.includes('data-hint-x') && v213Js.includes('function clearSlot') &&
     /* a hint is never a popup: nothing in this file opens a modal by itself */
     !/openModal\('(?!guideModalBg)/.test(v213Js));
@@ -1798,6 +1988,90 @@ if (!useFallback) {
     /js\/v213\.js\?v=\d/.test(indexHtml) && /css\/v213\.css\?v=\d/.test(indexHtml) &&
     /`\.\/js\/v213\.js\?v=\$\{VERSION\}`/.test(swJs) &&
     /`\.\/css\/v213\.css\?v=\$\{VERSION\}`/.test(swJs));
+
+  // ---------- v21.4: three more guided sections + the tidy-up of habits / goals / notes ----------
+  const v214Sections = ['habits', 'goals', 'notes'];
+  check('v21.4 habits, goals and notes carry the same single ❓, slot and panel',
+    v214Sections.every(v => indexHtml.includes(`onclick="openGuide('${v}')"`) &&
+      indexHtml.includes(`id="guideSlot-${v}"`) && indexHtml.includes(`data-g="${v}" role="tab"`)) &&
+    (indexHtml.match(/class="guide-btn"/g) || []).length === 5 &&
+    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 12 &&
+    v213Js.includes("habits: { label: '➕ عادت جدید', fn: 'openHabitModal' }") &&
+    v213Js.includes("goals: { label: '➕ هدف جدید', fn: 'openGoalModal' }") &&
+    v213Js.includes("notes: { label: '➕ یادداشت جدید', fn: 'openNoteModal' }"));
+
+  check('v21.4 the guide engine grew data, not files, layers or storage keys',
+    v213Js.includes("'lifePlannerGuides_v213'") &&
+    v213Js.includes('habits: 0, goals: 0, notes: 0') &&
+    ['فقط خانه‌ی امروز را تیک بزن؛ استریک و XP خودش می‌آید.',
+     'یک هدف بساز و هر روز با +۲٪ یا +۱۰٪ جلویش ببر — همین.',
+     'یک عنوان بنویس و ذخیره کن؛ برچسب و رنگ و سنجاق همه اختیاری‌اند.']
+      .every(h => v213Js.includes(h)) &&
+    !fs.existsSync(path.join(ROOT, 'js/v214.js')) && !fs.existsSync(path.join(ROOT, 'css/v214.css')));
+
+  check('v21.4 the guides in Settings grew with the sections',
+    indexHtml.includes('راهنمای کوتاهِ داشبورد، تسک‌ها، تقویم، عادت‌ها، اهداف و یادداشت‌ها.') &&
+    langJs.includes('"راهنمای کوتاهِ داشبورد، تسک‌ها، تقویم، عادت‌ها، اهداف و یادداشت‌ها. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود."'));
+
+  check('v21.4 every new string has an English translation',
+    ['راهنمای عادت‌ها', 'راهنمای اهداف', 'راهنمای یادداشت‌ها', 'عادت جدید', 'هدف جدید', 'یادداشت جدید',
+     'خانه‌ی امروز', 'استریک و XP', 'چهار دکمه روی کارت', 'پیشرفتِ امروز جدا ثبت می‌شود', 'پاداش و روز عالی',
+     'جست‌وجو و برچسب', 'سنجاق و ترتیب', 'کارت‌ها', '🗑️ عادت حذف شد', '🗑️ هدف حذف شد',
+     'تغییر به نمای لیستی', 'تغییر به نمای شبکه‌ای']
+      .every(k => langJs.includes(`"${k}":`)) &&
+    langJs.includes('var EXTRA_V214 = {') && langJs.includes('EXACT[_k214] = EXTRA_V214[_k214];') &&
+    ['Habits guide', 'Goals guide', 'Notes guide', '🗑️ Habit deleted', '🗑️ Goal deleted',
+     'Switch to the list view', 'Switch to the grid view']
+      .every(en => langJs.includes(en)));
+
+  /* Comments in core.js name the removed functions on purpose (they say why the
+     code is gone), so these two assertions read the code with comments stripped. */
+  const coreCode = coreJs.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  check('v21.4 the dead chart layer is out and the living Pomodoro chart stayed',
+    ['function renderCharts', 'function drawLineChart', 'function drawDoughnut', 'function drawHBarChart',
+     'chartHabits', 'chartGoals', 'chartPriority']
+      .every(dead => !coreCode.includes(dead) && !indexHtml.includes(dead)) &&
+    ['function drawBarChart', 'drawBarChart(canvas', 'function setupCanvas', 'function roundRect',
+     'function last7', 'function cssVar']
+      .every(alive => coreJs.includes(alive)));
+
+  check('v21.4 the leftovers of the old dashboard tiles and the hidden shield picker are gone',
+    ['renderHabitMini', 'renderGoalMini', 'hShieldHabits', 'streakShieldHabits', 'streakShieldArmedAt',
+     "logHistory('habits'", 'shield-habit-options']
+      .every(dead => !coreCode.includes(dead) && !indexHtml.includes(dead) && !appCss.includes(dead)) &&
+    coreJs.includes('DB.history[d] = DB.history[d] || {tasks:0};') &&
+    !coreJs.includes('{tasks:0, habits:0}'));
+
+  check('v21.4 the habit week grid belongs to the habits, not to the calendar’s week switch',
+    coreJs.includes('function weekDates(offset=CAL_WEEK_OFFSET)') &&
+    coreJs.includes('sat.setDate(now.getDate() - dayOfWeek + (Number(offset)||0)*7);') &&
+    /function renderHabits\(\)\{[\s\S]{0,200}?weekDates\(0\)/.test(coreJs) &&
+    /function renderCalendar\(\)[\s\S]{0,2000}?weekDates\(\)/.test(coreJs));
+
+  check('v21.4 a habit pays its 6 XP once a day, not on every re-tick',
+    coreJs.includes('if(h.rewardDate !== date){ h.rewardDate = date; addXP(6); }') &&
+    !/toggleHabitDay[\s\S]{0,400}?addXP\(6\); logHistory/.test(coreJs));
+
+  check('v21.4 all four deletes ask the same question and then say what happened',
+    ['این تسک حذف بشه؟', 'این یادداشت حذف بشه؟', 'این عادت حذف بشه؟', 'این هدف حذف بشه؟']
+      .every(q => coreJs.includes(`confirm('${q}')`)) &&
+    coreJs.includes("toast('🗑️ عادت حذف شد')") && coreJs.includes("toast('🗑️ هدف حذف شد')"));
+
+  check('v21.4 streaks and goal percentages use the app’s own digits',
+    coreJs.includes('${toFaDigits(streak)} روز پیاپی') && coreJs.includes('${toFaDigits(g.progress)}٪') &&
+    coreJs.includes('function toFaDigits(n)'));
+
+  check('v21.4 the notes layout button reports the view you are in and the one a tap leads to',
+    coreJs.includes("vt.textContent=asList?'☰':'▦'") && coreJs.includes("vt.title='تغییر به '+next;") &&
+    coreJs.includes("vt.setAttribute('aria-pressed',asList?'true':'false');") &&
+    indexHtml.includes('id="noteViewToggle"'));
+
+  const readmeGoals = readme.split('### 6. 🎯')[1].split('### 7. 📝')[0];
+  check('v21.4 the README describes what the app really does',
+    !readmeGoals.includes('Milestones') && !readmeGoals.includes('نقاط عطف') &&
+    readme.includes('نسخه 21.4') &&
+    readme.includes('راهنمای شش بخش') && readme.includes('۶ XP') &&
+    readme.includes('دکمه‌ی نما وضعیت را نشان می‌دهد'));
 
   const v213CssCode = v213Css.replace(/\/\*[\s\S]*?\*\//g, '');   /* comments may talk about blur */
   check('v21.3 the guide layer stays cheap: no blur, no animation on layout',
