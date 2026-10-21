@@ -39,7 +39,7 @@
     "❓ راهنما": "❓ Guide",
     "بستن راهنما": "Close the guide",
     "بخش‌های راهنما": "Guide sections",
-    "راهنمای کوتاهِ داشبورد، تسک‌ها، تقویم، عادت‌ها، اهداف و یادداشت‌ها. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.": "Short guides for the Dashboard, Tasks, the Calendar, Habits, Goals and Notes. Inside each section the same guide opens with its ❓ button.",
+    "راهنمای کوتاهِ هر ده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.": "A short guide for each of the app's ten sections. Inside every section the same guide opens with its ❓ button.",
     "↩️ نمایش دوباره‌ی راهنمای خودکار": "↩️ Show the automatic guides again",
     "↩️ راهنمای خودکار بخش‌ها دوباره فعال شد": "↩️ The automatic section guides are on again",
     "⚠️ این بخش در دسترس نیست": "⚠️ This section is not available",
@@ -311,7 +311,6 @@
 
     "همه‌ی داده‌هات فقط روی همین گوشی ذخیره می‌شن. اگه گوشی ریست بشه یا اپ پاک بشه، یه فایل که همین‌جا دانلود بشه هم از بین می‌ره — پس بهتره یه نسخه رو بفرستی بیرون از گوشی (گوگل‌درایو، ایمیل و...).": "All of your data is stored only on this phone. If the phone is reset or the app is deleted, a file downloaded here is gone too — so send a copy off your phone (Google Drive, email and so on).",
     "چهار دکمه پایین برنامه رو خودت انتخاب کن؛ چیزهایی که بیشتر استفاده می‌کنی همیشه دم دستت باشن. می‌تونی تا ۵ دکمه اضافه هم اضافه کنی تا نوار پایین به دو ردیف وسط‌چین تبدیل بشه.": "Choose the four buttons at the bottom yourself; keep what you use most within reach. You can also add up to 5 extra buttons to turn the bottom bar into two centered rows.",
-    "🛡️ ثبت‌های دستی مثل پومودورو بخشی از تاریخچه‌ی اصلی هستند و برای جلوگیری از خراب شدن XP/آمار حذف کامل نمی‌شوند.": "🛡️ Manual entries are part of the main history just like Pomodoro, and they are not fully deleted so your XP/stats stay intact.",
     "شانس‌ها بر اساس وزن پایه‌ی هر جایزه محاسبه شده‌اند. مهارت «شانس بلند» فقط شانس جعبه‌ی رایگان را بیشتر می‌کند.": "The odds are based on each reward's base weight. The “Lucky Streak” skill only improves your free-box chance.",
     "پشتیبان شامل داده‌های اصلی برنامه مثل تسک‌ها، عادت‌ها، اهداف، XP، پومودورو، تم‌ها و تنظیمات ذخیره‌شده است.": "The backup includes the app's main data such as tasks, habits, goals, XP, Pomodoro, themes and saved settings.",
     "⏰ ۱۴ روز فرصت داری تا باس رو شکست بدی؛ وگرنه باس از دست می‌ره و باید یک هفته صبر کنی تا باس جدید بیاد.": "⏰ You have 14 days to beat the boss; otherwise the boss gets away and you have to wait a week for a new one.",
@@ -325,7 +324,7 @@
     "فقط عنوان رو بنویس، سریع ذخیره می‌شه. بعداً از بخش تسک‌ها کاملش کن و وارد برنامه اصلی کن.": "Just write the title, it saves fast. Complete it later from Tasks and bring it into your main plan.",
     "اگر امروز فقط یک کار مهم انجام بدی، بذار همون کاری باشه که بیشتر از همه ازش فرار کردی. 😈": "If you do only one important thing today, make it the one you have been avoiding most. 😈",
     "با دکمه‌های اضافه، نوار پایین به دو ردیف تبدیل می‌شود و دکمه‌های اضافه وسط‌چین می‌مانند.": "With extra buttons the bottom bar becomes two rows and the extra buttons stay centered.",
-    "برای اینکه وقتی پومودورو تموم می‌شه یا کوئست جدید می‌رسه، حتی بیرون از تب، خبردار بشی": "So you get notified when a Pomodoro ends or a new quest arrives, even outside the tab",
+    "اعلانِ شروع و پایانِ هر جلسه و پایانِ هر دور — حتی بیرون از تب. اعلانِ دائمیِ شمارش معکوس حذف شده تا مزاحم نباشد.": "A notification for the start and the end of every session and for the end of a round — even outside the tab. The permanent countdown notification is gone, so it does not get in the way.",
     "اندازه نوشته‌ها و متن‌های رابط را از داخل خود برنامه تغییر بده؛ مستقل از فونت گوشی.": "Change the size of the app's text from inside the app, independent of your phone's font.",
     "قرار نیست همیشه انگیزه داشته باشی؛ قرارِ تو اینه که حتی بدون انگیزه هم ادامه بدی. 🔥": "You will not always feel motivated; your deal is to keep going even without it. 🔥",
     "رویداد را نگه دار و بکش تا روز یا ساعتش عوض شود؛ رنگ و دسته‌بندی هم دست خودت است.": "Hold and drag an event to change its day or time; the color and category are up to you.",
@@ -348,7 +347,7 @@
     "انضباط یعنی وقتی حوصله نداری هم به چیزی که برای خودت مهمه احترام بذاری.": "Discipline means respecting what matters to you even when you do not feel like it.",
     "🛡️ یه Streak Shield خریدی! یه روز از‌دست‌رفته‌ی عادت‌ها رو جبران می‌کنه": "🛡️ You bought a Streak Shield! It makes up for one lost habit day",
     "حواست رو از نتیجه بردار و بذار روی همین ده دقیقه‌ای که جلوت قرار داره.": "Take your mind off the result and put it on the ten minutes in front of you.",
-    "هر تیر ۱ دقیقه از زمان انتظار کوئست بعدی کم می‌کنه (از ۲۰ به ۱۷ دقیقه)": "Each tier cuts 1 minute off the wait for the next quest (from 20 to 17 minutes)",
+    "هر تیر ۱ دقیقه از زمان انتظار کوئست بعدی کم می‌کنه (از ۲۰ به ۱۵ دقیقه)": "Each tier cuts 1 minute off the wait for the next quest (from 20 to 15 minutes)",
     "به جای اینکه منتظر نسخه بهتر خودت باشی، امروز مثل همون نسخه رفتار کن.": "Instead of waiting for a better version of yourself, act like that version today.",
     "هر بار که بهانه‌ات رو شکست میدی، داری نسخه قوی‌تری از خودت می‌سازی. 💪": "Every time you beat your excuse, you build a stronger version of yourself. 💪",
     "برای شروع بزن، یا چند ثانیه روی تایمر نگه‌دار برای فوکوس بی‌نهایت ♾️": "Tap to start, or hold the timer for a few seconds for infinite focus ♾️",
@@ -446,7 +445,6 @@
     "استراحت واقعی بخشی از مسیر پیشرفته، نه دشمنشه.": "A real break is part of your progress, not the enemy of it.",
     "هر تیر +۵ XP برای هر تسک بحرانی که تموم می‌کنی": "Each tier: +5 XP for every critical task you finish",
     "هروقت خواستی تمومش کن، همون مدت برات ثبت می‌شه": "End it whenever you want; that exact time gets logged for you",
-    "آمار جامع فوکوس بر اساس جلسات واقعی پومودورو:": "Full focus stats based on real Pomodoro sessions:",
     "بزن ببین امروز چقدر تا Perfect Day فاصله داری": "Tap to see how far you are from a Perfect Day",
     "مثلاً: ایده ویدیو جدید، خرید کتاب، تماس با...": "e.g. New video idea, buy a book, call...",
     "⚔️ چون همه‌ی تسک‌های باس پاک شدن، نبرد لغو شد": "⚔️ The battle was cancelled because all of the boss's tasks were deleted",
@@ -518,7 +516,7 @@
     "↩️ برگردوندن به حالت انجام‌نشده": "↩️ Mark as not done again",
     "⚠️ فعال‌سازی یادآوری ناموفق بود": "⚠️ Enabling the reminder failed",
     "✅ حال‌وهوای پیام انگیزشی عوض شد": "✅ Motivation mood changed",
-    "📈 جمع‌بندی فوکوس (دقیقه و ساعت)": "📈 Focus summary (minutes and hours)",
+    "📈 جمع‌بندی فوکوس": "📈 Focus summary",
     "📍 یادداشت از حالت سنجاق خارج شد": "📍 Note unpinned",
     "انتخاب تصادفی یک تسک برای شروع": "Pick a random task to start",
     "مثلاً: امروز فقط یک قدم جلوتر.": "e.g. Just one step further today.",
@@ -569,7 +567,6 @@
     "⭐ +۱۰ XP — جایزه‌ی معمولی": "⭐ +10 XP — an ordinary reward",
     "⭐⭐⭐ +۵۰ XP — جایزه‌ی عالی": "⭐⭐⭐ +50 XP — a great reward",
     "🏖️ استراحت طولانی شروع شد": "🏖️ Long break started",
-    "🔔 نوتیفیکیشن هوشمند فعاله": "🔔 Smart notifications are on",
     "مثلاً: درس، کار، ورزش...": "e.g. Study, work, exercise...",
     "هر چی دوست داری بنویس...": "Write whatever you like...",
     "⚠️ عنوان رویداد رو بنویس": "⚠️ Write the event title",
@@ -596,12 +593,12 @@
     "۵ نفس عمیق و آرام بکش.": "Take 5 deep, slow breaths.",
     "⚠️ بازه زمانی نامعتبره": "⚠️ Invalid time range",
     "⚡ حالت‌های آماده فوکوس": "⚡ Ready-made focus modes",
-    "⛔ نوتیفیکیشن فعال نیست": "⛔ Notifications are off",
+    "⛔ اعلان فعال نیست": "⛔ Notifications are off",
     "✅ پیام سفارشی اعمال شد": "✅ Custom message applied",
     "✏️ ویرایش پریست سفارشی": "✏️ Edit custom preset",
     "⬇️ فقط دانلود روی گوشی": "⬇️ Just download to the phone",
     "🏖️ شروع استراحت طولانی": "🏖️ Start long break",
-    "🔔 فعال‌سازی نوتیفیکیشن": "🔔 Enable notifications",
+    "🔔 فعال‌سازی اعلان": "🔔 Enable notifications",
     "🔔 یادآوری Life Planner": "🔔 Life Planner reminder",
     "🔤 اندازه فونت ذخیره شد": "🔤 Font size saved",
     "🚶 یک دور کوتاه راه برو": "🚶 Take a short walk",
@@ -647,7 +644,7 @@
     "📌 سنجاق کردن یادداشت": "📌 Pin note",
     "🔔 یادآوری این رویداد": "🔔 Remind me about this event",
     "🔥 طولانی‌ترین استریک": "🔥 Longest streak",
-    "🕘 تاریخچه جلسات اخیر": "🕘 Recent session history",
+    "🕘 تاریخچه‌ی جلسات اخیر": "🕘 Recent session history",
     "🗂️ ثبت‌های دستی اخیر": "🗂️ Recent manual entries",
     "🧩 اندازه رابط کاربری": "🧩 UI size",
     "تا از دست دادن فرصت": "until you lose the chance",
@@ -675,7 +672,7 @@
     "پیش‌فرض (رنگ دسته)": "Default (category color)",
     "۲ صفحه کتاب بخوان.": "Read 2 pages of a book.",
     "⏱ بدون زمان تخمینی": "⏱ No estimated time",
-    "✅ نوتیفیکیشن فعاله": "✅ Notifications are on",
+    "✅ اعلان‌های شروع و پایان جلسه روشن است": "✅ Start and end of session notifications are on",
     "🎯 تسک و محیط فوکوس": "🎯 Focus task and environment",
     "💧 یک لیوان آب بخور": "💧 Drink a glass of water",
     "📌 نوار دسترسی سریع": "📌 Quick access bar",
@@ -725,7 +722,6 @@
     "✏️ باس ویرایش شد": "✏️ Boss updated",
     "✓ در حال استفاده": "✓ In use",
     "🌲 جنگل و پرندگان": "🌲 Forest and birds",
-    "🍅 تایمر پومودورو": "🍅 Pomodoro timer",
     "🎯 اهداف در جریان": "🎯 Goals in progress",
     "🎲 برگشت به رندوم": "🎲 Back to random",
     "🏆 دستاوردهای شهر": "🏆 City achievements",
@@ -835,7 +831,7 @@
     "🎧 صدای محیط:": "🎧 Ambient sound:",
     "🎯 هدف روزانه": "🎯 Daily goal",
     "📱 نوار پایین": "📱 Bottom bar",
-    "🔔 نوتیفیکیشن": "🔔 Notifications",
+    "🔔 اعلان‌ها": "🔔 Notifications",
     "🗺️ مسیر ترقی": "🗺️ Progress path",
     "0 / 0 دقیقه": "0 / 0 min",
     "استاد زندگی": "Life Master",
@@ -938,7 +934,6 @@
     "عالیه! 🙌": "Awesome! 🙌",
     "مثلاً 45": "e.g. 45",
     "نام عادت": "Habit name",
-    "همگام شد": "Synced",
     "پاک کردن": "Clear",
     "پومودورو": "Pomodoro",
     "چهارشنبه": "Wednesday",
@@ -1286,6 +1281,90 @@
   };
   for(var _k16 in EXTRA_V16){ if(Object.prototype.hasOwnProperty.call(EXTRA_V16, _k16)) EXACT[_k16] = EXTRA_V16[_k16]; }
   for(var _k214 in EXTRA_V214){ if(Object.prototype.hasOwnProperty.call(EXTRA_V214, _k214)) EXACT[_k214] = EXTRA_V214[_k214]; }
+  /* v21.5: the Pomodoro, the XP Shop, the skill tree and the weekly boss joined
+     the section guides, so every section of the app is explainable from inside
+     itself. Icon-prefixed cores ("📖 راهنمای پومودورو", "⚔️ ساخت باس") are still
+     handled by compose(); a paragraph that *starts* with an icon is listed whole.
+     Also here: the boss task that can be written inside the picker, the honest
+     notification switch of the Pomodoro, and the strings whose wording changed
+     while the four sections were tidied up. */
+  var EXTRA_V215 = {
+    /* the ❓ button and the modal title of each new section */
+    "راهنمای پومودورو": "Pomodoro guide",
+    "راهنمای XP Shop": "XP Shop guide",
+    "راهنمای درخت مهارت": "Skill tree guide",
+    "راهنمای باس هفتگی": "Weekly boss guide",
+    /* the four leads */
+    "تایمر فوکوس با ریتمِ دور و جلسه — فقط «▶️ شروع» را بزن، بقیه خودش می‌آید.": "A focus timer with a rhythm of rounds and sessions — just tap “▶️ Start” and the rest takes care of itself.",
+    "XPهایی که جمع کرده‌ای را خرج کن — بدون این‌که سطح و لولت پایین بیاید.": "Spend the XP you have collected — without your level or your bar ever going down.",
+    "هر بار لول‌آپ می‌شوی یک امتیاز مهارت می‌گیری؛ یک تیر بخر و اثرش دائمی است.": "Every level-up gives you one skill point; buy a tier and its effect is permanent.",
+    "یک هدف بزرگ را به نبرد تبدیل کن: هر تسکی که تیک بخورد، یک ضربه به باس است.": "Turn one big goal into a fight: every task you tick is a hit on the boss.",
+    /* Pomodoro guide */
+    "تایمر و جلسه‌ها": "Timer and sessions",
+    "دایره را بزن تا جلسه شروع شود؛ یک لحظه نگه‌داشتنش «♾️ فوکوس بی‌نهایت» است. «⏹️ پایان و ثبت» همان‌قدر که واقعاً کار کرده‌ای ثبت می‌کند و بعدش امتیاز جلسه (از ۱۰۰) را نشان می‌دهد.": "Tap the circle to start a session; holding it for a moment starts “♾️ infinite focus”. “⏹️ End and log” records exactly as much as you really worked, and then shows the session score (out of 100).",
+    "دور و استراحت": "Rounds and breaks",
+    "بالای تایمر «دور ۱ • جلسه ۱ از ۴» و نقطه‌ها هستند. بعد از هر فوکوس نوبت استراحت است و بعد از آخرین جلسه‌ی دور، استراحت طولانی — «⏭️ جلسه بعدی» مرحله را دستی جلو می‌برد.": "Above the timer you get “round 1 • session 1 of 4” and the dots. Every focus is followed by a break, and the last session of a round by a long break — “⏭️ Next session” steps forward by hand.",
+    "حالت‌ها، تسک و صدا": "Modes, task and sound",
+    "پنج حالت آماده (کلاسیک، کوتاه، دیپ فوکوس، مطالعه و سفارشیِ ساختنی)، انتخاب تسک برای جلسه، هشت صدای محیط با اسلایدر بلندی، و «🧠 حالت تمرکز تمام‌صفحه» برای وقتی که فقط تایمر را می‌خواهی.": "Five ready modes (classic, short, deep focus, study and a buildable custom one), a task picker for the session, eight ambient sounds with a volume slider, and “🧠 full-screen focus mode” for when you only want the timer.",
+    "آمار و XP": "Stats and XP",
+    "تب «📊 آمار پومو» فوکوس امروز، هدف روزانه، هفت روز اخیر، نمودار روند، جمع‌بندی کلی و ۱۰ جلسه‌ی آخر را نشان می‌دهد. هر دقیقه (فوکوس یا استراحت) ۲ XP می‌دهد و پر کردن هدف روزانه ۳۰ XP.": "The “📊 Stats” tab shows today's focus, the daily goal, the last seven days, the trend chart, the overall summary and the last 10 sessions. Every minute (focus or break) gives 2 XP, and reaching the daily goal gives 30 XP.",
+    "🔔 اعلان‌ها فقط سه‌جا می‌آیند: شروع جلسه، پایان جلسه و پایان دور — کلید روشن/خاموششان در تب «⚙️ تنظیمات» است.": "🔔 Notifications only arrive in three places: the start of a session, the end of a session and the end of a round — their on/off switch is in the “⚙️ Settings” tab.",
+    /* XP Shop guide */
+    "موجودیِ جدا": "A separate balance",
+    "«موجودی XP Shop» یک کیف پولِ جدا از نوار XPِ سطح است: هر XP که از هر جای برنامه بگیری اینجا جمع می‌شود و خرج کردنش نه لولت را کم می‌کند و نه نوار پیشرفت را.": "“XP Shop balance” is a wallet of its own, separate from the level XP bar: every XP you earn anywhere in the app collects here, and spending it lowers neither your level nor the progress bar.",
+    "بوست و جعبه‌ی شانس": "Boost and mystery box",
+    "«⚡ XP Boost» سی دقیقه هر XP را دوبرابر می‌کند. «Mystery Box» یک جایزه‌ی تصادفیِ وزنی می‌دهد — از ۱۰ XP تا جکپات ۲۰۰، سپر، کوئست ویژه، آیتم شهر و جعبه‌ی رایگان — و دکمه‌ی ⓘ شانسِ دقیقِ هر ده جایزه را می‌گوید.": "“⚡ XP Boost” doubles every XP for thirty minutes. “Mystery Box” gives one weighted random reward — from 10 XP up to the 200 jackpot, a shield, a special quest, a city item and a free box — and the ⓘ button tells you the exact odds of all ten.",
+    "سپر استریک": "Streak shield",
+    "۵۰۰ XP برای روزی که عادتی را جا انداختی. دو قانون ضدِ زیاده‌روی دارد: حداکثر ۱ سپر در دست و ۳ خرید در هفته — شمارِ باقی‌مانده زیر همان کارت نوشته می‌شود.": "500 XP for the day you missed a habit. It has two anti-overuse rules: at most 1 shield held and 3 purchases a week — the number left is written under the same card.",
+    "تم‌ها و دارایی‌ها": "Themes and items",
+    "سه تمِ ویژه با XP باز می‌شوند (تاریک و روشن رایگان‌اند) و «🎒 دارایی‌های ویژه» هرچه خریده‌ای را با تعداد نشان می‌دهد: سپرها و آیتم‌های Life City.": "Three special themes unlock with XP (dark and light are free) and “🎒 Special items” shows everything you have bought with its count: shields and Life City items.",
+    "💰 مهارت «چانه‌زن» در درخت مهارت هر تیر ۱۰٪ از همه‌ی قیمت‌های همین فروشگاه کم می‌کند.": "💰 The “Bargainer” skill in the skill tree takes 10% off every price in this shop, per tier.",
+    /* skill tree guide */
+    "امتیاز از کجا می‌آید": "Where the points come from",
+    "هر لول‌آپ دقیقاً ۱ امتیاز مهارت می‌دهد و عددِ بالای صفحه همان امتیازهای خرج‌نشده است. راهِ دیگری برای گرفتنش نیست، پس خرج کردنش با فکر است.": "Every level-up gives exactly 1 skill point, and the number at the top is the points you have not spent. There is no other way to earn one, so it is worth spending thoughtfully.",
+    "هفت مهارت": "Seven skills",
+    "استاد فوکوس، شکارچی کوئست، چانه‌زن، شانس بلند، قاتل بحران، محافظ استریک و کوئست سریع. زیرِ اسم هرکدام نوشته شده هر تیر دقیقاً چه‌کار می‌کند.": "Focus Master, Quest Hunter, Bargainer, Lucky Streak, Crisis Slayer, Streak Guard and Quick Quest. Under each name it says exactly what one tier does.",
+    "تیرها": "Tiers",
+    "هزینه‌ی هر تیر ۱ امتیاز است و گران‌تر نمی‌شود. نقطه‌های زیر هر مهارت تیرهای گرفته‌شده را نشان می‌دهند و وقتی به سقف برسد «✓ تکمیل شده» جای دکمه می‌نشیند.": "Every tier costs 1 point and never gets more expensive. The dots under a skill show the tiers you have taken, and at the ceiling “✓ Completed” replaces the button.",
+    "اثرِ فوری": "Immediate effect",
+    "«محافظ استریک» همان لحظه ۱ سپر رایگان می‌دهد، «چانه‌زن» قیمت‌های فروشگاه را جلوِ چشمت کم می‌کند و «کوئست سریع» تا ۵ تیر انتظارِ کوئست بعدی را از ۲۰ به ۱۵ دقیقه می‌رساند.": "“Streak Guard” hands you 1 free shield right away, “Bargainer” lowers the shop prices in front of your eyes, and “Quick Quest” cuts the wait for the next quest from 20 down to 15 minutes over 5 tiers.",
+    /* weekly boss guide */
+    "ساختِ باس": "Building the boss",
+    "یک اسم بنویس و چند تسکِ انجام‌نشده را انتخاب کن. اگر تسکِ مناسبی نداری، همان‌جا پایینِ لیست تسکِ جدید بساز — ساخته و خودش برای باس انتخاب می‌شود و بعداً در بخش تسک‌ها هم هست.": "Write a name and pick a few open tasks. If you do not have the right tasks, build a new one right there under the list — it is created, selected for the boss automatically, and it is still in the tasks section afterwards.",
+    "HP و ضربه": "HP and hits",
+    "باس همیشه ۱۰۰ HP دارد و بین تسک‌هایش تقسیم می‌شود: با ۴ تسک، هر تیک ۲۵ HP کم می‌کند. هر تسک فقط یک بار ضربه می‌زند و تسک‌های ضربه‌خورده با ⚔️ و خط‌خورده نشان داده می‌شوند.": "A boss always has 100 HP and it is shared between its tasks: with 4 tasks, every tick takes 25 HP. Each task hits only once, and the tasks that already hit are shown with ⚔️ and struck through.",
+    "مهلتِ ۱۴ روزه": "The 14-day deadline",
+    "چهارده روز فرصت داری. اگر مهلت تمام شود باس از دست می‌رود و یک هفته صبر می‌کنی تا باس بعدی؛ «فعلاً باس مشخصی ندارم» هم همین یک هفته را عقب می‌اندازد. شکستِ باس ۱۰۰ XP می‌دهد.": "You have fourteen days. If the deadline passes the boss gets away and you wait a week for the next one; “I do not have a boss right now” postpones it by the same week. Beating a boss gives 100 XP.",
+    "ویرایش و حذفِ تسک": "Editing and deleting tasks",
+    "با «✏️ ویرایش» اسم و تسک‌ها عوض می‌شوند و HP بر اساسِ همان ضربه‌های خورده دوباره حساب می‌شود. اگر یکی از تسک‌های باس را پاک کنی HP به‌روز می‌شود و اگر همه‌شان پاک شوند، نبرد بدون انتظارِ هفتگی لغو می‌شود.": "With “✏️ Edit” the name and the tasks change and the HP is recomputed from the very hits already landed. Delete one of the boss's tasks and the HP updates; delete all of them and the fight is cancelled without a week of waiting.",
+    /* the four one-time hints */
+    "فقط «▶️ شروع» را بزن؛ دور، استراحت و XP خودش می‌آید.": "Just tap “▶️ Start”; the rounds, the breaks and the XP take care of themselves.",
+    "موجودی XP Shop از نوارِ سطح جداست — خرج کردنش لولت را کم نمی‌کند.": "The XP Shop balance is separate from the level bar — spending it never lowers your level.",
+    "هر لول‌آپ ۱ امتیاز مهارت می‌دهد؛ یک تیر بخر و اثرش را همان لحظه ببین.": "Every level-up gives 1 skill point; buy a tier and see its effect right away.",
+    "یک اسم بنویس و چند تسک انتخاب کن؛ هر تیک یک ضربه به باس است.": "Write a name and pick a few tasks; every tick is one hit on the boss.",
+    /* the action button at the bottom of each new guide */
+    "▶️ شروع جلسه‌ی فوکوس": "▶️ Start a focus session",
+    "🎁 شانس‌های جعبه": "🎁 The box odds",
+    "🛍️ برو به XP Shop": "🛍️ Go to the XP Shop",
+    "⚔️ ساخت باس": "⚔️ Build a boss",
+    /* boss: a task can be born inside the picker */
+    "➕ ساخت تسک": "➕ Create task",
+    "تسک جدید… (مثلاً: فصل ۳ رو بخون)": "New task… (e.g. read chapter 3)",
+    "تسک تازه همون‌جا ساخته و خودش برای باس انتخاب می‌شه؛ بعداً توی بخش تسک‌ها هم هست.": "The new task is created right there and selected for the boss automatically; it is in the tasks section afterwards too.",
+    "تسک انجام‌نشده‌ای نداری — همین پایین یکی بساز": "You have no open tasks — build one right below",
+    "⚠️ اول اسم تسک جدید رو بنویس": "⚠️ Write the new task's name first",
+    /* pomodoro: the notification card became a real control */
+    "اعلان‌های پومودورو": "Pomodoro notifications",
+    "🔕 اعلان‌های جلسه خاموش است": "🔕 Session notifications are off",
+    "⛔ اجازه‌ی اعلان داده نشده — از تنظیمات سایت/گوشی اجازه بده": "⛔ Notifications are not allowed — allow them in the site/phone settings",
+    "🔔 اعلان‌های شروع و پایان جلسه روشن شد": "🔔 Start and end of session notifications are on",
+    "🔕 اعلان‌های جلسه خاموش شد": "🔕 Session notifications are off",
+    /* pomodoro: the stats tab now speaks with one voice */
+    "از روی جلسات واقعی": "from the real sessions",
+    "۱۰ جلسه‌ی آخر": "the last 10 sessions",
+    "مجموع فوکوس": "Total focus"
+  };
+  for(var _k215 in EXTRA_V215){ if(Object.prototype.hasOwnProperty.call(EXTRA_V215, _k215)) EXACT[_k215] = EXTRA_V215[_k215]; }
 
   /* ---------- digits ---------- */
   var FA_D = '۰۱۲۳۴۵۶۷۸۹';

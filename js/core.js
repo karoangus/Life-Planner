@@ -227,10 +227,29 @@ async function requestNotifyPermission(){
     else toast('🔕 اجازه اعلان داده نشد.');
   }catch(_){ toast('⚠️ فعال‌سازی اعلان ناموفق بود'); }
 }
+/* v21.5: this line used to be a fixed claim («🔔 نوتیفیکیشن هوشمند فعاله») that
+   ignored DB.pomodoro.notifications, and there was no way to turn session
+   notifications off. Now the status says what is really true and the switch
+   under it is the control. */
 function renderPomoNotifyStatus(){
-  const el=document.getElementById('pomoNotifyStatus'); if(!el)return;
+  const el=document.getElementById('pomoNotifyStatus');
   const p=notifyPermissionStatus();
-  el.textContent=p==='granted'&&DB.pomodoro.notifications!==false?'✅ نوتیفیکیشن فعاله':'⛔ نوتیفیکیشن فعال نیست';
+  const allowed = p==='granted';
+  const on = allowed && DB.pomodoro.notifications!==false;
+  if(el){
+    el.textContent = !allowed
+      ? (p==='denied' ? '⛔ اجازه‌ی اعلان داده نشده — از تنظیمات سایت/گوشی اجازه بده' : '⛔ اعلان فعال نیست')
+      : (on ? '✅ اعلان‌های شروع و پایان جلسه روشن است' : '🔕 اعلان‌های جلسه خاموش است');
+  }
+  const t=document.getElementById('pomoNotifyToggle');
+  if(t){ t.checked = on; t.disabled = !allowed; }
+}
+function togglePomoNotifications(on){
+  DB.pomodoro.notifications = !!on;
+  DB.notifications = { enabled: !!on && notifyPermissionStatus()==='granted' };
+  persist();
+  renderPomoNotifyStatus();
+  toast(on ? '🔔 اعلان‌های شروع و پایان جلسه روشن شد' : '🔕 اعلان‌های جلسه خاموش شد');
 }
 
 /* ms is optional: an undo-able action keeps its toast on screen a little longer
@@ -1742,7 +1761,7 @@ function checkPomoGoalBonus(){
   if(goal>0 && rec && (rec.focus||0)>=goal && !rec.goalAwarded){
     rec.goalAwarded = true;
     addXP(POMO_GOAL_BONUS_XP);
-    setTimeout(()=> toast(`🎯🎉 هدف روزانه‌ی پومودورو کامل شد! +${POMO_GOAL_BONUS_XP} XP`), 1600);
+    setTimeout(()=> toast(`🎯🎉 هدف روزانه‌ی پومودورو کامل شد! +${toFaDigits(POMO_GOAL_BONUS_XP)} XP`), 1600);
   }
 }
 
@@ -1787,7 +1806,7 @@ function endSession(){
     const elapsedMs = (s.baseElapsedMs||0) + (s.status==='running' ? Date.now()-s.startAt : 0);
     const mins = Math.round(elapsedMs/60000);
     DB.pomodoro.session = null;
-    if(mins>0){ addPomoMinutes('focus', mins); toast(`✅ ${mins} دقیقه فوکوس ثبت شد · +${mins*POMO_XP_PER_MIN} XP`); checkPomoGoalBonus(); checkPerfectDay(); }
+    if(mins>0){ addPomoMinutes('focus', mins); toast(`✅ ${toFaDigits(mins)} دقیقه فوکوس ثبت شد · +${toFaDigits(mins*POMO_XP_PER_MIN)} XP`); checkPomoGoalBonus(); checkPerfectDay(); }
     save();
   } else {
     const remaining = s.status==='running' ? Math.max(0, s.endAt-Date.now()) : (s.remainingMs||0);
@@ -1797,7 +1816,7 @@ function endSession(){
     DB.pomodoro.session = null;
     if(mins>0){
       addPomoMinutes(mode, mins);
-      toast(`✅ ${mins} دقیقه ${mode==='focus'?'فوکوس':'استراحت'} ثبت شد · +${mins*POMO_XP_PER_MIN} XP`);
+      toast(`✅ ${toFaDigits(mins)} دقیقه ${mode==='focus'?'فوکوس':'استراحت'} ثبت شد · +${toFaDigits(mins*POMO_XP_PER_MIN)} XP`);
       if(mode==='focus'){ checkPomoGoalBonus(); checkPerfectDay(); }
     }
     save();
@@ -1906,6 +1925,11 @@ function savePomoSettings(){
   const gm = parseInt(document.getElementById('pomoSetGoalM').value) || 0;
   DB.pomodoro.settings = { focusMin:Math.max(1,f), breakMin:Math.max(1,b), longBreakMin:Math.max(1,lb), cycleCount:Math.max(1,cy), goalMinutes:Math.max(0, gh*60+gm) };
   save();
+  /* v21.5: one setting, one truth — the preset grid of the focus tab now shows
+     the mode these numbers belong to instead of staying on the old one. */
+  if(typeof window.syncPomoPresetFromSettings==='function') window.syncPomoPresetFromSettings();
+  renderPomoUI();
+  if(typeof window.renderPomoV66==='function') window.renderPomoV66();
   toast('✅ تنظیمات پومودورو ذخیره شد');
 }
 
@@ -1916,8 +1940,12 @@ function renderManualTaskOptions(){
   sel.innerHTML='<option value="">بدون تسک</option>'+tasks.map(t=>`<option value="${esc(t.id)}">${esc(t.title||t.text||'تسک')}</option>`).join('');
   if(tasks.some(t=>String(t.id)===String(cur))) sel.value=cur;
 }
+/* v21.5: this ran on every boot *and* on every manual entry, scanning the whole
+   manual list for records that have not been migrated — a state that has not
+   existed since the day the flag was introduced. One pass, remembered. */
 function migrateLegacyManualPomoData(){
-  if(!Array.isArray(DB.pomodoro?.manualData)) return;
+  if(DB.pomodoro?.manualMigrated) return;
+  if(!Array.isArray(DB.pomodoro?.manualData)){ if(DB.pomodoro) DB.pomodoro.manualMigrated = true; return; }
   DB.pomodoro.history=DB.pomodoro.history||{};
   DB.pomodoro.sessionHistory=Array.isArray(DB.pomodoro.sessionHistory)?DB.pomodoro.sessionHistory:[];
   let changed=false;
@@ -1933,6 +1961,7 @@ function migrateLegacyManualPomoData(){
     m.migratedToHistory=true;
     changed=true;
   }
+  DB.pomodoro.manualMigrated = true;
   if(changed){ DB.pomodoro.sessionHistory=DB.pomodoro.sessionHistory.slice(0,500); save(); }
 }
 function addManualPomoData(){
@@ -1942,7 +1971,6 @@ function addManualPomoData(){
   const note=(document.getElementById('pomoManualNote')?.value||'').trim();
   const taskId=kind==='focus' ? (document.getElementById('pomoManualTask')?.value||'') : '';
   if(!Number.isFinite(minutes)||minutes<1||minutes>1440){toast('⚠️ مدت را بین ۱ تا ۱۴۴۰ دقیقه وارد کن');return;}
-  migrateLegacyManualPomoData();
   const id=uid();
   if(!Array.isArray(DB.pomodoro.manualData))DB.pomodoro.manualData=[];
   DB.pomodoro.manualData.push({id,kind,minutes,date,note,taskId,createdAt:Date.now(),migratedToHistory:true});
@@ -1950,40 +1978,35 @@ function addManualPomoData(){
   if(kind==='focus' && date===todayISO()) checkPomoGoalBonus();
   save();
   document.getElementById('pomoManualMinutes').value='';document.getElementById('pomoManualNote').value='';
-  toast(`✅ ${minutes} دقیقه ${kind==='focus'?'مطالعه':'استراحت'} ثبت شد${kind==='focus'?` · امتیاز تمرکز ${score}/100`:''}`);
+  toast(`✅ ${toFaDigits(minutes)} دقیقه ${kind==='focus'?'مطالعه':'استراحت'} ثبت شد${kind==='focus'?` · امتیاز تمرکز ${toFaDigits(score)}/۱۰۰`:''}`);
   renderManualPomoData(); renderPomoStats(); window.renderPomoV66?.();
 }
-function deleteManualPomoData(id){
-  const item=(DB.pomodoro.manualData||[]).find(x=>x.id===id);
-  if(!item){return;}
-  toast('🛡️ ثبت‌های دستی مثل پومودورو بخشی از تاریخچه‌ی اصلی هستند و برای جلوگیری از خراب شدن XP/آمار حذف کامل نمی‌شوند.');
-}
-function getManualPomoTotal(date,kind){
-  // Kept only for legacy UI compatibility. The canonical source is pomodoro.history.
-  return 0;
-}
+/* v21.5: deleteManualPomoData() had no caller (the manual list has no delete
+   button — it only ever answered "this cannot be deleted") and
+   getManualPomoTotal() was a stub that always returned 0. Both are gone;
+   pomodoro.history stays the single source for every total. */
 function getPomoTotal(date,kind){return (DB.pomodoro.history?.[date]?.[kind]||0);}
 function renderManualPomoData(){
   const d=document.getElementById('pomoManualDate');if(d&&!d.value)d.value=todayISO();const date=d?.value||todayISO();
   renderManualTaskOptions();
   const f=document.getElementById('pomoManualTodayFocus'),b=document.getElementById('pomoManualTodayBreak');
   const totalF = getPomoTotal(date,'focus'), totalB = getPomoTotal(date,'break');
-  if(f) f.textContent = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalF) : (totalF+'m');
-  if(b) b.textContent = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalB) : (totalB+'m');
+  if(f) f.textContent = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalF) : (toFaDigits(totalF)+' دقیقه');
+  if(b) b.textContent = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalB) : (toFaDigits(totalB)+' دقیقه');
   const list=document.getElementById('pomoManualList');if(!list)return;
   const arr=(DB.pomodoro.manualData||[]).slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  list.innerHTML=arr.length?arr.slice(0,30).map(x=>{ const taskName=x.taskId?((DB.tasks||[]).find(t=>String(t.id)===String(x.taskId))?.title||'تسک'):''; const durFmt = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(x.minutes) : `${x.minutes} دقیقه`; return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);"><div><div style="font-weight:800;">${x.kind==='focus'?'📚':'☕'} ${durFmt} (${x.minutes}m)</div><div class="muted" style="font-size:11.5px;">${x.date}${taskName?' • 🎯 '+esc(taskName):''}${x.note?' • '+esc(x.note):''}</div></div><span class="muted" style="font-size:11px;">همگام شد</span></div>`; }).join(''):'<div class="muted" style="padding:10px 0;">هنوز ثبت دستی نداری.</div>';
+  list.innerHTML=arr.length?arr.slice(0,30).map(x=>{ const taskName=x.taskId?((DB.tasks||[]).find(t=>String(t.id)===String(x.taskId))?.title||'تسک'):''; const durFmt = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(x.minutes) : `${toFaDigits(x.minutes)} دقیقه`; return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);"><div><div style="font-weight:800;">${x.kind==='focus'?'📚':'☕'} ${durFmt}</div><div class="muted" style="font-size:11.5px;">${isoToJalaliText(x.date)||x.date}${taskName?' • 🎯 '+esc(taskName):''}${x.note?' • '+esc(x.note):''}</div></div></div>`; }).join(''):'<div class="muted" style="padding:10px 0;">هنوز ثبت دستی نداری.</div>';
 }
 function renderPomoStats(){
   const d = todayISO();
   const today = DB.pomodoro.history[d] || {focus:0, break:0};
   const totalFocus=getPomoTotal(d,'focus'), totalBreak=getPomoTotal(d,'break');
-  const fmtFocus = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalFocus) : (totalFocus+'m');
-  const fmtBreak = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalBreak) : (totalBreak+'m');
+  const fmtFocus = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalFocus) : (toFaDigits(totalFocus)+' دقیقه');
+  const fmtBreak = typeof formatPomoTimeFa==='function' ? formatPomoTimeFa(totalBreak) : (toFaDigits(totalBreak)+' دقیقه');
   const elF = document.getElementById('pomoTodayFocus');
   const elB = document.getElementById('pomoTodayBreak');
-  if(elF) elF.textContent = totalFocus>=60 ? `${fmtFocus} (${totalFocus}m)` : fmtFocus;
-  if(elB) elB.textContent = totalBreak>=60 ? `${fmtBreak} (${totalBreak}m)` : fmtBreak;
+  if(elF) elF.textContent = fmtFocus;
+  if(elB) elB.textContent = fmtBreak;
 
   const goal = DB.pomodoro.settings.goalMinutes||0;
   const pct = goal ? Math.min(100, (totalFocus/goal)*100) : 0;
@@ -2015,7 +2038,7 @@ function renderPomoStats(){
       const met = goal>0 && focusTotal>=goal;
       const cls = goal>0 ? (met?'met':'missed') : '';
       const sym = goal>0 ? (met?'✅':'▫️') : '⏺️';
-      const durStr = focusTotal>=60 ? (typeof formatPomoHours==='function'?formatPomoHours(focusTotal):`${Math.round(focusTotal/60*10)/10}h`) : `${focusTotal}m`;
+      const durStr = typeof formatPomoHours==='function' ? formatPomoHours(focusTotal) : `${toFaDigits(focusTotal)} دقیقه`;
       return `<div class="pomo-day-chip ${cls}" title="${typeof formatPomoTimeFa==='function'?formatPomoTimeFa(focusTotal):focusTotal+' دقیقه'}"><div class="d">${dayLbl[i]}</div><div class="s">${sym}</div><div class="d num">${durStr}</div></div>`;
     }).join('');
   }
@@ -2290,6 +2313,7 @@ function openBossSetup(){
   bossEditMode = false;
   document.getElementById('bossSetupTitle').textContent = '⚔️ باس این هفته رو بساز';
   document.getElementById('bossNameInput').value = '';
+  const nt = document.getElementById('bossNewTaskInput'); if(nt) nt.value = '';
   renderBossTaskPicker();
   openModal('bossSetupModalBg');
 }
@@ -2299,6 +2323,7 @@ function startEditBoss(){
   bossEditMode = true;
   document.getElementById('bossSetupTitle').textContent = '✏️ ویرایش باس';
   document.getElementById('bossNameInput').value = b.name;
+  const nt = document.getElementById('bossNewTaskInput'); if(nt) nt.value = '';
   renderBossTaskPicker();
   openModal('bossSetupModalBg');
 }
@@ -2306,7 +2331,7 @@ function renderBossTaskPicker(){
   const list = DB.tasks.filter(t=>(!t.inbox) && (!t.done || bossSetupSelected.includes(t.id)));
   const el = document.getElementById('bossTaskPicker');
   if(!list.length){
-    el.innerHTML = `<div class="empty" style="padding:16px;">تسک انجام‌نشده‌ای نداری — اول چندتا تسک بساز</div>`;
+    el.innerHTML = `<div class="empty" style="padding:16px;">تسک انجام‌نشده‌ای نداری — همین پایین یکی بساز</div>`;
   } else {
     el.innerHTML = list.map(t=>{
       const sel = bossSetupSelected.includes(t.id);
@@ -2316,13 +2341,35 @@ function renderBossTaskPicker(){
       </div>`;
     }).join('');
   }
-  document.getElementById('bossTaskCount').textContent = `(${bossSetupSelected.length} تسک)`;
+  document.getElementById('bossTaskCount').textContent = `(${toFaDigits(bossSetupSelected.length)} تسک)`;
 }
 function toggleBossTaskPick(taskId){
   const idx = bossSetupSelected.indexOf(taskId);
   if(idx>=0){ bossSetupSelected.splice(idx,1); }
   else { bossSetupSelected.push(taskId); }
   renderBossTaskPicker();
+}
+/* v21.5: a boss is only as good as the tasks behind it, and half a fight used to
+   die here — «تسک انجام‌نشده‌ای نداری، اول چندتا تسک بساز» meant closing the
+   sheet, going to the tasks section, writing them, and coming back (by which
+   time the mood was gone). The picker now builds the task itself: it lands in
+   DB.tasks like any other task, is selected for the fight straight away, and is
+   still there in the tasks section afterwards. */
+function addBossTaskInline(){
+  const input = document.getElementById('bossNewTaskInput');
+  const title = (input?.value||'').trim();
+  if(!title){ toast('⚠️ اول اسم تسک جدید رو بنویس'); input?.focus(); return; }
+  const t = {
+    id: uid(), title, cat:'', date: todayISO(), priority:'medium', status:'notstarted',
+    est:'', note:'', extraDeadlines:[], subtasks:[], inbox:false, color:null,
+    done:false, created: todayISO()
+  };
+  DB.tasks.push(t);
+  if(!bossSetupSelected.includes(t.id)) bossSetupSelected.push(t.id);
+  if(input) input.value = '';
+  save();
+  renderBossTaskPicker();
+  toast(`✅ تسک «${title}» ساخته و برای باس انتخاب شد`);
 }
 function confirmBossSetup(){
   const name = document.getElementById('bossNameInput').value.trim();
@@ -2373,7 +2420,7 @@ function hitBossFromTask(taskId){
     document.getElementById('bossVictoryText').textContent = `«${name}» شکست خورد! +۱۰۰ XP`;
     openModal('bossVictoryModalBg');
   } else {
-    toast(`⚔️ ضربه زدی! HP باس: ${b.hp}%`);
+    toast(`⚔️ ضربه زدی! HP باس: ${toFaDigits(b.hp)}٪`);
   }
   renderBossContent();
 }
@@ -2382,7 +2429,7 @@ function fmtBossCountdown(ms){
   const totalHours = Math.floor(ms/3600000);
   const days = Math.floor(totalHours/24);
   const hours = totalHours%24;
-  return `${days} روز و ${hours} ساعت`;
+  return `${toFaDigits(days)} روز و ${toFaDigits(hours)} ساعت`;
 }
 function renderBossContent(){
   const el = document.getElementById('bossContent');
@@ -2400,7 +2447,7 @@ function renderBossContent(){
         <div class="boss-name">☠️ ${esc(b.name)}</div>
         <button class="btn ghost sm" onclick="startEditBoss()">✏️ ویرایش</button>
       </div>
-      <div class="boss-hp-track"><div class="boss-hp-fill" style="width:${pct}%"></div><div class="boss-hp-text">${b.hp} / ${b.maxHp} HP</div></div>
+      <div class="boss-hp-track"><div class="boss-hp-fill" style="width:${pct}%"></div><div class="boss-hp-text">${faNum(b.hp)} / ${faNum(b.maxHp)} HP</div></div>
       ${deadlineHtml}
       <div style="margin-top:16px;">
         ${b.taskIds.map(id=>{
@@ -2434,25 +2481,27 @@ const SKILL_TREE = [
   { key:'luckyBox',      icon:'🍀', name:'شانس بلند',      desc:'هر تیر شانس جعبه‌ی رایگان توی Mystery Box بیشتر می‌شه', maxTier:3 },
   { key:'criticalBonus', icon:'🔥', name:'قاتل بحران',     desc:'هر تیر +۵ XP برای هر تسک بحرانی که تموم می‌کنی',    maxTier:3 },
   { key:'streakGuard',   icon:'🛡️', name:'محافظ استریک',  desc:'هر تیر همون لحظه ۱ Streak Shield رایگان می‌گیری',  maxTier:5 },
-  { key:'questCooldown', icon:'⏱️', name:'کوئست سریع',     desc:'هر تیر ۱ دقیقه از زمان انتظار کوئست بعدی کم می‌کنه (از ۲۰ به ۱۷ دقیقه)', maxTier:3 },
+  /* v21.5: five tiers instead of three — the wait for the next quest can now be
+     shortened all the way from 20 to 15 minutes. */
+  { key:'questCooldown', icon:'⏱️', name:'کوئست سریع',     desc:'هر تیر ۱ دقیقه از زمان انتظار کوئست بعدی کم می‌کنه (از ۲۰ به ۱۵ دقیقه)', maxTier:5 },
 ];
-function skillTierCost(){ return 1; } // flat: 1 skill point per tier
+const SKILL_TIER_COST = 1;   // flat: every tier of every skill costs 1 point
 function buySkillTier(key){
   const skill = SKILL_TREE.find(s=>s.key===key); if(!skill) return;
   const current = DB.skillTiers[key]||0;
   if(current>=skill.maxTier){ toast('این مهارت به حداکثر رسیده'); return; }
-  if((DB.skillPoints||0) < skillTierCost()){ toast('⚠️ امتیاز مهارت کافی نداری'); return; }
-  DB.skillPoints -= skillTierCost();
+  if((DB.skillPoints||0) < SKILL_TIER_COST){ toast('⚠️ امتیاز مهارت کافی نداری'); return; }
+  DB.skillPoints -= SKILL_TIER_COST;
   DB.skillTiers[key] = current+1;
   if(key==='streakGuard'){ DB.streakShields = (DB.streakShields||0)+1; toast('🛡️ +۱ Streak Shield گرفتی!'); }
   persist();
   renderSkillTree();
-  toast(`🌳 ${skill.name} به تیر ${DB.skillTiers[key]} رسید!`);
+  toast(`🌳 ${skill.name} به تیر ${toFaDigits(DB.skillTiers[key])} رسید!`);
 }
 function renderSkillTree(){
   const ptsEl = document.getElementById('skillPointsVal');
   if(!ptsEl) return;
-  ptsEl.textContent = (DB.skillPoints||0).toLocaleString('en-US');
+  ptsEl.textContent = faNum(DB.skillPoints);
   const grid = document.getElementById('skillTreeGrid');
   grid.innerHTML = SKILL_TREE.map(s=>{
     const tier = DB.skillTiers[s.key]||0;
@@ -2468,8 +2517,8 @@ function renderSkillTree(){
       </div>
       <div class="skill-tiers">${dots}</div>
       ${maxed
-        ? `<div class="skill-maxed">✓ تکمیل شده (${tier}/${s.maxTier})</div>`
-        : `<button class="btn ${(DB.skillPoints||0)<1?'ghost':''} sm" style="width:100%; margin-top:12px;" onclick="buySkillTier('${s.key}')">تیر بعدی (${tier}/${s.maxTier}) — ۱ امتیاز</button>`
+        ? `<div class="skill-maxed">✓ تکمیل شده (${toFaDigits(tier)}/${toFaDigits(s.maxTier)})</div>`
+        : `<button class="btn ${(DB.skillPoints||0)<SKILL_TIER_COST?'ghost':''} sm" style="width:100%; margin-top:12px;" onclick="buySkillTier('${s.key}')">تیر بعدی (${toFaDigits(tier)}/${toFaDigits(s.maxTier)}) — ۱ امتیاز</button>`
       }
     </div>`;
   }).join('');
@@ -2554,7 +2603,7 @@ function openMysteryInfo(){
     const pct = weights[i]/total*100;
     return `<div style="display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; padding:9px 10px; background:var(--bg2); border:1px solid var(--line); border-radius:10px;">
       <div style="font-size:12.5px; line-height:1.6;">${esc(r.label)}</div>
-      <b class="num" style="white-space:nowrap;">${pct.toFixed(2)}%</b>
+      <b class="num" style="white-space:nowrap;">${toFaDigits(pct.toFixed(2))}٪</b>
     </div>`;
   }).join('');
   openModal('mysteryInfoModalBg');
@@ -2651,7 +2700,7 @@ function shopDataSig(){
 function tickXPShop(){
   const walletEl = document.getElementById('xpWalletVal');
   if(!walletEl) return;
-  const w = (DB.xpWallet||0).toLocaleString('en-US');
+  const w = faNum(DB.xpWallet);
   if(walletEl.textContent !== w) walletEl.textContent = w;
   const statusEl = document.getElementById('xpShopStatus');
   const boostLeft = DB.xpBoost ? DB.xpBoost.activeUntil - Date.now() : 0;
@@ -2668,11 +2717,11 @@ function renderXPShop(){
   const walletEl = document.getElementById('xpWalletVal');
   if(!walletEl) return;
   __shopSig = shopDataSig();
-  walletEl.textContent = (DB.xpWallet||0).toLocaleString('en-US');
+  walletEl.textContent = faNum(DB.xpWallet);
 
-  document.getElementById('costBoost').textContent = applyShopDiscount(100)+' XP';
-  document.getElementById('costMystery').textContent = applyShopDiscount(200)+' XP';
-  document.getElementById('costShield').textContent = applyShopDiscount(500)+' XP';
+  document.getElementById('costBoost').textContent = faNum(applyShopDiscount(100))+' XP';
+  document.getElementById('costMystery').textContent = faNum(applyShopDiscount(200))+' XP';
+  document.getElementById('costShield').textContent = faNum(applyShopDiscount(500))+' XP';
 
   const shieldLimitEl = document.getElementById('streakShieldWeeklyLimit');
   if(shieldLimitEl){
@@ -2681,7 +2730,7 @@ function renderXPShop(){
     const count = (w.weekStart===now) ? (w.count||0) : 0;
     const remaining = Math.max(0, STREAK_SHIELD_WEEKLY_LIMIT - count);
     const owned = (DB.streakShields||0) >= 1;
-    let txt = `سقف خرید هفتگی: <b class="num">${count}/${STREAK_SHIELD_WEEKLY_LIMIT}</b> — ${remaining} خرید باقی‌مانده`;
+    let txt = `سقف خرید هفتگی: <b class="num">${toFaDigits(count)}/${toFaDigits(STREAK_SHIELD_WEEKLY_LIMIT)}</b> — ${toFaDigits(remaining)} خرید باقی‌مانده`;
     if(owned) txt += '<br>🛡️ الان یک Shield داری — اول مصرفش کن';
     shieldLimitEl.innerHTML = txt;
   }
@@ -2703,18 +2752,18 @@ function renderXPShop(){
       <div class="theme-name">${meta.icon} ${meta.label}</div>
       ${owned
         ? `<button class="btn ${active?'ghost':''} sm" style="width:100%; margin-top:8px;" onclick="useTheme('${k}')" ${active?'disabled':''}>${active?'✓ در حال استفاده':'استفاده کن'}</button>`
-        : `<div class="theme-cost num">${applyShopDiscount(meta.cost)} XP</div><button class="btn sm" style="width:100%; margin-top:8px;" onclick="buyTheme('${k}')">خرید</button>`
+        : `<div class="theme-cost num">${faNum(applyShopDiscount(meta.cost))} XP</div><button class="btn sm" style="width:100%; margin-top:8px;" onclick="buyTheme('${k}')">خرید</button>`
       }
     </div>`;
   }).join('');
 
   const invEl = document.getElementById('shopInventory');
   const rows = [];
-  if(DB.streakShields>0) rows.push(`<div class="shop-inv-row"><div class="ic">🔥</div><div>Streak Shield · <b class="num">${DB.streakShields}</b> عدد</div></div>`);
+  if(DB.streakShields>0) rows.push(`<div class="shop-inv-row"><div class="ic">🔥</div><div>Streak Shield · <b class="num">${toFaDigits(DB.streakShields)}</b> عدد</div></div>`);
   const cityCounts = {};
   (DB.cityBonusItems||[]).forEach(t=> cityCounts[t]=(cityCounts[t]||0)+1);
   Object.keys(cityCounts).forEach(t=>{
-    rows.push(`<div class="shop-inv-row"><div class="ic">${CITY_BONUS_ICONS[t]}</div><div>${CITY_BONUS_NAMES[t]} توی Life City · <b class="num">${cityCounts[t]}</b> عدد</div></div>`);
+    rows.push(`<div class="shop-inv-row"><div class="ic">${CITY_BONUS_ICONS[t]}</div><div>${CITY_BONUS_NAMES[t]} توی Life City · <b class="num">${toFaDigits(cityCounts[t])}</b> عدد</div></div>`);
   });
   invEl.innerHTML = rows.length ? rows.join('') : `<div class="empty" style="padding:16px;">هنوز چیزی نخریدی</div>`;
 }
@@ -2787,6 +2836,11 @@ function jalaaliMonthLength(jy,jm){
 const JALALI_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
 const FA_DIGITS = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFaDigits(n){ return String(n).replace(/[0-9]/g, d=>FA_DIGITS[+d]); }
+/* v21.5: one way to write a count/price/HP on screen — Persian digits with the
+   usual thousand separator. English mode turns the digits back to Latin through
+   lang.js, exactly like every other number in the app. Clock faces (MM:SS) stay
+   Latin on purpose: they are timers, not counts. */
+function faNum(n){ return toFaDigits(Math.round(Number(n)||0).toLocaleString('en-US')); }
 function isoToJalaliText(iso){
   if(!iso) return '';
   const [gy,gm,gd] = iso.split('-').map(Number);
@@ -5570,7 +5624,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='21.4';
+const LP_APP_VERSION='21.5';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

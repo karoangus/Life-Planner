@@ -1,5 +1,5 @@
 /* ============================================================
-   Life Planner v21.3 / v21.4 — «راهنمای بخش‌ها» / section guides
+   Life Planner v21.3 / v21.4 / v21.5 — «راهنمای بخش‌ها» / section guides
 
    The simplification path (v20 → v21.2) took the clutter out of
    the Dashboard, Tasks and Calendar. This file adds the missing
@@ -10,6 +10,16 @@
    Habits, Goals and Notes now carry a ❓ of their own and one
    first-visit hint each. Nothing else about them changed here —
    the fixes of that release live in core.js.
+
+   v21.5 finishes the job: the Pomodoro, the XP Shop, the skill
+   tree and the weekly boss carry the same ❓ and the same single
+   hint, so every section of the app is now explainable from
+   inside itself. Still the same engine, still one storage key,
+   still no new file — only four more entries in the data below
+   (and two of the ten action buttons run a small local function
+   instead of a global one, because their section has no sheet to
+   open: the skill tree leads to the shop, the boss opens its own
+   fight — or its editor when a fight is already on).
 
    Three layers, all additive, none of them touching a renderer,
    an element ID, a class or a handler from core.js:
@@ -53,8 +63,12 @@
 
   /* Sections that own a guide. The Calendar has one too, it just never shows
      a first-visit hint (its intro line already sits above the grid). */
-  var SECTIONS = ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes'];
-  var HINTED = { dashboard: true, tasks: true, habits: true, goals: true, notes: true };
+  var SECTIONS = ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes',
+                  'pomodoro', 'shop', 'skills', 'boss'];
+  var HINTED = {
+    dashboard: true, tasks: true, habits: true, goals: true, notes: true,
+    /* v21.5 */ pomodoro: true, shop: true, skills: true, boss: true
+  };
 
   var TITLES = {
     dashboard: '📖 راهنمای داشبورد',
@@ -62,7 +76,12 @@
     calendar: '📖 راهنمای تقویم',
     habits: '📖 راهنمای عادت‌ها',
     goals: '📖 راهنمای اهداف',
-    notes: '📖 راهنمای یادداشت‌ها'
+    notes: '📖 راهنمای یادداشت‌ها',
+    /* v21.5 */
+    pomodoro: '📖 راهنمای پومودورو',
+    shop: '📖 راهنمای XP Shop',
+    skills: '📖 راهنمای درخت مهارت',
+    boss: '📖 راهنمای باس هفتگی'
   };
 
   /* One button per guide that lands the user in the section's main action —
@@ -74,10 +93,48 @@
     /* v21.4 */
     habits: { label: '➕ عادت جدید', fn: 'openHabitModal' },
     goals: { label: '➕ هدف جدید', fn: 'openGoalModal' },
-    notes: { label: '➕ یادداشت جدید', fn: 'openNoteModal' }
+    notes: { label: '➕ یادداشت جدید', fn: 'openNoteModal' },
+    /* v21.5 — `fn` is a global name, `local` a function of this file: the two
+       sections below have no sheet of their own to open. */
+    pomodoro: { label: '▶️ شروع جلسه‌ی فوکوس', fn: 'pomoQuickStart' },
+    shop: { label: '🎁 شانس‌های جعبه', fn: 'openMysteryInfo' },
+    skills: { label: '🛍️ برو به XP Shop', local: function () {
+      if (typeof window.showView === 'function') window.showView('shop');
+    } },
+    boss: {
+      /* A running fight must never be answered with a blank setup sheet — that
+         would throw its HP away — so both the label and the action follow the
+         data: build a boss, or edit the one that is already on screen. */
+      label: function () {
+        var db = store();
+        return (db && db.boss && db.boss.active) ? '✏️ ویرایش باس' : '⚔️ ساخت باس';
+      },
+      local: function () {
+        var db = store();
+        var active = !!(db && db.boss && db.boss.active);
+        if (!call(active ? 'startEditBoss' : 'openBossSetup')) say('⚠️ این بخش در دسترس نیست');
+      }
+    }
   };
 
   var HINTS = {
+    /* v21.5: one line each for the last four sections */
+    pomodoro: {
+      ic: '🍅',
+      txt: 'فقط «▶️ شروع» را بزن؛ دور، استراحت و XP خودش می‌آید.'
+    },
+    shop: {
+      ic: '🛍️',
+      txt: 'موجودی XP Shop از نوارِ سطح جداست — خرج کردنش لولت را کم نمی‌کند.'
+    },
+    skills: {
+      ic: '🌳',
+      txt: 'هر لول‌آپ ۱ امتیاز مهارت می‌دهد؛ یک تیر بخر و اثرش را همان لحظه ببین.'
+    },
+    boss: {
+      ic: '⚔️',
+      txt: 'یک اسم بنویس و چند تسک انتخاب کن؛ هر تیک یک ضربه به باس است.'
+    },
     dashboard: {
       ic: '👋',
       txt: 'داشبورد یعنی «امروز چه‌کار داری؟» — یک بار راهنما را بخوان تا همه‌چیز روشن شود.'
@@ -104,10 +161,9 @@
   /* ---------- stored state ---------- */
 
   function blankState() {
-    return {
-      seen: { dashboard: 0, tasks: 0, calendar: 0, habits: 0, goals: 0, notes: 0 },
-      qs: ''
-    };
+    var seen = {};
+    SECTIONS.forEach(function (s) { seen[s] = 0; });
+    return { seen: seen, qs: '' };
   }
 
   function readState() {
@@ -189,7 +245,10 @@
     }
 
     var cta = byId('guideCta');
-    if (cta && CTA[section]) cta.textContent = CTA[section].label;
+    if (cta && CTA[section]) {
+      var lbl = CTA[section].label;
+      cta.textContent = (typeof lbl === 'function') ? lbl() : lbl;
+    }
   }
 
   function guideOpen() {
@@ -217,7 +276,9 @@
     var cta = CTA[currentSection];
     closeGuide();
     /* Straight into the action the guide was explaining. */
-    if (cta && !call(cta.fn)) say('⚠️ این بخش در دسترس نیست');
+    if (!cta) { say('⚠️ این بخش در دسترس نیست'); return; }
+    if (typeof cta.local === 'function') { try { cta.local(); } catch (_) { } return; }
+    if (!call(cta.fn)) say('⚠️ این بخش در دسترس نیست');
   }
 
   window.openGuide = openGuide;
