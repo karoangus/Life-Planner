@@ -4,6 +4,18 @@
    real-time minute tracking, hours/minutes statistics)
    Load order: after core.js + enhancements.js.
    Self-contained IIFE — does not add unnecessary globals.
+
+   v21.5 simplification (no feature was taken away from the user):
+     • the live countdown notification is gone — a session still
+       announces its start, its end and the end of a round, but no
+       notification is rewritten every five seconds any more;
+     • one 1s interval instead of two (minute badge + Focus Mode);
+     • dead code out: the never-invoked window.tickPomo override,
+       the no-op fullscreenchange listener and four unused `oldX`
+       references, the DB.pomodoro.presets mirror that nothing read
+       and two task fields that were written and never shown;
+     • every number this file paints now uses the app's own Persian
+       digits (toFaDigits), and each duration is written once.
    ============================================================ */
 
 /* ============ POMODORO v11.1 (Focus To-Do Edition) ============ */
@@ -45,7 +57,10 @@
     if(DB.pomodoro.settings.longBreakMin===undefined) DB.pomodoro.settings.longBreakMin = 15;
     if(DB.pomodoro.settings.cycleCount===undefined) DB.pomodoro.settings.cycleCount = 4;
     if(!Array.isArray(DB.pomodoro.sessionHistory)) DB.pomodoro.sessionHistory = [];
-    if(!DB.pomodoro.presets) DB.pomodoro.presets = PRESETS.map(x=>({...x}));
+    /* v21.5: DB.pomodoro.presets was a copy of PRESETS that the UI never read
+       (the preset grid is painted from the constant). Drop it, so backups and
+       localStorage stop carrying a stale second source of truth. */
+    if(DB.pomodoro.presets) delete DB.pomodoro.presets;
     if(!DB.pomodoro.presetId) DB.pomodoro.presetId = 'classic';
     if(!DB.pomodoro.customPreset) DB.pomodoro.customPreset = { focus:25, break:5 };
     if(!DB.pomodoro.sound) DB.pomodoro.sound = 'off';
@@ -73,19 +88,25 @@
   /* -------------------------------------------------------------
      PERSISTENT DURATION FORMATTERS (Hours + Minutes in Persian)
   ------------------------------------------------------------- */
+  /* v21.5: every number this file paints goes through the app's own digit
+     helper, so the Pomodoro reads like the rest of the app (and English mode
+     still gets Latin digits back through lang.js). */
+  const fa = (n) => (typeof toFaDigits === 'function' ? toFaDigits(n) : String(n));
+
   function formatPomoTimeFa(minutes){
     const m = Math.max(0, Math.round(Number(minutes) || 0));
     if(m === 0) return '۰ دقیقه';
-    if(m < 60) return `${m} دقیقه`;
+    if(m < 60) return `${fa(m)} دقیقه`;
     const h = Math.floor(m / 60);
     const remM = m % 60;
-    if(remM === 0) return `${h} ساعت`;
-    return `${h} ساعت و ${remM} دقیقه`;
+    if(remM === 0) return `${fa(h)} ساعت`;
+    return `${fa(h)} ساعت و ${fa(remM)} دقیقه`;
   }
+  /* Compact label for the small week chips: ۴۵ دقیقه / ۱.۵ ساعت */
   function formatPomoHours(minutes){
     const m = Math.max(0, Number(minutes) || 0);
-    const h = Math.round((m / 60) * 10) / 10;
-    return `${h}h`;
+    if(m < 60) return `${fa(Math.round(m))} دقیقه`;
+    return `${fa(Math.round((m / 60) * 10) / 10)} ساعت`;
   }
   window.formatPomoTimeFa = formatPomoTimeFa;
   window.formatPomoHours = formatPomoHours;
@@ -98,7 +119,7 @@
     return '<option value="">🎯 فوکوس آزاد (بدون تسک)</option>' +
       tasks.slice().sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999')).map(t => {
         const count = t.pomodorosCount ? ` (🍅 ${t.pomodorosCount})` : '';
-        const dt = t.date ? ` • ${esc(t.date)}` : '';
+        const dt = t.date ? ` • ${esc(jalaliOrIso(t.date))}` : '';
         return `<option value="${esc(t.id)}">${esc(t.title||t.text||'بدون عنوان')}${count}${dt}</option>`;
       }).join('');
   }
@@ -106,6 +127,11 @@
   function selectedTask(){
     const id = document.getElementById('pomo66Task')?.value || '';
     return id ? ((DB.tasks||[]).find(t=>String(t.id)===String(id)) || null) : null;
+  }
+
+  /* v21.5: dates read the way the rest of the app reads them — Jalali. */
+  function jalaliOrIso(iso){
+    return (typeof isoToJalaliText === 'function' && iso) ? (isoToJalaliText(iso) || iso) : (iso || '');
   }
 
   function getTaskLabel(id){
@@ -533,11 +559,11 @@
     const dots = [];
     for(let i = 1; i <= cycleCount; i++){
       if(i < currentSession){
-        dots.push(`<span class="pomo-dot done" title="جلسه ${i} کامل شده">🍅</span>`);
+        dots.push(`<span class="pomo-dot done" title="جلسه ${fa(i)} کامل شده">🍅</span>`);
       } else if(i === currentSession){
-        dots.push(`<span class="pomo-dot active" title="جلسه کنونی ${i}">${isBreak ? '☕' : '⏱️'}</span>`);
+        dots.push(`<span class="pomo-dot active" title="جلسه کنونی ${fa(i)}">${isBreak ? '☕' : '⏱️'}</span>`);
       } else {
-        dots.push(`<span class="pomo-dot pending" title="جلسه ${i}">⚪</span>`);
+        dots.push(`<span class="pomo-dot pending" title="جلسه ${fa(i)}">⚪</span>`);
       }
     }
     return dots.join('');
@@ -549,21 +575,21 @@
   /* v13.1: single source of truth for the "Minute X of Y" line under the
      timer, shared by the full badge render and the cheap live tick. */
   function minuteBadgeText(s, currentSession, cycleCount){
-    if(!s) return `🍅 جلسه ${currentSession} از ${cycleCount} آماده شروع`;
+    if(!s) return `🍅 جلسه ${fa(currentSession)} از ${fa(cycleCount)} آماده شروع`;
     const info = getPomoMinuteInfo(s);
-    if(info.isInfinite) return `♾️ دقیقه ${info.currentMin} فوکوس آزاد`;
-    if(s.mode === 'break') return `☕ دقیقه ${info.currentMin} از ${info.totalMin} استراحت`;
-    return `⏱️ دقیقه ${info.currentMin} از ${info.totalMin} (${info.remMin} دقیقه باقی‌مانده)`;
+    if(info.isInfinite) return `♾️ دقیقه ${fa(info.currentMin)} فوکوس آزاد`;
+    if(s.mode === 'break') return `☕ دقیقه ${fa(info.currentMin)} از ${fa(info.totalMin)} استراحت`;
+    return `⏱️ دقیقه ${fa(info.currentMin)} از ${fa(info.totalMin)} (${fa(info.remMin)} دقیقه باقی‌مانده)`;
   }
 
-  /* v13.1: live-update the minute badge ONCE PER SECOND while a session is
-     running. core.js's setInterval holds the *original* tickPomo reference,
-     so the window.tickPomo override below never ran and the "Minute X of Y"
-     number only moved on start/pause/resume — it looked stuck. This interval
-     touches the single text node in place (no DOM rebuild) and stays idle
-     unless the pomodoro view is on screen. */
+  /* v13.1 / v21.5: ONE 1s interval for everything that moves by itself here —
+     the "Minute X of Y" badge of the main view and the Focus Mode overlay.
+     It touches single text nodes in place (no DOM rebuild) and stays idle
+     unless the Pomodoro view or the overlay is actually on screen. */
   setInterval(()=>{
     try{
+      const ov = document.getElementById('pomo66FocusOverlay');
+      if(ov && ov.classList.contains('open')) renderFocusOverlay();
       const pv = document.getElementById('view-pomodoro');
       if(!pv || !pv.classList.contains('active')) return;
       const s = DB.pomodoro && DB.pomodoro.session;
@@ -595,8 +621,8 @@
     }
     if(badge){
       const titleText = isBreak
-        ? (s?.isLongBreak ? `🏖️ دور ${currentRound} • استراحت طولانی` : `☕ دور ${currentRound} • استراحت جلسه ${currentSession} از ${cycleCount}`)
-        : `🍅 دور ${currentRound} • جلسه ${currentSession} از ${cycleCount}`;
+        ? (s?.isLongBreak ? `🏖️ دور ${fa(currentRound)} • استراحت طولانی` : `☕ دور ${fa(currentRound)} • استراحت جلسه ${fa(currentSession)} از ${fa(cycleCount)}`)
+        : `🍅 دور ${fa(currentRound)} • جلسه ${fa(currentSession)} از ${fa(cycleCount)}`;
       badge.innerHTML = `
         <div class="pomo-session-title" id="pomoSessionTitle">${titleText}</div>
         <div class="pomo-dots-row" id="pomoSessionDots">${renderCycleDotsHtml(currentSession, cycleCount, isBreak)}</div>
@@ -634,7 +660,7 @@
           <div class="pomo-preset-grid">
             ${PRESETS.map(x=>{
               const p = x.id==='custom' ? getCustomPreset() : x;
-              return `<button type="button" class="pomo-preset ${x.id===activePreset?'active':''}" data-pomo-preset="${x.id}">${x.icon} ${x.label}<small>${p.focus}/${p.break} دقیقه</small></button>`;
+              return `<button type="button" class="pomo-preset ${x.id===activePreset?'active':''}" data-pomo-preset="${x.id}">${x.icon} ${x.label}<small>${fa(p.focus)}/${fa(p.break)} دقیقه</small></button>`;
             }).join('')}
           </div>
           <button type="button" class="btn ghost btn-sm" id="pomoEditCustomBtn" style="font-size:11px;padding:5px 10px;margin-top:8px;">✏️ ویرایش پریست سفارشی</button>
@@ -657,10 +683,7 @@
                 <input type="range" id="pomo66Volume" min="0" max="1" step="0.05" value="${vol}" class="pomo-vol-slider">
               </div>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:4px;">
-              <span class="pomo-v66-mini">🔔 نوتیفیکیشن هوشمند فعاله</span>
-              <button type="button" class="btn" id="pomo66FocusMode" style="background:var(--grad);">🧠 حالت تمرکز تمام‌صفحه</button>
-            </div>
+            <button type="button" class="btn" id="pomo66FocusMode" style="background:var(--grad);width:100%;justify-content:center;">🧠 حالت تمرکز تمام‌صفحه</button>
           </div>
         </div>
       </div>`;
@@ -716,14 +739,14 @@
         DB.pomodoro.pendingNext = 'focus';
         save();
         const st = getCycleState();
-        toast(`⏭️ مرحله بعد: جلسه ${st.currentSession} از ${st.cycleCount} (فوکوس)`);
+        toast(`⏭️ مرحله بعد: جلسه ${fa(st.currentSession)} از ${fa(st.cycleCount)} (فوکوس)`);
       } else {
         const isCycleEnd = currentSession >= cycleCount;
         DB.pomodoro.pendingNext = isCycleEnd ? 'longBreak' : 'break';
         save();
         toast(isCycleEnd
-          ? `⏭️ مرحله بعد: استراحت طولانی (${DB.pomodoro.settings.longBreakMin || 15} دقیقه)`
-          : `⏭️ مرحله بعد: استراحت (${DB.pomodoro.settings.breakMin || 5} دقیقه)`);
+          ? `⏭️ مرحله بعد: استراحت طولانی (${fa(DB.pomodoro.settings.longBreakMin || 15)} دقیقه)`
+          : `⏭️ مرحله بعد: استراحت (${fa(DB.pomodoro.settings.breakMin || 5)} دقیقه)`);
       }
       renderPomoUI();
       renderPomoV66();
@@ -746,8 +769,28 @@
     fillPomoSettingsForm();
     renderPomoUI();
     renderPomoV66();
-    toast(`✅ ${p.label}: ${p.focus} دقیقه فوکوس / ${p.break} دقیقه استراحت`);
+    toast(`✅ ${p.label}: ${fa(p.focus)} دقیقه فوکوس / ${fa(p.break)} دقیقه استراحت`);
   }
+
+  /* v21.5: the ⚙️ tab and the preset grid both write DB.pomodoro.settings, so
+     after saving numbers by hand the grid follows: a matching preset becomes
+     the active one, anything else becomes the saved custom preset. The two
+     places can no longer disagree on screen. */
+  function syncPresetFromSettings(){
+    ensure();
+    const st = DB.pomodoro.settings;
+    const f = st.focusMin || 25, b = st.breakMin || 5;
+    const match = PRESETS.find(x => x.id !== 'custom' && x.focus === f && x.break === b);
+    if(match){
+      if(DB.pomodoro.presetId !== match.id){ DB.pomodoro.presetId = match.id; save(); }
+      return match.id;
+    }
+    DB.pomodoro.customPreset = { focus:f, break:b, saved:true };
+    DB.pomodoro.presetId = 'custom';
+    save();
+    return 'custom';
+  }
+  window.syncPomoPresetFromSettings = syncPresetFromSettings;
 
   /* v13: custom preset editor — user creates & reuses their own focus/break times */
   function openCustomPresetEditor(){
@@ -783,12 +826,6 @@
       const f = Math.min(180, Math.max(1, parseInt(document.getElementById('pomoCustomFocus').value,10) || 25));
       const b = Math.min(60,  Math.max(1, parseInt(document.getElementById('pomoCustomBreak').value,10) || 5));
       DB.pomodoro.customPreset = { focus:f, break:b, saved:true };
-      if(Array.isArray(DB.pomodoro.presets)){
-        const idx = DB.pomodoro.presets.findIndex(x => x.id === 'custom');
-        const entry = { id:'custom', label:'سفارشی', focus:f, break:b, icon:'⚙️' };
-        if(idx >= 0) DB.pomodoro.presets[idx] = entry;
-        else DB.pomodoro.presets.push(entry);
-      }
       DB.pomodoro.presetId = 'custom';
       DB.pomodoro.settings.focusMin = f;
       DB.pomodoro.settings.breakMin = b;
@@ -797,7 +834,7 @@
       renderPomoUI();
       renderPomoV66();
       el.classList.remove('open');
-      toast(`✅ پریست سفارشی: ${f} دقیقه فوکوس / ${b} دقیقه استراحت`);
+      toast(`✅ پریست سفارشی: ${fa(f)} دقیقه فوکوس / ${fa(b)} دقیقه استراحت`);
     };
     document.getElementById('pomoCustomCancel').onclick = () => el.classList.remove('open');
   }
@@ -860,13 +897,12 @@
         source: meta.source || 'pomodoro'
       });
       DB.pomodoro.sessionHistory = DB.pomodoro.sessionHistory.slice(0, 500);
+      /* v21.5: only pomodorosCount is ever shown (in the task picker), so only
+         that counter is written now. pomodoroMinutes / lastPomodoroAt had no
+         reader anywhere in the app. */
       if(meta.taskId){
         const t = (DB.tasks || []).find(x => String(x.id) === String(meta.taskId));
-        if(t){
-          t.pomodoroMinutes = (t.pomodoroMinutes || 0) + minutes;
-          t.pomodorosCount = (t.pomodorosCount || 0) + 1;
-          t.lastPomodoroAt = endedAt;
-        }
+        if(t) t.pomodorosCount = (t.pomodorosCount || 0) + 1;
       }
       updateStreak();
     }
@@ -900,8 +936,8 @@
 
     el.innerHTML = `
       <div class="pomo-result-box" dir="rtl">
-        <div style="font-size:12px;color:var(--txt-dim2);font-weight:800;text-align:center;">🎉 پایان جلسه ${data.sessionNum || 1} از ${data.cycleCount || 4}</div>
-        <div class="pomo-result-score">${data.score}/100</div>
+        <div style="font-size:12px;color:var(--txt-dim2);font-weight:800;text-align:center;">🎉 پایان جلسه ${fa(data.sessionNum || 1)} از ${fa(data.cycleCount || 4)}</div>
+        <div class="pomo-result-score">${fa(data.score)}/۱۰۰</div>
         <div style="text-align:center;font-size:14px;font-weight:900;margin-top:-2px;">${formatPomoTimeFa(data.minutes)} ${isFocus ? 'فوکوس موفق 🎯' : 'استراحت ☕'}</div>
         <div class="pomo-v66-help" style="text-align:center;margin-top:6px;">${esc(taskName)} ${isFocus ? '· امتیاز تمرکز ثبت شد' : ''}</div>
         ${taskDoneBtn}
@@ -934,8 +970,8 @@
     }
     const title = isLong ? '🏖️ وقت استراحت طولانی' : '☕ وقت استراحت کوتاه';
     const desc = isLong
-      ? `تبریک! یک دور کامل از جلسات فوکوس رو با موفقیت پشت سر گذاشتی. حالا ${breakMinutes} دقیقه با خیال راحت استراحت کن تا کاملاً شارژ بشی.`
-      : `${breakMinutes} دقیقه استراحت یعنی واقعاً چند دقیقه ذهنت رو از کار جدا کنی؛ یک دور کوتاه راه برو یا آب بخور.`;
+      ? `تبریک! یک دور کامل از جلسات فوکوس رو با موفقیت پشت سر گذاشتی. حالا ${fa(breakMinutes)} دقیقه با خیال راحت استراحت کن تا کاملاً شارژ بشی.`
+      : `${fa(breakMinutes)} دقیقه استراحت یعنی واقعاً چند دقیقه ذهنت رو از کار جدا کنی؛ یک دور کوتاه راه برو یا آب بخور.`;
 
     el.innerHTML = `
       <div class="pomo-break-box" dir="rtl">
@@ -982,8 +1018,6 @@
   /* -------------------------------------------------------------
      FULLSCREEN FOCUS MODE OVERLAY (Polished, Responsive & Bug-Free)
   ------------------------------------------------------------- */
-  let focusFullscreenRequested = false;
-
   function setFocusUiOpen(open){
     document.documentElement.classList.toggle('pomo-focus-open', open);
     document.body.classList.toggle('pomo-focus-open', open);
@@ -994,7 +1028,6 @@
     try {
       if(document.fullscreenElement === el) return true;
       if(typeof el.requestFullscreen !== 'function') return false;
-      focusFullscreenRequested = true;
       await el.requestFullscreen({ navigationUI: 'hide' }).catch(()=>{});
       return document.fullscreenElement === el;
     } catch(e){
@@ -1012,7 +1045,6 @@
         document.exitFullscreen?.().catch(()=>{});
       }
     } catch(_){}
-    focusFullscreenRequested = false;
     renderPomoV66();
   }
 
@@ -1117,20 +1149,6 @@
     requestFocusFullscreen(el);
   }
 
-  if(!window.__pomoFocusFullscreenBound){
-    window.__pomoFocusFullscreenBound = true;
-    document.addEventListener('fullscreenchange', () => {
-      const el = document.getElementById('pomo66FocusOverlay');
-      if(!el || !el.classList.contains('open')) return;
-      if(!document.fullscreenElement && !document.webkitFullscreenElement){
-        if(focusFullscreenRequested){
-          focusFullscreenRequested = false;
-          return;
-        }
-      }
-    });
-  }
-
   function renderFocusOverlay(){
     const s = DB.pomodoro.session;
     const el = document.getElementById('pomo66FocusOverlay');
@@ -1150,8 +1168,8 @@
 
     if(cycleBadge){
       cycleBadge.textContent = isBreak
-        ? (s?.isLongBreak ? `🏖️ دور ${currentRound} • استراحت طولانی` : `☕ دور ${currentRound} • استراحت جلسه ${currentSession} از ${cycleCount}`)
-        : `🍅 دور ${currentRound} • جلسه ${currentSession} از ${cycleCount}`;
+        ? (s?.isLongBreak ? `🏖️ دور ${fa(currentRound)} • استراحت طولانی` : `☕ دور ${fa(currentRound)} • استراحت جلسه ${fa(currentSession)} از ${fa(cycleCount)}`)
+        : `🍅 دور ${fa(currentRound)} • جلسه ${fa(currentSession)} از ${fa(cycleCount)}`;
     }
     if(dotsRow){
       dotsRow.innerHTML = renderCycleDotsHtml(currentSession, cycleCount, isBreak);
@@ -1161,7 +1179,7 @@
       tm.textContent = '00:00';
       mode.textContent = 'آماده‌ی شروع فوکوس';
       task.textContent = DB.pomodoro.lastTaskId ? getTaskLabel(DB.pomodoro.lastTaskId) : 'فوکوس آزاد';
-      if(minBadge) minBadge.textContent = `🍅 جلسه ${currentSession} از ${cycleCount} آماده شروع`;
+      if(minBadge) minBadge.textContent = `🍅 جلسه ${fa(currentSession)} از ${fa(cycleCount)} آماده شروع`;
       bar.style.width = '0%';
       act.textContent = '▶️ شروع فوکوس';
       return;
@@ -1173,18 +1191,18 @@
       const elapsed = (s.baseElapsedMs || 0) + (s.status === 'running' ? Date.now() - s.startAt : 0);
       tm.textContent = fmtMMSS(elapsed);
       mode.textContent = '♾️ فوکوس بی‌نهایت';
-      if(minBadge) minBadge.textContent = `♾️ دقیقه ${info.currentMin} فوکوس آزاد`;
+      if(minBadge) minBadge.textContent = `♾️ دقیقه ${fa(info.currentMin)} فوکوس آزاد`;
       bar.style.width = '100%';
     } else {
       const remainMs = s.status === 'running' ? Math.max(0, s.endAt - Date.now()) : (s.remainingMs || 0);
       tm.textContent = fmtMMSS(remainMs);
       mode.textContent = s.mode === 'focus'
-        ? `🎯 جلسه ${currentSession} از ${cycleCount} • فوکوس`
+        ? `🎯 جلسه ${fa(currentSession)} از ${fa(cycleCount)} • فوکوس`
         : (s.isLongBreak ? '🏖️ استراحت طولانی' : '☕ استراحت کوتاه');
       if(minBadge){
         minBadge.textContent = s.mode === 'focus'
-          ? `⏱️ دقیقه ${info.currentMin} از ${info.totalMin} (${info.remMin} دقیقه باقی‌مانده)`
-          : `☕ دقیقه ${info.currentMin} از ${info.totalMin} استراحت`;
+          ? `⏱️ دقیقه ${fa(info.currentMin)} از ${fa(info.totalMin)} (${fa(info.remMin)} دقیقه باقی‌مانده)`
+          : `☕ دقیقه ${fa(info.currentMin)} از ${fa(info.totalMin)} استراحت`;
       }
       bar.style.width = `${info.pct}%`;
     }
@@ -1196,6 +1214,10 @@
   /* -------------------------------------------------------------
      POMODORO STATISTICS (Hours & Minutes Formatting)
   ------------------------------------------------------------- */
+  /* v21.5: the stats tab used to mix two visual languages — the plain cards of
+     core.js on top and two .pomo-v66-card blocks below — and the two summary
+     tiles wrote the same duration twice ("1.5h" over "۱ ساعت و ۳۰ دقیقه").
+     Same data, one language, one number per tile. */
   function renderStatsTools(){
     const root = document.getElementById('pomoV66StatsTools');
     if(!root) return;
@@ -1204,43 +1226,40 @@
     const hist = (DB.pomodoro.sessionHistory || []).filter(x => x.mode === 'focus' && x.minutes > 0);
     const totalMins = hist.reduce((a,x) => a + x.minutes, 0);
     const avg = hist.length ? Math.round(hist.reduce((a,x) => a + x.score, 0) / hist.length) : 0;
-    // v13: average daily focus time across recorded days
-    const dayRecords = Object.entries(DB.pomodoro.history || {});
-    const focusDays = dayRecords.filter(([,v]) => v && (v.focus || 0) > 0);
+    // average daily focus time across the days that have any focus recorded
+    const focusDays = Object.values(DB.pomodoro.history || {}).filter(v => v && (v.focus || 0) > 0);
     const avgDailyMins = focusDays.length
-      ? Math.round(focusDays.reduce((s,[,v]) => s + (v.focus || 0), 0) / focusDays.length)
+      ? Math.round(focusDays.reduce((sum,v) => sum + (v.focus || 0), 0) / focusDays.length)
       : 0;
-    const { currentSession, currentRound, cycleCount } = getCycleState();
 
     root.innerHTML = `
-      <div class="pomo-v66-card">
-        <div class="pomo-v66-title">📈 جمع‌بندی فوکوس (دقیقه و ساعت)</div>
-        <div class="pomo-v66-help">آمار جامع فوکوس بر اساس جلسات واقعی پومودورو:</div>
+      <div class="card">
+        <div class="card-head"><h3>📈 جمع‌بندی فوکوس</h3><span class="muted" style="font-size:11.5px;">از روی جلسات واقعی</span></div>
         <div class="pomo-stat-grid">
           <div class="pomo-stat-mini">
-            <div class="n">${formatPomoHours(totalMins)}</div>
-            <div class="l">${formatPomoTimeFa(totalMins)}</div>
+            <div class="n dur">${formatPomoTimeFa(totalMins)}</div>
+            <div class="l">مجموع فوکوس</div>
           </div>
           <div class="pomo-stat-mini">
-            <div class="n">${hist.length}</div>
+            <div class="n">${fa(hist.length)}</div>
             <div class="l">جلسات کامل</div>
           </div>
           <div class="pomo-stat-mini">
-            <div class="n">${avg || 0}</div>
+            <div class="n">${fa(avg)}</div>
             <div class="l">میانگین کیفیت</div>
           </div>
           <div class="pomo-stat-mini">
-            <div class="n">🔥 ${DB.pomodoro.focusStreak || 0}</div>
+            <div class="n">🔥 ${fa(DB.pomodoro.focusStreak || 0)}</div>
             <div class="l">استریک روزانه</div>
           </div>
           <div class="pomo-stat-mini avg-daily">
-            <div class="n">${formatPomoHours(avgDailyMins)}</div>
+            <div class="n dur">${formatPomoTimeFa(avgDailyMins)}</div>
             <div class="l">میانگین فوکوس روزانه</div>
           </div>
         </div>
       </div>
-      <div class="pomo-v66-card">
-        <div class="pomo-v66-title">🕘 تاریخچه جلسات اخیر</div>
+      <div class="card">
+        <div class="card-head"><h3>🕘 تاریخچه‌ی جلسات اخیر</h3><span class="muted" style="font-size:11.5px;">۱۰ جلسه‌ی آخر</span></div>
         <div id="pomo66HistoryList"></div>
       </div>`;
 
@@ -1248,14 +1267,13 @@
     const recent = hist.slice(0, 10);
     list.innerHTML = recent.length ? recent.map(x => {
       const taskName = x.taskId ? getTaskLabel(x.taskId) : 'فوکوس آزاد';
-      const durationFormatted = formatPomoTimeFa(x.minutes);
       return `
         <div class="pomo-history-item">
           <div class="pomo-history-main">
             <div class="pomo-history-name">🎯 ${esc(taskName)}</div>
-            <div class="pomo-history-meta">${durationFormatted} (${x.minutes}m) · ${esc(x.date)} · ${x.pauseCount || 0} مکث</div>
+            <div class="pomo-history-meta">${formatPomoTimeFa(x.minutes)} · ${esc(jalaliOrIso(x.date))} · ${fa(x.pauseCount || 0)} مکث</div>
           </div>
-          <div class="pomo-history-score">${x.score}/100</div>
+          <div class="pomo-history-score">${fa(x.score)}/۱۰۰</div>
         </div>`;
     }).join('') : '<div class="muted" style="padding:10px 0;">هنوز جلسه کاملی ثبت نشده.</div>';
   }
@@ -1271,56 +1289,13 @@
   /* -------------------------------------------------------------
      GLOBAL ACTION OVERRIDES FOR SMOOTH FOCUS TO-DO FLOW
   ------------------------------------------------------------- */
-  const oldStartFocus = window.startFocus;
-  const oldStartBreak = window.startBreak;
+  /* v21.5: four of these six references were never used — the overrides below
+     rebuild the behaviour instead of delegating to it — and the whole live
+     notification layer went away with them. A session still announces its
+     start, its end and the end of a round (see startFocus / startBreak /
+     completePomoSession); nothing is rewritten every five seconds any more. */
   const oldPause = window.pauseSession;
   const oldResume = window.resumeSession;
-  const oldEnd = window.endSession;
-  const oldComplete = window.completePomoSession;
-
-  /* v13: live countdown inside the Pomodoro notification.
-     Re-uses one notification (same tag) and refreshes its body while the
-     timer runs, so the number in the notification counts down in real time. */
-  let liveNotifyTimer = null;
-  const LIVE_NOTIFY_TAG = 'lp-pomo-live';
-  let lastLiveNotifyBody = '';
-  function livePomoNotifyBody(){
-    const s = DB.pomodoro.session;
-    if(!s) return '';
-    if(s.mode === 'infinite'){
-      const elapsed = (s.baseElapsedMs || 0) + (s.status === 'running' ? Date.now() - s.startAt : 0);
-      return `♾️ ${fmtMMSS(elapsed)} فوکوس بی‌نهایت`;
-    }
-    const remain = s.status === 'running' ? Math.max(0, s.endAt - Date.now()) : (s.remainingMs || 0);
-    const phase = s.mode === 'focus' ? '🎯 فوکوس' : (s.isLongBreak ? '🏖️ استراحت طولانی' : '☕ استراحت');
-    return `⏳ ${fmtMMSS(remain)} — ${phase}${s.status === 'paused' ? ' (مکث)' : ''}`;
-  }
-  async function pushLivePomoNotification(){
-    if(!DB.pomodoro.notifications) return;
-    const body = livePomoNotifyBody();
-    if(!body || body === lastLiveNotifyBody) return;
-    lastLiveNotifyBody = body;
-    await sendNotification('🍅 تایمر پومودورو', body, { tag:LIVE_NOTIFY_TAG, renotify:false });
-  }
-  function startLivePomoNotification(){
-    stopLivePomoNotification(false);
-    lastLiveNotifyBody = '';
-    pushLivePomoNotification();
-    liveNotifyTimer = setInterval(pushLivePomoNotification, 5000);
-  }
-  function stopLivePomoNotification(close = true){
-    if(liveNotifyTimer){ clearInterval(liveNotifyTimer); liveNotifyTimer = null; }
-    lastLiveNotifyBody = '';
-    if(close && 'serviceWorker' in navigator){
-      try{
-        navigator.serviceWorker.ready.then(reg => {
-          if(reg && reg.getNotifications){
-            reg.getNotifications({ tag:LIVE_NOTIFY_TAG }).then(ns => ns.forEach(n => n.close())).catch(()=>{});
-          }
-        }).catch(()=>{});
-      }catch(_){}
-    }
-  }
 
   window.startFocus = function(){
     ensure();
@@ -1344,11 +1319,10 @@
     save();
     restartSoundFromGesture(getSound());
     if(DB.pomodoro.notifications){
-      sendNotification('🍅 فوکوس شروع شد', task ? `🎯 ${task.title||task.text}` : `جلسه ${currentSession} از ${cycleCount} شروع شد 💪`);
+      sendNotification('🍅 فوکوس شروع شد', task ? `🎯 ${task.title||task.text}` : `جلسه ${fa(currentSession)} از ${fa(cycleCount)} شروع شد 💪`);
     }
     renderPomoUI();
     renderPomoV66();
-    startLivePomoNotification();
   };
 
   window.startBreak = function(isLong = false){
@@ -1371,11 +1345,10 @@
     save();
     restartSoundFromGesture(getSound());
     if(DB.pomodoro.notifications){
-      sendNotification(isLong ? '🏖️ استراحت طولانی شروع شد' : '☕ استراحت کوتاه شروع شد', `به مدت ${breakMin} دقیقه استراحت کن`);
+      sendNotification(isLong ? '🏖️ استراحت طولانی شروع شد' : '☕ استراحت کوتاه شروع شد', `به مدت ${fa(breakMin)} دقیقه استراحت کن`);
     }
     renderPomoUI();
     renderPomoV66();
-    startLivePomoNotification();
   };
 
   window.pomoQuickStart = function(){
@@ -1401,7 +1374,6 @@
     stopSound();
     renderPomoUI();
     renderFocusOverlay();
-    pushLivePomoNotification();
   };
 
   window.resumeSession = function(){
@@ -1418,13 +1390,11 @@
     restartSoundFromGesture(getSound());
     renderPomoUI();
     renderFocusOverlay();
-    pushLivePomoNotification();
   };
 
   window.endSession = function(){
     const s = DB.pomodoro.session;
     if(!s) return;
-    stopLivePomoNotification();
     let mins = 0;
     if(s.mode === 'infinite'){
       const elapsed = (s.baseElapsedMs || 0) + (s.status === 'running' ? Date.now() - s.startAt : 0);
@@ -1452,7 +1422,7 @@
         completed: mins >= Math.ceil(planned)
       });
       if(mode === 'focus' && DB.pomodoro.notifications){
-        sendNotification('✅ جلسه ثبت شد', `${formatPomoTimeFa(mins)} تمرکز ثبت شد · امتیاز ${score}/100`);
+        sendNotification('✅ جلسه ثبت شد', `${formatPomoTimeFa(mins)} تمرکز ثبت شد · امتیاز ${fa(score)}/۱۰۰`);
       }
     } else {
       save();
@@ -1468,7 +1438,6 @@
   window.completePomoSession = function(){
     const s = DB.pomodoro.session;
     if(!s) return;
-    stopLivePomoNotification();
     const mode = s.mode;
     const { currentSession, currentRound, cycleCount } = getCycleState();
     const mins = mode === 'focus'
@@ -1501,7 +1470,7 @@
       if(DB.pomodoro.notifications){
         sendNotification(
           isCycleEnd ? '🎉 دور پومودورو کامل شد!' : '🎉 جلسه فوکوس کامل شد',
-          `جلسه ${currentSession} از ${cycleCount} به پایان رسید · استراحت ${nextBreakMin} دقیقه‌ای آماده است`
+          `جلسه ${fa(currentSession)} از ${fa(cycleCount)} به پایان رسید · استراحت ${fa(nextBreakMin)} دقیقه‌ای آماده است`
         );
       }
       renderPomoUI();
@@ -1512,7 +1481,7 @@
       advanceSessionAfterBreak(wasLong);
       save();
       if(DB.pomodoro.notifications){
-        sendNotification('☕ استراحت کامل شد', `وقت شروع جلسه ${DB.pomodoro.currentSession} از ${cycleCount} است 💪`);
+        sendNotification('☕ استراحت کامل شد', `وقت شروع جلسه ${fa(DB.pomodoro.currentSession)} از ${fa(cycleCount)} است 💪`);
       }
       toast('☕ استراحت تموم شد! وقت فوکوس بعدیه 💪');
       renderPomoUI();
@@ -1520,43 +1489,10 @@
     }
   };
 
-  // Live timer tick hook. (v13.1 note: core.js's setInterval captured the
-  // original tickPomo at definition time, so this override is invoked mainly
-  // from places that call tickPomo() by name; the cheap 1s interval below
-  // covers the main-view minute badge, and the overlay interval above covers
-  // fullscreen focus mode.)
-  const oldTick = window.tickPomo;
-  window.tickPomo = function(){
-    if(typeof oldTick === 'function') oldTick();
-    try{
-      const pv = document.getElementById('view-pomodoro');
-      if(pv && pv.classList.contains('active')){
-        const badge = document.getElementById('pomoMinuteBadge');
-        if(badge){
-          const { currentSession, cycleCount } = getCycleState();
-          badge.textContent = minuteBadgeText(DB.pomodoro && DB.pomodoro.session, currentSession, cycleCount);
-        } else {
-          renderMainSessionBadge();
-        }
-      }
-      const ov = document.getElementById('pomo66FocusOverlay');
-      if(ov && ov.classList.contains('open')) renderFocusOverlay();
-    }catch(_){}
-  };
-
-  /* v11.1: keep the fullscreen Focus Mode timer ticking once per second.
-     The core.js setInterval captures the function reference at definition
-     time, so simply overriding window.tickPomo there does not propagate.
-     We add a self-contained tick here that runs only while the Focus Mode
-     overlay is open, so the visible countdown stays in sync. */
-  /* v13.1: 1000ms instead of 500 — the overlay's countdown only shows whole
-     seconds via the shared core tick; this halves the (already hidden-view
-     guarded) DOM work while scrolling around with focus mode open. */
-  setInterval(()=>{
-    const el = document.getElementById('pomo66FocusOverlay');
-    if(!el || !el.classList.contains('open')) return;
-    renderFocusOverlay();
-  }, 1000);
+  /* v21.5: the window.tickPomo override was dead — core.js's setInterval
+     captured the original tickPomo at definition time and nothing else in the
+     app calls tickPomo() by name. Its two jobs (the minute badge and the Focus
+     Mode overlay) are done by the single 1s interval above. */
 
   try {
     if(typeof migrateLegacyManualPomoData === 'function') migrateLegacyManualPomoData();

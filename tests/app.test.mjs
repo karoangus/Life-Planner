@@ -1029,8 +1029,11 @@ if (!useFallback) {
 
     out.helpButtons = document.querySelectorAll(
       '#view-dashboard .guide-btn, #view-tasks .guide-btn, #view-calendar .guide-open-btn,' +
-      ' #view-habits .guide-btn, #view-goals .guide-btn, #view-notes .guide-btn').length;
-    out.slotAnchors = ['guideSlot-dashboard', 'guideSlot-tasks', 'guideSlot-habits', 'guideSlot-goals', 'guideSlot-notes']
+      ' #view-habits .guide-btn, #view-goals .guide-btn, #view-notes .guide-btn,' +
+      /* v21.5: the last four sections carry the same single ❓ */
+      ' #view-pomodoro .guide-btn, #view-shop .guide-btn, #view-skills .guide-btn, #view-boss .guide-btn').length;
+    out.slotAnchors = ['guideSlot-dashboard', 'guideSlot-tasks', 'guideSlot-habits', 'guideSlot-goals', 'guideSlot-notes',
+      'guideSlot-pomodoro', 'guideSlot-shop', 'guideSlot-skills', 'guideSlot-boss']
       .filter(id => document.getElementById(id)).length;
     out.panels = [...document.querySelectorAll('#guideModalBg .guide-panel[data-g]')].map(p => p.dataset.g).join(',');
     out.rowsPerPanel = [...document.querySelectorAll('#guideModalBg .guide-panel')].map(p => p.querySelectorAll('.guide-row').length).join(',');
@@ -1078,9 +1081,9 @@ if (!useFallback) {
     return out;
   });
   check('v21.3 every simplified section has its own ❓ and one guide modal explains them all',
-    v213.helpButtons === 6 && v213.slotAnchors === 5 &&
-    v213.panels === 'dashboard,tasks,calendar,habits,goals,notes' &&
-    v213.rowsPerPanel === '4,4,4,4,4,4', JSON.stringify(v213));
+    v213.helpButtons === 10 && v213.slotAnchors === 9 &&
+    v213.panels === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss' &&
+    v213.rowsPerPanel === '4,4,4,4,4,4,4,4,4,4', JSON.stringify(v213));
   check('v21.3 the calendar intro is one quiet line and the guide kept the full gestures',
     v213.introChars < 90 && v213.guideKeepsGestures, JSON.stringify(v213));
   check('v21.3 opening the guide shows exactly one panel with the right action',
@@ -1215,7 +1218,7 @@ if (!useFallback) {
     const out = {};
     out.slot = document.getElementById('guideSlot-dashboard').innerHTML;
     out.settingsCard = [...document.querySelectorAll('#view-settings .settings-card')]
-      .some(c => c.textContent.includes('راهنمای بخش‌ها') && c.querySelectorAll('[onclick^="openGuide("]').length === 6);
+      .some(c => c.textContent.includes('راهنمای بخش‌ها') && c.querySelectorAll('[onclick^="openGuide("]').length === 10);
     /* «نمایش دوباره» brings the automatic guides back */
     window.lpResetGuides();
     out.resetState = JSON.parse(localStorage.getItem('lifePlannerGuides_v213'));
@@ -1274,7 +1277,7 @@ if (!useFallback) {
     v214.goals === 'goals|📖 راهنمای اهداف|➕ هدف جدید' &&
     v214.notes === 'notes|📖 راهنمای یادداشت‌ها|➕ یادداشت جدید', JSON.stringify(v214));
   check('v21.4 six tabs, one visible panel, and the action opens that section’s sheet',
-    v214.tabs === 'dashboard,tasks,calendar,habits,goals,notes' && v214.visiblePanels === 1 &&
+    v214.tabs === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss' && v214.visiblePanels === 1 &&
     v214.ctaClosedGuide && v214.ctaOpenedSheet, JSON.stringify(v214));
   check('v21.4 switching tab follows panel, title and action together, and reading marks it seen',
     v214.afterTab === 'notes|📖 راهنمای یادداشت‌ها|➕ یادداشت جدید' && v214.readingMarksSeen,
@@ -1412,6 +1415,413 @@ if (!useFallback) {
   check('v21.4 the dead chart layer and its leftovers are gone, the Pomodoro chart is not',
     v214fix.deadGone && v214fix.pomoChartAlive, JSON.stringify(v214fix));
   check('no fatal JS errors after the v21.4 flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
+
+
+  /* ---------- v21.5: the last four sections joined the guide ---------- */
+  /* The Pomodoro, the XP Shop, the skill tree and the weekly boss now explain
+     themselves; the XP Shop kept every feature it had. */
+  const v215 = await page.evaluate(() => {
+    const clean = () => document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    clean();
+    const q = sel => document.querySelector(sel);
+    const out = {};
+    const trip = (sec) => {
+      window.openGuide(sec);
+      return [q('#guideModalBg .guide-panel.sel').dataset.g, q('#guideTitle').textContent, q('#guideCta').textContent].join('|');
+    };
+    out.pomodoro = trip('pomodoro');
+    out.shop = trip('shop');
+    out.skills = trip('skills');
+    DB.boss.active = null;
+    out.bossIdle = trip('boss');
+    out.tabs = [...document.querySelectorAll('#guideTabs [data-g]')].map(t => t.dataset.g).join(',');
+    out.rowsPerPanel = [...document.querySelectorAll('#guideModalBg .guide-panel')]
+      .map(p => p.querySelectorAll('.guide-row').length).join(',');
+    out.visiblePanels = [...document.querySelectorAll('#guideModalBg .guide-panel')]
+      .filter(p => getComputedStyle(p).display !== 'none').length;
+
+    /* the Pomodoro's action really starts a session (and is refused while one runs) */
+    window.showView('pomodoro');
+    DB.pomodoro.session = null; DB.pomodoro.pendingNext = null;
+    window.openGuide('pomodoro'); q('#guideCta').click();
+    out.pomoCtaStarted = !!(DB.pomodoro.session && DB.pomodoro.session.mode === 'focus');
+    out.pomoCtaClosedGuide = !document.getElementById('guideModalBg').classList.contains('open');
+    window.endSession();                       /* 0 minutes → nothing is logged */
+    out.pomoNothingLogged = (DB.pomodoro.sessionHistory || []).length === 0 || DB.pomodoro.session === null;
+
+    /* the shop's action shows the odds — it never spends a single XP */
+    const wallet = DB.xpWallet;
+    window.openGuide('shop'); q('#guideCta').click();
+    out.shopCtaOpenedOdds = document.getElementById('mysteryInfoModalBg').classList.contains('open');
+    out.shopCtaSpentNothing = DB.xpWallet === wallet;
+    out.oddsListed = document.querySelectorAll('#mysteryInfoList > div').length === 10;
+    clean();
+
+    /* the skill tree has no sheet of its own: its action walks to the shop */
+    window.showView('skills');
+    window.openGuide('skills'); q('#guideCta').click();
+    out.skillsCtaClosedGuide = !document.getElementById('guideModalBg').classList.contains('open');
+    out.skillsCtaWentToShop = document.getElementById('view-shop').classList.contains('active');
+
+    /* the boss's action follows the data: build a fight, or edit the running one */
+    window.showView('boss');
+    DB.boss.active = { name: 'آزمون v21.5', hp: 100, maxHp: 100, taskIds: [], hitTaskIds: [], deadlineAt: Date.now() + 86400000 };
+    window.openGuide('boss');
+    out.bossRunning = q('#guideCta').textContent;
+    q('#guideCta').click();
+    out.bossCtaOpenedEdit = document.getElementById('bossSetupModalBg').classList.contains('open') &&
+      document.getElementById('bossSetupTitle').textContent.includes('ویرایش باس');
+    out.bossCtaKeptTheFight = !!DB.boss.active && DB.boss.active.hp === 100;
+    clean();
+    DB.boss.active = null;
+    return out;
+  });
+  check('v21.5 each new section opens its own panel, title and action',
+    v215.pomodoro === 'pomodoro|📖 راهنمای پومودورو|▶️ شروع جلسه‌ی فوکوس' &&
+    v215.shop === 'shop|📖 راهنمای XP Shop|🎁 شانس‌های جعبه' &&
+    v215.skills === 'skills|📖 راهنمای درخت مهارت|🛍️ برو به XP Shop' &&
+    v215.bossIdle === 'boss|📖 راهنمای باس هفتگی|⚔️ ساخت باس', JSON.stringify(v215));
+  check('v21.5 ten tabs, four rows each, and only one panel on screen',
+    v215.tabs === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss' &&
+    v215.rowsPerPanel === '4,4,4,4,4,4,4,4,4,4' && v215.visiblePanels === 1, JSON.stringify(v215));
+  check('v21.5 each action lands in the real thing, and the shop one spends nothing',
+    v215.pomoCtaStarted && v215.pomoCtaClosedGuide && v215.shopCtaOpenedOdds && v215.shopCtaSpentNothing &&
+    v215.oddsListed && v215.skillsCtaWentToShop && v215.skillsCtaClosedGuide, JSON.stringify(v215));
+  check('v21.5 the boss guide edits a running fight instead of building a second one',
+    v215.bossRunning === '✏️ ویرایش باس' && v215.bossCtaOpenedEdit && v215.bossCtaKeptTheFight,
+    JSON.stringify(v215));
+
+  /* the one-time hint of the four new sections: once, and gone for good */
+  const v215hint = await page.evaluate(() => {
+    /* leaving a section is what retires its hint, so reset from a section that
+       has no guide of its own and then walk the four in turn (boss first). */
+    window.showView('city');
+    localStorage.removeItem('lifePlannerGuides_v213');
+    window.lpGuide.reset();
+    const slot = (s) => document.getElementById('guideSlot-' + s).innerHTML;
+    const seen = (k) => JSON.parse(localStorage.getItem('lifePlannerGuides_v213')).seen[k] === 1;
+    const out = {};
+    window.showView('boss');
+    out.bossHint = slot('boss').includes('guide-hint') && slot('boss').includes('هر تیک یک ضربه به باس است');
+    out.hintInsideView = !!document.getElementById('guideSlot-boss').closest('#view-boss');
+    out.nothingModalOpen = !document.querySelector('.modal-bg.open');
+    window.showView('pomodoro');
+    out.bossGoneOnWalk = slot('boss') === '' && seen('boss');
+    out.pomoHint = slot('pomodoro').includes('فقط «▶️ شروع» را بزن');
+    window.showView('shop');
+    out.pomoGoneOnWalk = slot('pomodoro') === '' && seen('pomodoro');
+    out.shopHint = slot('shop').includes('موجودی XP Shop از نوارِ سطح جداست');
+    document.querySelector('#guideSlot-shop [data-hint-x]').click();
+    out.shopGoneOnX = slot('shop') === '' && seen('shop');
+    window.showView('skills');
+    out.skillsHint = slot('skills').includes('هر لول‌آپ ۱ امتیاز مهارت می‌دهد');
+    window.openGuide('skills'); window.closeGuide();
+    out.skillsGoneAfterRead = slot('skills') === '' && seen('skills');
+    window.showView('pomodoro'); window.showView('shop'); window.showView('skills'); window.showView('boss');
+    out.neverNags = ['pomodoro', 'shop', 'skills', 'boss'].every(s => slot(s) === '');
+    return out;
+  });
+  check('v21.5 a first visit to the four sections gets one slim hint, inside the section',
+    v215hint.pomoHint && v215hint.shopHint && v215hint.skillsHint && v215hint.bossHint &&
+    v215hint.hintInsideView && v215hint.nothingModalOpen, JSON.stringify(v215hint));
+  check('v21.5 each new hint retires for good on ✕, on walking away and on reading the guide',
+    v215hint.bossGoneOnWalk && v215hint.pomoGoneOnWalk && v215hint.shopGoneOnX &&
+    v215hint.skillsGoneAfterRead && v215hint.neverNags,
+    JSON.stringify(v215hint));
+
+  /* the Pomodoro lost exactly one thing: the notification that rewrote itself */
+  const v215notify = await page.evaluate(async () => {
+    const clean = () => document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    clean();
+    const out = {};
+    const sent = [];
+    const origSend = window.sendNotification;
+    const origPerm = window.notifyPermissionStatus;
+    window.sendNotification = (title, body, options) => {
+      sent.push([title, body || '', (options && options.tag) || ''].join('|'));
+      return Promise.resolve(true);
+    };
+    window.notifyPermissionStatus = () => 'granted';
+    DB.pomodoro.notifications = true;
+    DB.pomodoro.session = null; DB.pomodoro.pendingNext = null;
+    DB.pomodoro.currentSession = 1; DB.pomodoro.currentRound = 1;
+
+    window.startFocus();
+    out.startNotified = sent.length === 1 && sent[0].includes('🍅 فوکوس شروع شد');
+    /* pausing and resuming used to rewrite the live notification — now: silence */
+    window.pauseSession();
+    window.resumeSession();
+    await new Promise(r => setTimeout(r, 600));
+    out.pauseResumeSilent = sent.length === 1;
+    out.noLiveTag = !sent.some(x => x.includes('lp-pomo-live'));
+    window.completePomoSession();
+    out.sessionEndNotified = sent.length === 2 && sent[1].includes('🎉 جلسه فوکوس کامل شد');
+    clean();
+    DB.pomodoro.session = null; DB.pomodoro.pendingNext = null;
+
+    /* the switch is real: off means off, and the status tells the truth */
+    window.togglePomoNotifications(false);
+    out.statusOff = document.getElementById('pomoNotifyStatus').textContent;
+    out.switchOff = document.getElementById('pomoNotifyToggle').checked === false;
+    window.startFocus();
+    out.silentWhenOff = sent.length === 2;
+    window.endSession();
+    window.togglePomoNotifications(true);
+    out.statusOn = document.getElementById('pomoNotifyStatus').textContent;
+    out.switchOn = document.getElementById('pomoNotifyToggle').checked === true;
+    window.startFocus();
+    out.notifiesAgain = sent.length === 3;
+    window.endSession();
+    clean();
+
+    /* without the browser's permission the switch says so and stays out of reach */
+    window.notifyPermissionStatus = () => 'denied';
+    window.renderPomoNotifyStatus();
+    out.statusDenied = document.getElementById('pomoNotifyStatus').textContent;
+    out.switchDisabled = document.getElementById('pomoNotifyToggle').disabled === true;
+
+    window.sendNotification = origSend;
+    window.notifyPermissionStatus = origPerm;
+    DB.pomodoro.notifications = true;
+    DB.pomodoro.session = null; DB.pomodoro.pendingNext = null;
+    DB.pomodoro.currentSession = 1; DB.pomodoro.currentRound = 1;
+    window.renderPomoUI(); window.renderPomoV66();
+    return out;
+  });
+  check('v21.5 the countdown notification is gone and the three real ones stayed',
+    v215notify.startNotified && v215notify.pauseResumeSilent && v215notify.noLiveTag &&
+    v215notify.sessionEndNotified, JSON.stringify(v215notify));
+  check('v21.5 the notification switch really switches, and tells the truth about permission',
+    v215notify.statusOff.includes('خاموش') && v215notify.switchOff && v215notify.silentWhenOff &&
+    v215notify.statusOn.includes('روشن') && v215notify.switchOn && v215notify.notifiesAgain &&
+    v215notify.statusDenied.includes('اجازه') && v215notify.switchDisabled, JSON.stringify(v215notify));
+
+  /* the Pomodoro reads like the rest of the app, and its stats say each thing once */
+  const v215pomo = await page.evaluate(() => {
+    const clean = () => document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    clean();
+    const out = {};
+    const today = window.todayISO();
+    window.showView('pomodoro');
+    DB.pomodoro.session = null;
+    DB.pomodoro.currentRound = 2; DB.pomodoro.currentSession = 3;
+    DB.pomodoro.settings.cycleCount = 4;
+    window.renderPomoV66();
+    out.cycleTitle = document.getElementById('pomoSessionTitle').textContent;
+    out.dots = document.querySelectorAll('#pomoSessionDots .pomo-dot').length;
+
+    DB.pomodoro.session = {
+      mode: 'focus', status: 'paused', startAt: Date.now() - 5 * 60000, endAt: Date.now() + 20 * 60000,
+      totalMs: 25 * 60000, remainingMs: 20 * 60000, pauseCount: 1, plannedMinutes: 25, taskId: ''
+    };
+    window.renderPomoV66();
+    out.minuteBadge = document.getElementById('pomoMinuteBadge').textContent;
+    DB.pomodoro.session = null;
+
+    /* the stats tab: one card language, every number written once */
+    DB.pomodoro.history = {};
+    DB.pomodoro.history[today] = { focus: 80, break: 15, sessions: 2 };
+    DB.pomodoro.sessionHistory = [
+      { id: 'v215a', date: today, mode: 'focus', minutes: 45, score: 90, pauseCount: 1, taskId: '' },
+      { id: 'v215b', date: today, mode: 'focus', minutes: 35, score: 100, pauseCount: 0, taskId: '' }
+    ];
+    DB.pomodoro.focusStreak = 3;
+    DB.pomodoro.settings.goalMinutes = 60;
+    window.showPomoTab('stats');
+    window.renderPomoStats(); window.renderPomoChart(); window.renderPomoV66();
+    out.todayFocus = document.getElementById('pomoTodayFocus').textContent;
+    out.goalStatus = document.getElementById('pomoGoalStatus').textContent;
+    out.weekChip = document.querySelector('#pomoWeekChecklist .pomo-day-chip:last-child .d.num').textContent;
+    out.summaryCards = document.querySelectorAll('#pomoV66StatsTools .card').length;
+    out.oldCardsGone = document.querySelectorAll('#pomoV66StatsTools .pomo-v66-card').length;
+    out.tiles = [...document.querySelectorAll('#pomoV66StatsTools .pomo-stat-mini')]
+      .map(t => t.querySelector('.n').textContent.trim() + '/' + t.querySelector('.l').textContent.trim());
+    out.historyFirst = document.querySelector('#pomoV66StatsTools .pomo-history-meta').textContent;
+    out.historyScore = document.querySelector('#pomoV66StatsTools .pomo-history-score').textContent;
+    out.chartAlive = document.getElementById('chartPomo').width > 0;
+
+    /* the ⚙️ tab and the preset grid can no longer disagree */
+    const setVal = (id, v) => { document.getElementById(id).value = v; };
+    setVal('pomoSetFocus', 45); setVal('pomoSetBreak', 10);
+    window.savePomoSettings();
+    out.presetFollowsStudy = DB.pomodoro.presetId === 'study';
+    out.studyChipActive = document.querySelector('.pomo-preset.active')?.dataset.pomoPreset === 'study';
+    setVal('pomoSetFocus', 33); setVal('pomoSetBreak', 8);
+    window.savePomoSettings();
+    out.presetBecomesCustom = DB.pomodoro.presetId === 'custom' &&
+      DB.pomodoro.customPreset.focus === 33 && DB.pomodoro.customPreset.break === 8;
+    out.customChipLabel = document.querySelector('.pomo-preset[data-pomo-preset="custom"] small').textContent;
+    setVal('pomoSetFocus', 25); setVal('pomoSetBreak', 5);
+    window.savePomoSettings();
+    out.presetBackToClassic = DB.pomodoro.presetId === 'classic';
+    out.settingsFormKept = document.getElementById('pomoSetFocus').value === '25';
+
+    /* the legacy migration is a one-pass job now */
+    DB.pomodoro.manualMigrated = false;
+    DB.pomodoro.manualData = [{ id: 'v215legacy', kind: 'focus', minutes: 30, date: today, createdAt: Date.now(), note: '' }];
+    const before = (DB.pomodoro.history[today] || {}).focus || 0;
+    window.migrateLegacyManualPomoData();
+    out.migrated = DB.pomodoro.manualMigrated === true && DB.pomodoro.manualData[0].migratedToHistory === true &&
+      DB.pomodoro.history[today].focus === before + 30;
+    window.migrateLegacyManualPomoData();
+    window.migrateLegacyManualPomoData();
+    out.migratedOnce = DB.pomodoro.history[today].focus === before + 30;
+    DB.pomodoro.manualData = [];
+    DB.pomodoro.presets = undefined; delete DB.pomodoro.presets;
+    window.renderPomoV66();
+    out.noPresetsMirror = !('presets' in DB.pomodoro);
+
+    clean();
+    window.showPomoTab('focus');
+    DB.pomodoro.currentRound = 1; DB.pomodoro.currentSession = 1;
+    DB.pomodoro.history = {}; DB.pomodoro.sessionHistory = []; DB.pomodoro.focusStreak = 0;
+    DB.pomodoro.settings.goalMinutes = 0;
+    window.renderPomoUI(); window.renderPomoV66();
+    return out;
+  });
+  check('v21.5 rounds, sessions and minutes read in the app’s own digits',
+    v215pomo.cycleTitle === '🍅 دور ۲ • جلسه ۳ از ۴' && v215pomo.dots === 4 &&
+    v215pomo.minuteBadge === '⏱️ دقیقه ۶ از ۲۵ (۲۰ دقیقه باقی‌مانده)', JSON.stringify(v215pomo));
+  check('v21.5 the stats tab has one voice: same cards, each number written once',
+    v215pomo.summaryCards === 2 && v215pomo.oldCardsGone === 0 &&
+    v215pomo.todayFocus === '۱ ساعت و ۲۰ دقیقه' &&
+    v215pomo.tiles.join(' | ') === '۱ ساعت و ۲۰ دقیقه/مجموع فوکوس | ۲/جلسات کامل | ۹۵/میانگین کیفیت | 🔥 ۳/استریک روزانه | ۱ ساعت و ۲۰ دقیقه/میانگین فوکوس روزانه' &&
+    v215pomo.historyFirst.includes('۴۵ دقیقه') && !v215pomo.historyFirst.includes('(45m)') &&
+    !v215pomo.historyFirst.includes('2026-') && v215pomo.weekChip === '۱.۳ ساعت' &&
+    v215pomo.historyScore === '۹۰/۱۰۰' && v215pomo.goalStatus.includes('هدف امروز رو کامل کردی') &&
+    v215pomo.chartAlive, JSON.stringify(v215pomo));
+  check('v21.5 one setting, one truth: the preset grid follows the ⚙️ tab',
+    v215pomo.presetFollowsStudy && v215pomo.studyChipActive && v215pomo.presetBecomesCustom &&
+    v215pomo.customChipLabel === '۳۳/۸ دقیقه' && v215pomo.presetBackToClassic && v215pomo.settingsFormKept,
+    JSON.stringify(v215pomo));
+  check('v21.5 the legacy migration runs once and the presets mirror is gone',
+    v215pomo.migrated && v215pomo.migratedOnce && v215pomo.noPresetsMirror, JSON.stringify(v215pomo));
+
+  /* the weekly boss builds its own tasks, and its numbers read like the rest */
+  const v215boss = await page.evaluate(() => {
+    const clean = () => document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    clean();
+    const out = {};
+    window.showView('boss');
+    DB.boss.active = null;
+    DB.boss.nextAvailableAt = 0;
+    const tasksBefore = DB.tasks.length;
+    window.openBossSetup();
+    out.rowExists = !!document.getElementById('bossNewTaskInput') && !!document.getElementById('bossTaskPicker');
+    document.getElementById('bossNameInput').value = 'باس آزمون v21.5';
+    window.addBossTaskInline();                       /* an empty line is refused */
+    out.emptyRefused = DB.tasks.length === tasksBefore &&
+      document.getElementById('toast').textContent.includes('اسم تسک');
+    document.getElementById('bossNewTaskInput').value = 'تسکِ ساخته‌شده داخل باس';
+    window.addBossTaskInline();
+    const t = DB.tasks[DB.tasks.length - 1];
+    out.taskCreated = DB.tasks.length === tasksBefore + 1 && t.title === 'تسکِ ساخته‌شده داخل باس';
+    out.taskIsARealTask = t.inbox === false && t.done === false && !!t.date && Array.isArray(t.subtasks);
+    out.pickerShowsIt = document.getElementById('bossTaskPicker').textContent.includes('تسکِ ساخته‌شده داخل باس');
+    out.pickerSelected = document.querySelectorAll('#bossTaskPicker .boss-task-pick-row.sel').length === 1;
+    out.counter = document.getElementById('bossTaskCount').textContent;
+    out.inputCleared = document.getElementById('bossNewTaskInput').value === '';
+    out.toast = document.getElementById('toast').textContent;
+    window.confirmBossSetup();
+    const b = DB.boss.active;
+    out.fightStarted = !!b && b.name === 'باس آزمون v21.5' && b.taskIds.length === 1 && b.hp === 100;
+    clean();
+    window.renderBossContent();
+    out.hpText = document.querySelector('.boss-hp-text').textContent;
+    out.deadline = document.querySelector('.boss-deadline').textContent;
+    /* ticking the boss task lands the only hit and wins the fight */
+    window.toggleTask(b.taskIds[0]);
+    out.bossBeaten = DB.boss.active === null;
+    out.victory = document.getElementById('bossVictoryText').textContent;
+    clean();
+    /* the task itself stays in the tasks section, done, like any other task */
+    out.taskStillThere = DB.tasks.some(x => x.title === 'تسکِ ساخته‌شده داخل باس' && x.done === true);
+    DB.boss.nextAvailableAt = Date.now() + 7 * 24 * 3600 * 1000;
+    window.renderBossContent();
+    out.countdown = document.querySelector('.boss-countdown-val').textContent;
+    return out;
+  });
+  check('v21.5 the boss picker builds a task, selects it and starts the fight with it',
+    v215boss.rowExists && v215boss.emptyRefused && v215boss.taskCreated && v215boss.taskIsARealTask &&
+    v215boss.pickerShowsIt && v215boss.pickerSelected && v215boss.counter === '(۱ تسک)' &&
+    v215boss.inputCleared && v215boss.toast.includes('ساخته و برای باس انتخاب شد') && v215boss.fightStarted,
+    JSON.stringify(v215boss));
+  check('v21.5 the boss task hits like any other and the task stays in the tasks section',
+    v215boss.bossBeaten && v215boss.victory.includes('شکست خورد') && v215boss.taskStillThere,
+    JSON.stringify(v215boss));
+  check('v21.5 HP and the boss countdowns read in the app’s own digits',
+    v215boss.hpText === '۱۰۰ / ۱۰۰ HP' && /۱۳ روز و ۲۳ ساعت|۱۴ روز و ۰ ساعت/.test(v215boss.deadline) &&
+    /۷ روز و ۰ ساعت|۶ روز و ۲۳ ساعت/.test(v215boss.countdown), JSON.stringify(v215boss));
+
+  /* the XP Shop kept everything and only reads better */
+  const v215shop = await page.evaluate(() => {
+    const clean = () => document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    clean();
+    const out = {};
+    window.showView('shop');
+    DB.xpWallet = 1234;
+    DB.skillTiers.shopDiscount = 0;
+    DB.streakShields = 0;
+    DB.streakShieldWeekly = { weekStart: 0, count: 0 };
+    const ownedThemes = (DB.themes.owned || []).slice();
+    DB.themes.owned = [];                        /* so the three price tags are all on screen */
+    window.renderXPShop();
+    out.wallet = document.getElementById('xpWalletVal').textContent;
+    out.costs = ['costBoost', 'costMystery', 'costShield'].map(id => document.getElementById(id).textContent).join(' | ');
+    out.shieldCap = document.getElementById('streakShieldWeeklyLimit').textContent;
+    out.themes = [...document.querySelectorAll('#shopThemes .theme-card')].length;
+    out.themeCost = document.querySelector('#shopThemes .theme-cost')?.textContent || '';
+    /* every feature of the shop is still there */
+    out.buttons = ['buyXPBoost()', 'buyMysteryBox()', 'openMysteryInfo()', 'buyStreakShield()']
+      .every(fn => document.getElementById('view-shop').innerHTML.includes(fn));
+    DB.skillTiers.shopDiscount = 1;
+    window.renderXPShop();
+    out.discounted = document.getElementById('costMystery').textContent;
+    DB.skillTiers.shopDiscount = 0;
+    window.openMysteryInfo();
+    out.odds = document.querySelector('#mysteryInfoList b').textContent;
+    clean();
+    /* the skill tree: five tiers for «کوئست سریع», and the wait really drops */
+    window.showView('skills');
+    DB.skillPoints = 5;
+    DB.skillTiers.questCooldown = 0;
+    window.renderSkillTree();
+    out.points = document.getElementById('skillPointsVal').textContent;
+    const card = () => [...document.querySelectorAll('#skillTreeGrid .skill-card')]
+      .find(c => c.textContent.includes('کوئست سریع'));
+    out.qcDots = card().querySelectorAll('.skill-tier-dot').length;
+    out.qcDesc = card().querySelector('.skill-desc').textContent;
+    out.qcButton = card().querySelector('button').textContent;
+    out.cooldownBefore = window.questCooldownMs();
+    for (let i = 0; i < 5; i++) window.buySkillTier('questCooldown');
+    out.qcTier = DB.skillTiers.questCooldown;
+    out.cooldownAfter = window.questCooldownMs();
+    out.qcMaxed = card().textContent.includes('✓ تکمیل شده (۵/۵)');
+    out.pointsLeft = DB.skillPoints;
+    DB.skillPoints = 3;
+    window.buySkillTier('questCooldown');                 /* refused at the ceiling */
+    out.refused = DB.skillTiers.questCooldown === 5 && DB.skillPoints === 3;
+    /* every other skill kept its tiers and its flat price */
+    out.otherSkills = [...document.querySelectorAll('#skillTreeGrid .skill-card')].length === 7;
+    out.flatPrice = [...document.querySelectorAll('#skillTreeGrid .skill-card button')]
+      .every(b => b.textContent.includes('۱ امتیاز'));
+    DB.themes.owned = ownedThemes;
+    DB.skillTiers.questCooldown = 0; DB.skillPoints = 0;
+    window.renderSkillTree(); window.renderXPShop();
+    return out;
+  });
+  check('v21.5 the XP Shop kept every feature and reads in the app’s own digits',
+    v215shop.wallet === '۱,۲۳۴' && v215shop.costs === '۱۰۰ XP | ۲۰۰ XP | ۵۰۰ XP' &&
+    v215shop.shieldCap.includes('۰/۳') && v215shop.shieldCap.includes('۳ خرید باقی‌مانده') &&
+    v215shop.themes === 3 && v215shop.themeCost === '۲۰۰ XP' && v215shop.buttons &&
+    v215shop.discounted === '۱۸۰ XP' && /٪$/.test(v215shop.odds), JSON.stringify(v215shop));
+  check('v21.5 «کوئست سریع» has five tiers and the wait drops from 20 to 15 minutes',
+    v215shop.qcDots === 5 && v215shop.qcDesc.includes('۲۰ به ۱۵ دقیقه') &&
+    v215shop.qcButton === 'تیر بعدی (۰/۵) — ۱ امتیاز' && v215shop.cooldownBefore === 20 * 60000 &&
+    v215shop.cooldownAfter === 15 * 60000 && v215shop.qcTier === 5 && v215shop.qcMaxed &&
+    v215shop.pointsLeft === 0 && v215shop.refused && v215shop.otherSkills && v215shop.flatPrice &&
+    v215shop.points === '۵', JSON.stringify(v215shop));
+  check('no fatal JS errors after the v21.5 flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
   await browser.close();
 } else {
@@ -1934,9 +2344,9 @@ if (!useFallback) {
   check('v21.3 one guide modal holds one panel per section, four short rows each',
     ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes']
       .every(g => indexHtml.includes(`data-g="${g}" role="tabpanel"`)) &&
-    (indexHtml.match(/class="guide-row"/g) || []).length === 24 &&
-    (indexHtml.match(/class="guide-lead"/g) || []).length === 6 &&
-    v213Js.includes("var SECTIONS = ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes'];"));
+    (indexHtml.match(/class="guide-row"/g) || []).length === 40 &&
+    (indexHtml.match(/class="guide-lead"/g) || []).length === 10 &&
+    /var SECTIONS = \['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes',[\s\S]{0,80}?'pomodoro', 'shop', 'skills', 'boss'\];/.test(v213Js));
 
   check('v21.3 each guide ends in the action it explains, not in more reading',
     ['openInboxQuickAdd', 'openTaskModal', 'openEventModal', 'openHabitModal', 'openGoalModal', 'openNoteModal']
@@ -1945,7 +2355,7 @@ if (!useFallback) {
 
   check('v21.3 a first visit gets a slim hint that is gone for good',
     v213Js.includes("'lifePlannerGuides_v213'") && v213Js.includes('function markSeen') &&
-    v213Js.includes('var HINTED = { dashboard: true, tasks: true, habits: true, goals: true, notes: true };') &&
+    /var HINTED = \{[\s\S]{0,220}?pomodoro: true, shop: true, skills: true, boss: true/.test(v213Js) &&
     v213Js.includes('data-hint-x') && v213Js.includes('function clearSlot') &&
     /* a hint is never a popup: nothing in this file opens a modal by itself */
     !/openModal\('(?!guideModalBg)/.test(v213Js));
@@ -1994,15 +2404,16 @@ if (!useFallback) {
   check('v21.4 habits, goals and notes carry the same single ❓, slot and panel',
     v214Sections.every(v => indexHtml.includes(`onclick="openGuide('${v}')"`) &&
       indexHtml.includes(`id="guideSlot-${v}"`) && indexHtml.includes(`data-g="${v}" role="tab"`)) &&
-    (indexHtml.match(/class="guide-btn"/g) || []).length === 5 &&
-    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 12 &&
+    (indexHtml.match(/class="guide-btn"/g) || []).length === 9 &&
+    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 20 &&
     v213Js.includes("habits: { label: '➕ عادت جدید', fn: 'openHabitModal' }") &&
     v213Js.includes("goals: { label: '➕ هدف جدید', fn: 'openGoalModal' }") &&
     v213Js.includes("notes: { label: '➕ یادداشت جدید', fn: 'openNoteModal' }"));
 
   check('v21.4 the guide engine grew data, not files, layers or storage keys',
     v213Js.includes("'lifePlannerGuides_v213'") &&
-    v213Js.includes('habits: 0, goals: 0, notes: 0') &&
+    /* v21.5: the stored state is built from SECTIONS, so it grew by itself */
+    v213Js.includes('SECTIONS.forEach(function (s) { seen[s] = 0; });') &&
     ['فقط خانه‌ی امروز را تیک بزن؛ استریک و XP خودش می‌آید.',
      'یک هدف بساز و هر روز با +۲٪ یا +۱۰٪ جلویش ببر — همین.',
      'یک عنوان بنویس و ذخیره کن؛ برچسب و رنگ و سنجاق همه اختیاری‌اند.']
@@ -2010,8 +2421,9 @@ if (!useFallback) {
     !fs.existsSync(path.join(ROOT, 'js/v214.js')) && !fs.existsSync(path.join(ROOT, 'css/v214.css')));
 
   check('v21.4 the guides in Settings grew with the sections',
-    indexHtml.includes('راهنمای کوتاهِ داشبورد، تسک‌ها، تقویم، عادت‌ها، اهداف و یادداشت‌ها.') &&
-    langJs.includes('"راهنمای کوتاهِ داشبورد، تسک‌ها، تقویم، عادت‌ها، اهداف و یادداشت‌ها. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود."'));
+    /* v21.5: the sentence no longer lists the sections one by one — there are ten */
+    indexHtml.includes('راهنمای کوتاهِ هر ده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.') &&
+    langJs.includes('"راهنمای کوتاهِ هر ده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود."'));
 
   check('v21.4 every new string has an English translation',
     ['راهنمای عادت‌ها', 'راهنمای اهداف', 'راهنمای یادداشت‌ها', 'عادت جدید', 'هدف جدید', 'یادداشت جدید',
@@ -2072,6 +2484,157 @@ if (!useFallback) {
     readme.includes('نسخه 21.4') &&
     readme.includes('راهنمای شش بخش') && readme.includes('۶ XP') &&
     readme.includes('دکمه‌ی نما وضعیت را نشان می‌دهد'));
+
+
+  // ---------- v21.5: ten guided sections + the tidy-up of the last four ----------
+  const pomoJs = fs.readFileSync(path.join(ROOT, 'js/pomodoro.js'), 'utf-8');
+  const v215Sections = ['pomodoro', 'shop', 'skills', 'boss'];
+
+  check('v21.5 the last four sections carry the same single ❓, slot, tab and panel',
+    v215Sections.every(v => indexHtml.includes(`onclick="openGuide('${v}')"`) &&
+      indexHtml.includes(`id="guideSlot-${v}"`) && indexHtml.includes(`data-g="${v}" role="tab"`) &&
+      indexHtml.includes(`data-g="${v}" role="tabpanel"`)) &&
+    (indexHtml.match(/class="guide-btn"/g) || []).length === 9 &&
+    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 20 &&
+    (indexHtml.match(/data-g="/g) || []).length === 20 &&
+    v213Js.includes("pomodoro: '📖 راهنمای پومودورو'") && v213Js.includes("shop: '📖 راهنمای XP Shop'") &&
+    v213Js.includes("skills: '📖 راهنمای درخت مهارت'") && v213Js.includes("boss: '📖 راهنمای باس هفتگی'"));
+
+  check('v21.5 the guide engine still grew data, not files, layers or storage keys',
+    v213Js.includes("'lifePlannerGuides_v213'") &&
+    ['pomodoro: true, shop: true, skills: true, boss: true'].every(h => v213Js.includes(h)) &&
+    ['فقط «▶️ شروع» را بزن؛ دور، استراحت و XP خودش می‌آید.',
+     'موجودی XP Shop از نوارِ سطح جداست — خرج کردنش لولت را کم نمی‌کند.',
+     'هر لول‌آپ ۱ امتیاز مهارت می‌دهد؛ یک تیر بخر و اثرش را همان لحظه ببین.',
+     'یک اسم بنویس و چند تسک انتخاب کن؛ هر تیک یک ضربه به باس است.']
+      .every(h => v213Js.includes(h)) &&
+    !fs.existsSync(path.join(ROOT, 'js/v215.js')) && !fs.existsSync(path.join(ROOT, 'css/v215.css')));
+
+  check('v21.5 a guide action is the section’s own action, and the boss one follows the data',
+    v213Js.includes("pomodoro: { label: '▶️ شروع جلسه‌ی فوکوس', fn: 'pomoQuickStart' }") &&
+    v213Js.includes("shop: { label: '🎁 شانس‌های جعبه', fn: 'openMysteryInfo' }") &&
+    v213Js.includes("window.showView('shop')") &&
+    v213Js.includes("call(active ? 'startEditBoss' : 'openBossSetup')") &&
+    v213Js.includes("return (db && db.boss && db.boss.active) ? '✏️ ویرایش باس' : '⚔️ ساخت باس';"));
+
+  check('v21.5 the live countdown notification is gone and the three real ones stayed',
+    ['startLivePomoNotification', 'pushLivePomoNotification', 'stopLivePomoNotification',
+     'LIVE_NOTIFY_TAG', 'liveNotifyTimer', 'lastLiveNotifyBody', 'livePomoNotifyBody']
+      .every(dead => !pomoJs.includes(dead)) &&
+    !/setInterval\(pushLive/.test(pomoJs) &&
+    (pomoJs.match(/sendNotification\(/g) || []).length === 5 &&
+    ['🍅 فوکوس شروع شد', '☕ استراحت کوتاه شروع شد', '✅ جلسه ثبت شد',
+     '🎉 دور پومودورو کامل شد!', '☕ استراحت کامل شد'].every(t => pomoJs.includes(t)));
+
+  check('v21.5 the notification card is a real control instead of a fixed claim',
+    indexHtml.includes('id="pomoNotifyToggle"') &&
+    indexHtml.includes('onchange="togglePomoNotifications(this.checked)"') &&
+    coreJs.includes('function togglePomoNotifications(on)') &&
+    coreJs.includes("el.textContent = !allowed") &&
+    !indexHtml.includes('🔔 نوتیفیکیشن هوشمند فعاله') && !pomoJs.includes('🔔 نوتیفیکیشن هوشمند فعاله') &&
+    !langJs.includes('🔔 نوتیفیکیشن هوشمند فعاله') &&
+    indexHtml.includes('اعلانِ دائمیِ شمارش معکوس حذف شده تا مزاحم نباشد.'));
+
+  check('v21.5 «کوئست سریع» grew to five tiers and the wait really drops to 15 minutes',
+    /name:'کوئست سریع'[\s\S]{0,140}?maxTier:5/.test(coreJs) &&
+    coreJs.includes('(از ۲۰ به ۱۵ دقیقه)') && !coreJs.includes('۲۰ به ۱۷ دقیقه') &&
+    coreJs.includes('const QUEST_COOLDOWN_MIN = 20;') && coreJs.includes('const QUEST_COOLDOWN_STEP_MIN = 1;') &&
+    coreJs.includes('Math.max(5, QUEST_COOLDOWN_MIN - tier*QUEST_COOLDOWN_STEP_MIN)') &&
+    langJs.includes('"هر تیر ۱ دقیقه از زمان انتظار کوئست بعدی کم می‌کنه (از ۲۰ به ۱۵ دقیقه)":') &&
+    readme.includes('در ۵ تیر (از ۲۰ به ۱۵ دقیقه)'));
+
+  check('v21.5 the boss picker builds its own task and selects it for the fight',
+    indexHtml.includes('id="bossNewTaskInput"') && indexHtml.includes('onclick="addBossTaskInline()"') &&
+    coreJs.includes('function addBossTaskInline()') &&
+    /addBossTaskInline\(\)\{[\s\S]{0,900}?DB\.tasks\.push\(t\);[\s\S]{0,200}?bossSetupSelected\.push\(t\.id\);[\s\S]{0,200}?renderBossTaskPicker\(\);/.test(coreJs) &&
+    /inbox:false, color:null/.test(coreJs) &&
+    coreJs.includes('تسک انجام‌نشده‌ای نداری — همین پایین یکی بساز') &&
+    /openBossSetup\(\)\{[\s\S]{0,500}?bossNewTaskInput/.test(coreJs) &&
+    /startEditBoss\(\)\{[\s\S]{0,600}?bossNewTaskInput/.test(coreJs) &&
+    appCss.includes('.boss-new-task{'));
+
+  check('v21.5 counts, prices, HP and skill points read in the app’s own digits',
+    coreJs.includes('function faNum(n)') &&
+    coreJs.includes('faNum(DB.xpWallet)') && coreJs.includes("faNum(applyShopDiscount(100))+' XP'") &&
+    coreJs.includes('${toFaDigits(count)}/${toFaDigits(STREAK_SHIELD_WEEKLY_LIMIT)}') &&
+    coreJs.includes('${faNum(b.hp)} / ${faNum(b.maxHp)} HP') &&
+    coreJs.includes('ptsEl.textContent = faNum(DB.skillPoints)') &&
+    coreJs.includes('return `${toFaDigits(days)} روز و ${toFaDigits(hours)} ساعت`;') &&
+    coreJs.includes('${toFaDigits(pct.toFixed(2))}٪') &&
+    pomoJs.includes('const fa = (n) =>') && pomoJs.includes('دقیقه ${fa(currentSession)} از ${fa(cycleCount)}') &&
+    pomoJs.includes('`${fa(h)} ساعت و ${fa(remM)} دقیقه`') &&
+    /* clock faces stay Latin on purpose — they are timers, not counts */
+    pomoJs.includes("String(mm).padStart(2,'0')") || coreJs.includes("String(mm).padStart(2,'0')"));
+
+  check('v21.5 the Pomodoro stats speak with one voice and write each number once',
+    /renderStatsTools\(\)\{[\s\S]{0,2600}?<div class="card">[\s\S]{0,60}?<div class="card-head"><h3>📈 جمع‌بندی فوکوس<\/h3>/.test(pomoJs) &&
+    !/renderStatsTools\(\)\{[\s\S]{0,2600}?pomo-v66-card/.test(pomoJs) &&
+    pomoJs.includes('${formatPomoTimeFa(totalMins)}') && pomoJs.includes('${formatPomoTimeFa(avgDailyMins)}') &&
+    !pomoJs.includes('(${x.minutes}m)') && !coreJs.includes('(${totalFocus}m)') &&
+    ['مجموع فوکوس', 'جلسات کامل', 'میانگین کیفیت', 'استریک روزانه', 'میانگین فوکوس روزانه']
+      .every(l => pomoJs.includes(l)) &&
+    appCss.includes('.pomo-stat-mini .n.dur{') &&
+    langJs.includes('"📈 جمع‌بندی فوکوس": "📈 Focus summary"') &&
+    langJs.includes('"🕘 تاریخچه‌ی جلسات اخیر"'));
+
+  check('v21.5 one setting, one truth: the preset grid follows the ⚙️ tab',
+    /savePomoSettings\(\)\{[\s\S]{0,1200}?window\.syncPomoPresetFromSettings/.test(coreJs) &&
+    pomoJs.includes('function syncPresetFromSettings()') &&
+    pomoJs.includes('window.syncPomoPresetFromSettings = syncPresetFromSettings;') &&
+    pomoJs.includes("PRESETS.find(x => x.id !== 'custom' && x.focus === f && x.break === b)"));
+
+  /* The header comment of pomodoro.js names what was removed on purpose (it says
+     why the code is gone), so these assertions read it with comments stripped. */
+  const pomoCode = pomoJs.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  check('v21.5 the dead code is out and the two one-second loops became one',
+    !pomoCode.includes('window.tickPomo = function') && !pomoCode.includes('const oldTick') &&
+    !pomoCode.includes('fullscreenchange') && !pomoCode.includes('focusFullscreenRequested') &&
+    ['oldStartFocus', 'oldStartBreak', 'oldEnd ', 'oldComplete'].every(d => !pomoCode.includes(d)) &&
+    /* the single UI loop now paints the badge *and* the Focus Mode overlay */
+    /setInterval\(\(\)=>\{\s*try\{\s*const ov = document\.getElementById\('pomo66FocusOverlay'\);/.test(pomoJs) &&
+    !coreCode.includes('getManualPomoTotal') && !coreCode.includes('deleteManualPomoData') &&
+    !coreCode.includes('skillTierCost') && !coreCode.includes('همگام شد') &&
+    coreJs.includes('const SKILL_TIER_COST = 1;'));
+
+  check('v21.5 the Pomodoro dates read the way the rest of the app reads them',
+    pomoJs.includes('function jalaliOrIso(iso)') &&
+    pomoJs.includes('${esc(jalaliOrIso(x.date))}') && pomoJs.includes('${esc(jalaliOrIso(t.date))}') &&
+    coreJs.includes('${isoToJalaliText(x.date)||x.date}') && !pomoCode.includes('${esc(x.date)}'));
+
+  check('v21.5 the data nothing ever read is no longer written',
+    !pomoJs.includes('t.pomodoroMinutes') && !pomoJs.includes('t.lastPomodoroAt') &&
+    pomoJs.includes('if(t) t.pomodorosCount = (t.pomodorosCount || 0) + 1;') &&
+    pomoJs.includes('if(DB.pomodoro.presets) delete DB.pomodoro.presets;') &&
+    !pomoJs.includes('DB.pomodoro.presets = PRESETS.map') &&
+    /* the legacy migration is one remembered pass, not a scan on every boot */
+    coreJs.includes('if(DB.pomodoro?.manualMigrated) return;') &&
+    coreJs.includes('DB.pomodoro.manualMigrated = true;') &&
+    !/addManualPomoData\(\)\{[\s\S]{0,600}?migrateLegacyManualPomoData\(\)/.test(coreJs));
+
+  check('v21.5 every new string has an English translation',
+    ['راهنمای پومودورو', 'راهنمای XP Shop', 'راهنمای درخت مهارت', 'راهنمای باس هفتگی',
+     'تایمر و جلسه‌ها', 'دور و استراحت', 'حالت‌ها، تسک و صدا', 'آمار و XP', 'موجودیِ جدا',
+     'بوست و جعبه‌ی شانس', 'سپر استریک', 'تم‌ها و دارایی‌ها', 'امتیاز از کجا می‌آید', 'هفت مهارت',
+     'تیرها', 'اثرِ فوری', 'ساختِ باس', 'HP و ضربه', 'مهلتِ ۱۴ روزه', 'ویرایش و حذفِ تسک',
+     '➕ ساخت تسک', 'اعلان‌های پومودورو', '🔔 اعلان‌ها', '🔔 فعال‌سازی اعلان', 'مجموع فوکوس']
+      .every(k => langJs.includes(`"${k}":`)) &&
+    langJs.includes('var EXTRA_V215 = {') && langJs.includes('EXACT[_k215] = EXTRA_V215[_k215];') &&
+    ['Pomodoro guide', 'XP Shop guide', 'Skill tree guide', 'Weekly boss guide', 'A separate balance',
+     'Seven skills', 'The 14-day deadline', '➕ Create task', 'Total focus']
+      .every(en => langJs.includes(en)) &&
+    /* keys whose string no longer exists anywhere were taken out with it */
+    ['"همگام شد"', '"🍅 تایمر پومودورو"', '"⛔ نوتیفیکیشن فعال نیست"', '"🔔 نوتیفیکیشن"']
+      .every(dead => !langJs.includes(dead)));
+
+  const readmePomo = readme.split('### 2. 🍅')[1].split('### 3. 🎮')[0];
+  const readmeGuides = readme.split('### 9. 📖')[1].split('## 🏗️')[0];
+  check('v21.5 the README describes what the app really does',
+    readme.includes('نسخه 21.5') && readme.includes('راهنمای ده بخش') &&
+    !readmePomo.includes('اعلان‌های معکوس زنده') &&
+    readmePomo.includes('اعلان‌ها فقط سه‌جا می‌آیند') && readmePomo.includes('کلید روشن/خاموش اعلان‌ها') &&
+    readmeGuides.includes('پومودورو، XP Shop، درخت مهارت و باس هفتگی') &&
+    readmeGuides.includes('هر ده راهنما') &&
+    readme.includes('ساختِ تسک داخل صفحه‌ی باس') && readme.includes('life-planner-cache-v86'));
 
   const v213CssCode = v213Css.replace(/\/\*[\s\S]*?\*\//g, '');   /* comments may talk about blur */
   check('v21.3 the guide layer stays cheap: no blur, no animation on layout',

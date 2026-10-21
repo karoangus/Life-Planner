@@ -8,10 +8,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=21.4">
-<link rel="stylesheet" href="css/design-system.css?v=21.4">
-<link rel="stylesheet" href="css/v20.css?v=21.4">
-<link rel="stylesheet" href="css/v213.css?v=21.4">
+<link rel="stylesheet" href="css/app.css?v=21.5">
+<link rel="stylesheet" href="css/design-system.css?v=21.5">
+<link rel="stylesheet" href="css/v20.css?v=21.5">
+<link rel="stylesheet" href="css/v213.css?v=21.5">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -279,7 +279,15 @@ try{
 
     <!-- POMODORO -->
     <div class="view" id="view-pomodoro">
-      <div class="topbar"><div><h1>پومودورو</h1><div class="sub">فوکوس متمرکز، با ریتم درست</div></div></div>
+      <div class="topbar">
+        <div><h1>پومودورو</h1><div class="sub">فوکوس متمرکز، با ریتم درست</div></div>
+        <div class="top-actions">
+          <!-- v21.5: the same single ❓ every guided section carries -->
+          <button class="guide-btn" type="button" onclick="openGuide('pomodoro')" title="راهنمای پومودورو" aria-label="راهنمای پومودورو">❓</button>
+        </div>
+      </div>
+      <!-- v21.5: one slot for the first-visit hint — it retires itself for good -->
+      <div class="guide-slot" id="guideSlot-pomodoro"></div>
 
       <div class="chip-group" id="pomoTabs" style="margin-bottom:18px;">
         <div class="chip-opt sel" data-pt="focus">⏱️ فوکوس</div>
@@ -383,10 +391,16 @@ try{
           <button class="btn" style="width:100%; justify-content:center;" onclick="savePomoSettings()">💾 ذخیره تنظیمات</button>
         </div>
         <div class="card" style="margin-top:16px;">
-          <div class="card-head"><h3>🔔 نوتیفیکیشن</h3></div>
-          <p class="muted" style="font-size:12px; line-height:1.9;">برای اینکه وقتی پومودورو تموم می‌شه یا کوئست جدید می‌رسه، حتی بیرون از تب، خبردار بشی</p>
-          <div id="pomoNotifyStatus" style="font-size:12.5px; font-weight:700; margin:10px 0;"></div>
-          <button class="btn ghost" style="width:100%; justify-content:center;" onclick="requestNotifyPermission()">🔔 فعال‌سازی نوتیفیکیشن</button>
+          <div class="card-head"><h3>🔔 اعلان‌ها</h3></div>
+          <p class="muted" style="font-size:12px; line-height:1.9;">اعلانِ شروع و پایانِ هر جلسه و پایانِ هر دور — حتی بیرون از تب. اعلانِ دائمیِ شمارش معکوس حذف شده تا مزاحم نباشد.</p>
+          <label class="check-row" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin:10px 0; user-select:none;">
+            <div>
+              <div style="font-weight:700; font-size:13.5px;">اعلان‌های پومودورو</div>
+              <div class="muted" id="pomoNotifyStatus" style="font-size:11.5px; margin-top:2px; font-weight:700;"></div>
+            </div>
+            <input type="checkbox" id="pomoNotifyToggle" onchange="togglePomoNotifications(this.checked)" style="width:20px; height:20px; accent-color:var(--neon); cursor:pointer;">
+          </label>
+          <button class="btn ghost" style="width:100%; justify-content:center;" onclick="requestNotifyPermission()">🔔 فعال‌سازی اعلان</button>
         </div>
       </div>
     </div>
@@ -762,7 +776,15 @@ try{
 
     <!-- XP SHOP -->
     <div class="view" id="view-shop">
-      <div class="topbar"><div><h1>🛍️ XP Shop</h1><div class="sub">با XP هایی که جمع کردی، وسیله بخر</div></div></div>
+      <div class="topbar">
+        <div><h1>🛍️ XP Shop</h1><div class="sub">با XP هایی که جمع کردی، وسیله بخر</div></div>
+        <div class="top-actions">
+          <!-- v21.5 -->
+          <button class="guide-btn" type="button" onclick="openGuide('shop')" title="راهنمای XP Shop" aria-label="راهنمای XP Shop">❓</button>
+        </div>
+      </div>
+      <!-- v21.5 -->
+      <div class="guide-slot" id="guideSlot-shop"></div>
 
       <div class="card xp-wallet-card">
         <div class="wallet-row">
@@ -815,7 +837,13 @@ try{
     <div class="view" id="view-skills">
       <div class="topbar">
         <div><h1>🌳 درخت مهارت</h1><div class="sub">هر بار لول‌آپ می‌شی، یه امتیاز مهارت می‌گیری</div></div>
+        <div class="top-actions">
+          <!-- v21.5 -->
+          <button class="guide-btn" type="button" onclick="openGuide('skills')" title="راهنمای درخت مهارت" aria-label="راهنمای درخت مهارت">❓</button>
+        </div>
       </div>
+      <!-- v21.5 -->
+      <div class="guide-slot" id="guideSlot-skills"></div>
       <div class="card" style="text-align:center; background:linear-gradient(120deg, rgba(46,230,166,.10), var(--panel) 60%); border-color:rgba(46,230,166,.3);">
         <div style="font-size:12px; color:var(--txt-dim); font-weight:700;">امتیاز مهارت در دسترس</div>
         <div class="wallet-val num" id="skillPointsVal" style="color:#2ee6a6;">0</div>
@@ -827,7 +855,13 @@ try{
     <div class="view" id="view-boss">
       <div class="topbar">
         <div><h1>⚔️ باس هفتگی</h1><div class="sub">یه هدف بزرگ رو به یه نبرد تبدیل کن</div></div>
+        <div class="top-actions">
+          <!-- v21.5 -->
+          <button class="guide-btn" type="button" onclick="openGuide('boss')" title="راهنمای باس هفتگی" aria-label="راهنمای باس هفتگی">❓</button>
+        </div>
       </div>
+      <!-- v21.5 -->
+      <div class="guide-slot" id="guideSlot-boss"></div>
       <div id="bossContent"></div>
     </div>
 
@@ -925,10 +959,10 @@ try{
       </div>
 
       <!-- v21.3: the section guides also live here, so they can be found
-           without hunting for a ❓ in each section (v21.4: six of them now). -->
+           without hunting for a ❓ in each section (v21.5: all ten of them). -->
       <div class="card settings-card">
         <div class="card-head"><h3>❓ راهنمای بخش‌ها</h3></div>
-        <p class="muted settings-help">راهنمای کوتاهِ داشبورد، تسک‌ها، تقویم، عادت‌ها، اهداف و یادداشت‌ها. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.</p>
+        <p class="muted settings-help">راهنمای کوتاهِ هر ده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.</p>
         <div class="settings-actions">
           <button class="btn ghost" type="button" onclick="openGuide('dashboard')">🏠 داشبورد</button>
           <button class="btn ghost" type="button" onclick="openGuide('tasks')">✅ تسک‌ها</button>
@@ -936,12 +970,16 @@ try{
           <button class="btn ghost" type="button" onclick="openGuide('habits')">🔥 عادت‌ها</button>
           <button class="btn ghost" type="button" onclick="openGuide('goals')">🎯 اهداف</button>
           <button class="btn ghost" type="button" onclick="openGuide('notes')">📝 یادداشت‌ها</button>
+          <button class="btn ghost" type="button" onclick="openGuide('pomodoro')">🍅 پومودورو</button>
+          <button class="btn ghost" type="button" onclick="openGuide('shop')">🛍️ XP Shop</button>
+          <button class="btn ghost" type="button" onclick="openGuide('skills')">🌳 درخت مهارت</button>
+          <button class="btn ghost" type="button" onclick="openGuide('boss')">⚔️ باس هفتگی</button>
         </div>
         <button class="btn ghost sm" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="lpResetGuides()">↩️ نمایش دوباره‌ی راهنمای خودکار</button>
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">21.4</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">21.5</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1169,7 +1207,13 @@ try{
   <div class="field"><label>اسم باس (مثلاً: مطالعه فصل ۳ ریاضی)</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="bossNameInput" placeholder="اسم هدف بزرگت..."></div>
   <div class="field">
     <label>چندتا تسک انتخاب کن که هرکدوم بهش ضربه بزنه <span id="bossTaskCount" class="num">(۰ تسک)</span></label>
-    <div id="bossTaskPicker" style="max-height:260px; overflow-y:auto;"></div>
+    <div id="bossTaskPicker" style="max-height:220px; overflow-y:auto;"></div>
+    <!-- v21.5: no more "go and create some tasks first" — the fight is built here -->
+    <div class="boss-new-task">
+      <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="bossNewTaskInput" maxlength="80" placeholder="تسک جدید… (مثلاً: فصل ۳ رو بخون)">
+      <button class="btn ghost sm" type="button" onclick="addBossTaskInline()">➕ ساخت تسک</button>
+    </div>
+    <div class="muted" style="font-size:11.5px; margin-top:6px; line-height:1.7;">تسک تازه همون‌جا ساخته و خودش برای باس انتخاب می‌شه؛ بعداً توی بخش تسک‌ها هم هست.</div>
   </div>
   <div class="muted" style="font-size:12px; margin-top:8px; line-height:1.8;">⏰ ۱۴ روز فرصت داری تا باس رو شکست بدی؛ وگرنه باس از دست می‌ره و باید یک هفته صبر کنی تا باس جدید بیاد.</div>
   <div class="modal-actions">
@@ -1227,6 +1271,11 @@ try{
     <div class="chip-opt" data-g="habits" role="tab" tabindex="0" aria-selected="false">🔥 عادت‌ها</div>
     <div class="chip-opt" data-g="goals" role="tab" tabindex="0" aria-selected="false">🎯 اهداف</div>
     <div class="chip-opt" data-g="notes" role="tab" tabindex="0" aria-selected="false">📝 یادداشت‌ها</div>
+    <!-- v21.5: the four remaining sections joined the same guide -->
+    <div class="chip-opt" data-g="pomodoro" role="tab" tabindex="0" aria-selected="false">🍅 پومودورو</div>
+    <div class="chip-opt" data-g="shop" role="tab" tabindex="0" aria-selected="false">🛍️ XP Shop</div>
+    <div class="chip-opt" data-g="skills" role="tab" tabindex="0" aria-selected="false">🌳 درخت مهارت</div>
+    <div class="chip-opt" data-g="boss" role="tab" tabindex="0" aria-selected="false">⚔️ باس هفتگی</div>
   </div>
 
   <section class="guide-panel sel" data-g="dashboard" role="tabpanel">
@@ -1294,6 +1343,49 @@ try{
     <p class="muted guide-note">🧹 «پاک کردن فیلتر» فقط وقتی جست‌وجو یا برچسب فعال باشد ظاهر می‌شود؛ حذف یادداشت هم تأیید می‌خواهد.</p>
   </section>
 
+  <!-- v21.5: Pomodoro, XP Shop, the skill tree and the weekly boss — same shape -->
+  <section class="guide-panel" data-g="pomodoro" role="tabpanel">
+    <p class="guide-lead">تایمر فوکوس با ریتمِ دور و جلسه — فقط «▶️ شروع» را بزن، بقیه خودش می‌آید.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">⏱️</span><div class="guide-row-txt"><b>تایمر و جلسه‌ها</b><span>دایره را بزن تا جلسه شروع شود؛ یک لحظه نگه‌داشتنش «♾️ فوکوس بی‌نهایت» است. «⏹️ پایان و ثبت» همان‌قدر که واقعاً کار کرده‌ای ثبت می‌کند و بعدش امتیاز جلسه (از ۱۰۰) را نشان می‌دهد.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🍅</span><div class="guide-row-txt"><b>دور و استراحت</b><span>بالای تایمر «دور ۱ • جلسه ۱ از ۴» و نقطه‌ها هستند. بعد از هر فوکوس نوبت استراحت است و بعد از آخرین جلسه‌ی دور، استراحت طولانی — «⏭️ جلسه بعدی» مرحله را دستی جلو می‌برد.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🎧</span><div class="guide-row-txt"><b>حالت‌ها، تسک و صدا</b><span>پنج حالت آماده (کلاسیک، کوتاه، دیپ فوکوس، مطالعه و سفارشیِ ساختنی)، انتخاب تسک برای جلسه، هشت صدای محیط با اسلایدر بلندی، و «🧠 حالت تمرکز تمام‌صفحه» برای وقتی که فقط تایمر را می‌خواهی.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📊</span><div class="guide-row-txt"><b>آمار و XP</b><span>تب «📊 آمار پومو» فوکوس امروز، هدف روزانه، هفت روز اخیر، نمودار روند، جمع‌بندی کلی و ۱۰ جلسه‌ی آخر را نشان می‌دهد. هر دقیقه (فوکوس یا استراحت) ۲ XP می‌دهد و پر کردن هدف روزانه ۳۰ XP.</span></div></div>
+    </div>
+    <p class="muted guide-note">🔔 اعلان‌ها فقط سه‌جا می‌آیند: شروع جلسه، پایان جلسه و پایان دور — کلید روشن/خاموششان در تب «⚙️ تنظیمات» است.</p>
+  </section>
+
+  <section class="guide-panel" data-g="shop" role="tabpanel">
+    <p class="guide-lead">XPهایی که جمع کرده‌ای را خرج کن — بدون این‌که سطح و لولت پایین بیاید.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">💰</span><div class="guide-row-txt"><b>موجودیِ جدا</b><span>«موجودی XP Shop» یک کیف پولِ جدا از نوار XPِ سطح است: هر XP که از هر جای برنامه بگیری اینجا جمع می‌شود و خرج کردنش نه لولت را کم می‌کند و نه نوار پیشرفت را.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🎁</span><div class="guide-row-txt"><b>بوست و جعبه‌ی شانس</b><span>«⚡ XP Boost» سی دقیقه هر XP را دوبرابر می‌کند. «Mystery Box» یک جایزه‌ی تصادفیِ وزنی می‌دهد — از ۱۰ XP تا جکپات ۲۰۰، سپر، کوئست ویژه، آیتم شهر و جعبه‌ی رایگان — و دکمه‌ی ⓘ شانسِ دقیقِ هر ده جایزه را می‌گوید.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🛡️</span><div class="guide-row-txt"><b>سپر استریک</b><span>۵۰۰ XP برای روزی که عادتی را جا انداختی. دو قانون ضدِ زیاده‌روی دارد: حداکثر ۱ سپر در دست و ۳ خرید در هفته — شمارِ باقی‌مانده زیر همان کارت نوشته می‌شود.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🎨</span><div class="guide-row-txt"><b>تم‌ها و دارایی‌ها</b><span>سه تمِ ویژه با XP باز می‌شوند (تاریک و روشن رایگان‌اند) و «🎒 دارایی‌های ویژه» هرچه خریده‌ای را با تعداد نشان می‌دهد: سپرها و آیتم‌های Life City.</span></div></div>
+    </div>
+    <p class="muted guide-note">💰 مهارت «چانه‌زن» در درخت مهارت هر تیر ۱۰٪ از همه‌ی قیمت‌های همین فروشگاه کم می‌کند.</p>
+  </section>
+
+  <section class="guide-panel" data-g="skills" role="tabpanel">
+    <p class="guide-lead">هر بار لول‌آپ می‌شوی یک امتیاز مهارت می‌گیری؛ یک تیر بخر و اثرش دائمی است.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">🎁</span><div class="guide-row-txt"><b>امتیاز از کجا می‌آید</b><span>هر لول‌آپ دقیقاً ۱ امتیاز مهارت می‌دهد و عددِ بالای صفحه همان امتیازهای خرج‌نشده است. راهِ دیگری برای گرفتنش نیست، پس خرج کردنش با فکر است.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🌳</span><div class="guide-row-txt"><b>هفت مهارت</b><span>استاد فوکوس، شکارچی کوئست، چانه‌زن، شانس بلند، قاتل بحران، محافظ استریک و کوئست سریع. زیرِ اسم هرکدام نوشته شده هر تیر دقیقاً چه‌کار می‌کند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🔘</span><div class="guide-row-txt"><b>تیرها</b><span>هزینه‌ی هر تیر ۱ امتیاز است و گران‌تر نمی‌شود. نقطه‌های زیر هر مهارت تیرهای گرفته‌شده را نشان می‌دهند و وقتی به سقف برسد «✓ تکمیل شده» جای دکمه می‌نشیند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">⚡</span><div class="guide-row-txt"><b>اثرِ فوری</b><span>«محافظ استریک» همان لحظه ۱ سپر رایگان می‌دهد، «چانه‌زن» قیمت‌های فروشگاه را جلوِ چشمت کم می‌کند و «کوئست سریع» تا ۵ تیر انتظارِ کوئست بعدی را از ۲۰ به ۱۵ دقیقه می‌رساند.</span></div></div>
+    </div>
+  </section>
+
+  <section class="guide-panel" data-g="boss" role="tabpanel">
+    <p class="guide-lead">یک هدف بزرگ را به نبرد تبدیل کن: هر تسکی که تیک بخورد، یک ضربه به باس است.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">⚔️</span><div class="guide-row-txt"><b>ساختِ باس</b><span>یک اسم بنویس و چند تسکِ انجام‌نشده را انتخاب کن. اگر تسکِ مناسبی نداری، همان‌جا پایینِ لیست تسکِ جدید بساز — ساخته و خودش برای باس انتخاب می‌شود و بعداً در بخش تسک‌ها هم هست.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">❤️</span><div class="guide-row-txt"><b>HP و ضربه</b><span>باس همیشه ۱۰۰ HP دارد و بین تسک‌هایش تقسیم می‌شود: با ۴ تسک، هر تیک ۲۵ HP کم می‌کند. هر تسک فقط یک بار ضربه می‌زند و تسک‌های ضربه‌خورده با ⚔️ و خط‌خورده نشان داده می‌شوند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">⏰</span><div class="guide-row-txt"><b>مهلتِ ۱۴ روزه</b><span>چهارده روز فرصت داری. اگر مهلت تمام شود باس از دست می‌رود و یک هفته صبر می‌کنی تا باس بعدی؛ «فعلاً باس مشخصی ندارم» هم همین یک هفته را عقب می‌اندازد. شکستِ باس ۱۰۰ XP می‌دهد.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">✏️</span><div class="guide-row-txt"><b>ویرایش و حذفِ تسک</b><span>با «✏️ ویرایش» اسم و تسک‌ها عوض می‌شوند و HP بر اساسِ همان ضربه‌های خورده دوباره حساب می‌شود. اگر یکی از تسک‌های باس را پاک کنی HP به‌روز می‌شود و اگر همه‌شان پاک شوند، نبرد بدون انتظارِ هفتگی لغو می‌شود.</span></div></div>
+    </div>
+  </section>
+
   <div class="guide-foot">
     <button class="btn" type="button" id="guideCta" onclick="guidePrimaryAction()">📥 اینباکس سریع</button>
     <button class="btn ghost" type="button" onclick="closeGuide()">بستن</button>
@@ -1326,18 +1418,18 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=21.4"></script>
-<script src="js/enhancements.js?v=21.4"></script>
-<script src="js/sw-register.js?v=21.4"></script>
+<script src="js/core.js?v=21.5"></script>
+<script src="js/enhancements.js?v=21.5"></script>
+<script src="js/sw-register.js?v=21.5"></script>
 
-<script src="js/pomodoro.js?v=21.4"></script>
+<script src="js/pomodoro.js?v=21.5"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=21.4"></script>
-<script src="js/v16.js?v=21.4"></script>
-<script src="js/v162.js?v=21.4"></script>
-<script src="js/v21.js?v=21.4"></script>
+<script src="js/lang.js?v=21.5"></script>
+<script src="js/v16.js?v=21.5"></script>
+<script src="js/v162.js?v=21.5"></script>
+<script src="js/v21.js?v=21.5"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=21.4"></script>
+<script src="js/v213.js?v=21.5"></script>
 
 </body>
 </html>
