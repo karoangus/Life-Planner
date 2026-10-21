@@ -1,19 +1,24 @@
 /* ============================================================
-   Life Planner v21.3 — «راهنمای سه بخش» / section guides
+   Life Planner v21.3 / v21.4 — «راهنمای بخش‌ها» / section guides
 
    The simplification path (v20 → v21.2) took the clutter out of
    the Dashboard, Tasks and Calendar. This file adds the missing
-   half: a way to *learn* those three sections without reading a
-   manual, and one more pass of decluttering for a first-time user.
+   half: a way to *learn* a section without reading a manual, and
+   one more pass of decluttering for a first-time user.
+
+   v21.4 extended the same engine from three sections to six:
+   Habits, Goals and Notes now carry a ❓ of their own and one
+   first-visit hint each. Nothing else about them changed here —
+   the fixes of that release live in core.js.
 
    Three layers, all additive, none of them touching a renderer,
    an element ID, a class or a handler from core.js:
 
-   1) SECTION GUIDE — the ❓ button of each of the three sections
-      opens one shared modal (#guideModalBg) with a short, plain
+   1) SECTION GUIDE — the ❓ button of each guided section opens
+      one shared modal (#guideModalBg) with a short, plain
       explanation: what the section is for, the four things on
       screen, and one button that jumps straight into the main
-      action. The three guides are reachable from each other, so
+      action. All six guides are reachable from each other, so
       nobody has to hunt for the next ❓.
 
    2) ONE-TIME HINT — the first time a section is opened, a slim
@@ -21,7 +26,8 @@
       gone forever as soon as the user reads the guide, taps ✕ or
       simply walks to another section. The Calendar is exempt: it
       already carries a permanent one-line intro, so it would be
-      the same sentence twice.
+      the same sentence twice. The Dashboard is exempt while
+      «سه قدم اول» is on screen, for the same reason.
 
    3) «سه قدم اول» — a three-step card on the Dashboard that only
       ever appears on an *empty* account (no task, habit, goal,
@@ -47,13 +53,16 @@
 
   /* Sections that own a guide. The Calendar has one too, it just never shows
      a first-visit hint (its intro line already sits above the grid). */
-  var SECTIONS = ['dashboard', 'tasks', 'calendar'];
-  var HINTED = { dashboard: true, tasks: true };
+  var SECTIONS = ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes'];
+  var HINTED = { dashboard: true, tasks: true, habits: true, goals: true, notes: true };
 
   var TITLES = {
     dashboard: '📖 راهنمای داشبورد',
     tasks: '📖 راهنمای تسک‌ها',
-    calendar: '📖 راهنمای تقویم'
+    calendar: '📖 راهنمای تقویم',
+    habits: '📖 راهنمای عادت‌ها',
+    goals: '📖 راهنمای اهداف',
+    notes: '📖 راهنمای یادداشت‌ها'
   };
 
   /* One button per guide that lands the user in the section's main action —
@@ -61,7 +70,11 @@
   var CTA = {
     dashboard: { label: '📥 اینباکس سریع', fn: 'openInboxQuickAdd' },
     tasks: { label: '➕ تسک جدید', fn: 'openTaskModal' },
-    calendar: { label: '➕ رویداد جدید', fn: 'openEventModal' }
+    calendar: { label: '➕ رویداد جدید', fn: 'openEventModal' },
+    /* v21.4 */
+    habits: { label: '➕ عادت جدید', fn: 'openHabitModal' },
+    goals: { label: '➕ هدف جدید', fn: 'openGoalModal' },
+    notes: { label: '➕ یادداشت جدید', fn: 'openNoteModal' }
   };
 
   var HINTS = {
@@ -72,13 +85,29 @@
     tasks: {
       ic: '✍️',
       txt: 'فقط یک عنوان بنویس و «ذخیره» را بزن؛ بقیه‌ی گزینه‌ها اختیاری‌اند.'
+    },
+    /* v21.4: one line per section, and only ever once */
+    habits: {
+      ic: '🔥',
+      txt: 'فقط خانه‌ی امروز را تیک بزن؛ استریک و XP خودش می‌آید.'
+    },
+    goals: {
+      ic: '🎯',
+      txt: 'یک هدف بساز و هر روز با +۲٪ یا +۱۰٪ جلویش ببر — همین.'
+    },
+    notes: {
+      ic: '📝',
+      txt: 'یک عنوان بنویس و ذخیره کن؛ برچسب و رنگ و سنجاق همه اختیاری‌اند.'
     }
   };
 
   /* ---------- stored state ---------- */
 
   function blankState() {
-    return { seen: { dashboard: 0, tasks: 0, calendar: 0 }, qs: '' };
+    return {
+      seen: { dashboard: 0, tasks: 0, calendar: 0, habits: 0, goals: 0, notes: 0 },
+      qs: ''
+    };
   }
 
   function readState() {

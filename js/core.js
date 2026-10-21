@@ -113,8 +113,6 @@ if(!DB.perfectDayHistory || typeof DB.perfectDayHistory!=='object') DB.perfectDa
 if(!DB.dailyGoalProgress || typeof DB.dailyGoalProgress!=='object') DB.dailyGoalProgress = {};
 if(!DB.streakShields || typeof DB.streakShields!=='number') DB.streakShields = 0;
 if(typeof DB.streakShieldActive!=='boolean') DB.streakShieldActive = true;
-if(!Array.isArray(DB.streakShieldHabits)) DB.streakShieldHabits = [];
-if(typeof DB.streakShieldArmedAt!=='number') DB.streakShieldArmedAt = 0;
 if(!DB.streakShieldWeekly || typeof DB.streakShieldWeekly!=='object') DB.streakShieldWeekly = { weekStart: weekStartMs(), count: 0 };
 if(typeof DB.streakShieldWeekly.weekStart!=='number') DB.streakShieldWeekly.weekStart = weekStartMs();
 if(typeof DB.streakShieldWeekly.count!=='number') DB.streakShieldWeekly.count = 0;
@@ -2513,7 +2511,6 @@ function buyStreakShield(){
   const cost = applyShopDiscount(500);
   if(!spendXP(cost)){ toast('⚠️ XP کافی نداری'); return; }
   DB.streakShields = (DB.streakShields||0)+1;
-  DB.streakShieldArmedAt = Date.now();
   w.count = (w.count||0)+1;
   DB.streakShieldWeekly = w;
   persist();
@@ -3082,7 +3079,8 @@ function deleteTask(id){
 }
 function logHistory(key,inc){
   const d = todayISO();
-  DB.history[d] = DB.history[d] || {tasks:0, habits:0};
+  /* v21.4: only 'tasks' is still read (YVY + the dashboard), so nothing else is seeded. */
+  DB.history[d] = DB.history[d] || {tasks:0};
   DB.history[d][key] = (DB.history[d][key]||0) + inc;
 }
 const CAT_PALETTE = ['#00e5ff','#8b6bff','#ff5470','#ffb545','#2ee6a6','#ff8fa3','#5eead4','#c084fc','#fbbf24','#60a5fa','#f472b6','#34d399'];
@@ -3419,8 +3417,6 @@ function openHabitModal(id=null){
     if(o.dataset.v === wanted){ o.classList.add('sel'); matched = true; }
   });
   if(!matched) document.querySelector('#hIcon [data-v="📚"]')?.classList.add('sel');
-  const shieldEl = document.getElementById('hShieldHabits');
-  if(shieldEl){ shieldEl.innerHTML = ''; }
   openModal('habitModalBg');
 }
 function saveHabit(){
@@ -3448,13 +3444,16 @@ function calWeekShift(n){
 }
 function calWeekStep(n){ calWeekShift(CAL_WEEK_OFFSET + (Number(n)||0)); }
 function calWeekToday(){ calWeekShift(0); scrollCalendarToNow(); }
-function weekDates(){
+/* v21.4: the offset is a parameter now. The calendar passes its own
+   CAL_WEEK_OFFSET; the Habits grid passes 0, because seven boxes that
+   belong to another week are seven boxes nobody can tick. */
+function weekDates(offset=CAL_WEEK_OFFSET){
   // Returns 7 dates for the shown week (Sat to Fri, Iranian calendar week) using LOCAL date
   const arr=[];
   const now = new Date();
   const dayOfWeek = (now.getDay()+1)%7; // 0=Sat,1=Sun,...,6=Fri
   const sat = new Date(now);
-  sat.setDate(now.getDate() - dayOfWeek + CAL_WEEK_OFFSET*7);
+  sat.setDate(now.getDate() - dayOfWeek + (Number(offset)||0)*7);
   for(let i=0;i<7;i++){
     const d=new Date(sat);
     d.setDate(sat.getDate()+i);
@@ -3467,7 +3466,9 @@ function toggleHabitDay(hid, date){
   if(!h){ console.warn('toggleHabitDay: habit not found', hid); return; }
   h.log[date] = !h.log[date];
   if(h.log[date]){
-    addXP(6); logHistory('habits',1);
+    /* v21.4: the 6 XP is earned once per habit per day — un-ticking and
+       ticking the same day again must not be a way to farm XP. */
+    if(h.rewardDate !== date){ h.rewardDate = date; addXP(6); }
     const s = habitStreak(h);
     if(s > (DB.stats.bestStreak||0)) DB.stats.bestStreak = s;
     checkPerfectDay();
@@ -3500,7 +3501,7 @@ function renderHabitShieldToggle(){
 }
 function renderHabits(){
   renderHabitShieldToggle();
-  const wDates = weekDates();
+  const wDates = weekDates(0);   /* v21.4: always *this* week */
   const dayLetters = ['ش','ی','د','س','چ','پ','ج'];
   const listEl = document.getElementById('habitList');
   if(!DB.habits.length){ listEl.innerHTML = `<div class="empty"><div class="ic">🔥</div>هنوز عادتی ثبت نکردی</div>`; }
@@ -3508,7 +3509,7 @@ function renderHabits(){
     const streak = habitStreak(h);
     return `<div class="habit-card">
       <div class="habit-ic" style="background:rgba(0,229,255,.1)">${h.icon}</div>
-      <div class="habit-info"><div class="habit-name">${esc(h.name)}</div><div class="habit-streak">🔥 ${streak} روز پیاپی</div></div>
+      <div class="habit-info"><div class="habit-name">${esc(h.name)}</div><div class="habit-streak">🔥 ${toFaDigits(streak)} روز پیاپی</div></div>
       <div class="habit-right">
         <div class="week-dots">
           ${wDates.map((d)=>{
@@ -3528,8 +3529,14 @@ function renderHabits(){
 
   /* v20: the dashboard habit tile is gone; the Habits view is the one place. */
 }
-function renderHabitMini(){}
-function deleteHabit(id){ if(!DB.habits.find(x=>x.id===id)) return; DB.habits = DB.habits.filter(x=>x.id!==id); save(); }
+/* v21.4: renderHabitMini() was an empty leftover from the day the dashboard
+   tile went away — nothing ever called it, so it went with it. */
+function deleteHabit(id){
+  if(!DB.habits.find(x=>x.id===id)) return;
+  if(!confirm('این عادت حذف بشه؟')) return;   /* v21.4: no more silent, irreversible delete */
+  DB.habits = DB.habits.filter(x=>x.id!==id);
+  save(); toast('🗑️ عادت حذف شد');
+}
 
 /* ============ GOALS ============ */
 /* v16 — the same modal now creates AND edits. openGoalModal() with no
@@ -3599,7 +3606,7 @@ function renderGoals(){
     <div class="goal-top">
       <div><div class="goal-title">${esc(g.title)}</div><span class="pill cat">${levelLabel(g.level)}</span></div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <span class="num" style="font-weight:800;color:var(--neon)">${g.progress}٪</span>
+        <span class="num" style="font-weight:800;color:var(--neon)">${toFaDigits(g.progress)}٪</span>
         <div class="lp-edit" onclick="openGoalModal('${g.id}')" title="ویرایش هدف">✏️</div>
         <div class="task-del" onclick="deleteGoal('${g.id}')">🗑️</div>
       </div>
@@ -3615,8 +3622,13 @@ function renderGoals(){
 
   /* v20: the dashboard goal tile is gone; the Goals view is the one place. */
 }
-function renderGoalMini(){}
-function deleteGoal(id){ if(!DB.goals.find(x=>x.id===id)) return; DB.goals = DB.goals.filter(x=>x.id!==id); save(); }
+/* v21.4: renderGoalMini() went the same way as its habit twin. */
+function deleteGoal(id){
+  if(!DB.goals.find(x=>x.id===id)) return;
+  if(!confirm('این هدف حذف بشه؟')) return;   /* v21.4: same question the other deletes ask */
+  DB.goals = DB.goals.filter(x=>x.id!==id);
+  save(); toast('🗑️ هدف حذف شد');
+}
 
 /* ============ NOTES ============ */
 let editingNoteId=null;
@@ -3663,7 +3675,18 @@ function updateNoteBodyCounter(){
    actually on screen, and never from a saved copy, so it can never drift. */
 function renderNoteToolbar(){
   const grid=document.getElementById('noteGrid');
-  if(grid) grid.classList.toggle('notes-list',(window.__lpNoteView||'grid')==='list');
+  const asList=(window.__lpNoteView||'grid')==='list';
+  if(grid) grid.classList.toggle('notes-list',asList);
+  /* v21.4: the toggle shows the view you are IN and names the one a tap
+     takes you to — before, its icon never changed at all. */
+  const vt=document.getElementById('noteViewToggle');
+  if(vt){
+    const next=asList?'نمای شبکه‌ای':'نمای لیستی';
+    vt.textContent=asList?'☰':'▦';
+    vt.title='تغییر به '+next;
+    vt.setAttribute('aria-label',vt.title);
+    vt.setAttribute('aria-pressed',asList?'true':'false');
+  }
   const sortEl=document.getElementById('noteSort');
   if(sortEl) sortEl.value=window.__lpNoteSort||'newest';
   const box=document.getElementById('noteTagFilter');
@@ -5298,100 +5321,11 @@ function drawBarChart(canvas, labels, values, color){
     ctx.fillText(labels[i], x+barW/2, h-8);
   });
 }
-function drawLineChart(canvas, labels, values, color, fillColor){
-  const {ctx,w,h} = setupCanvas(canvas, 180);
-  const line = cssVar('--line'), dim = cssVar('--txt-dim2');
-  const padL=8, padR=8, padT=12, padB=24;
-  const plotW = w-padL-padR, plotH = h-padT-padB;
-  const maxVal = Math.max(...values, 1);
-  ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.font = '10px Segoe UI, Tahoma, sans-serif';
-  for(let i=0;i<=3;i++){
-    const y = padT + plotH - (plotH*i/3);
-    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
-  }
-  const n = values.length, slot = n>1? plotW/(n-1) : plotW;
-  const pts = values.map((v,i)=>({x: padL + i*slot, y: padT + plotH - (maxVal? (v/maxVal)*plotH : 0)}));
-  ctx.beginPath(); ctx.moveTo(pts[0].x, padT+plotH);
-  pts.forEach(p=>ctx.lineTo(p.x,p.y));
-  ctx.lineTo(pts[pts.length-1].x, padT+plotH); ctx.closePath();
-  ctx.fillStyle = fillColor; ctx.fill();
-  ctx.beginPath(); pts.forEach((p,i)=> i===0? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
-  ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin='round'; ctx.stroke();
-  pts.forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,3,0,7); ctx.fillStyle = color; ctx.fill(); });
-  ctx.fillStyle = dim; ctx.textAlign='center';
-  labels.forEach((l,i)=> ctx.fillText(l, pts[i].x, h-8));
-}
-function drawDoughnut(canvas, labels, values, colors){
-  const {ctx,w,h} = setupCanvas(canvas, 180);
-  const total = values.reduce((a,b)=>a+b,0);
-  const cx = w/2, cy = 74, rOuter = 58, rInner = 34;
-  if(!total){
-    ctx.fillStyle = cssVar('--txt-dim2'); ctx.font='12px Segoe UI, Tahoma'; ctx.textAlign='center';
-    ctx.fillText('داده‌ای نیست', cx, cy); return;
-  }
-  let start = -Math.PI/2;
-  values.forEach((v,i)=>{
-    if(!v) return;
-    const angle = (v/total)*Math.PI*2;
-    ctx.beginPath(); ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,rOuter,start,start+angle); ctx.closePath();
-    ctx.fillStyle = colors[i]; ctx.fill();
-    start += angle;
-  });
-  ctx.globalCompositeOperation='destination-out';
-  ctx.beginPath(); ctx.arc(cx,cy,rInner,0,Math.PI*2); ctx.fill();
-  ctx.globalCompositeOperation='source-over';
-  // legend
-  ctx.font='11px Segoe UI, Tahoma'; ctx.textAlign='center';
-  const legendY = 148; const itemW = w/labels.length;
-  labels.forEach((l,i)=>{
-    const x = itemW*i + itemW/2;
-    ctx.fillStyle = colors[i]; ctx.beginPath(); ctx.arc(x-16, legendY, 4, 0, 7); ctx.fill();
-    ctx.fillStyle = cssVar('--txt-dim'); ctx.textAlign='right';
-    ctx.fillText(l+' ('+values[i]+')', x+18, legendY+4);
-  });
-}
-function drawHBarChart(canvas, labels, values, color, max){
-  const rowH = 30, h = Math.max(labels.length*rowH + 10, 60);
-  const {ctx,w} = setupCanvas(canvas, h);
-  const padL = 6, padR = 40;
-  labels.forEach((l,i)=>{
-    const y = 8 + i*rowH;
-    ctx.fillStyle = cssVar('--txt'); ctx.font='11.5px Segoe UI, Tahoma'; ctx.textAlign='right';
-    ctx.fillText(l, w-padR+2, y+15, w-padL-padR-4);
-  });
-  // adjust: draw bars below labels on next line for clarity on narrow screens
-  labels.forEach((l,i)=>{
-    const y = 8 + i*rowH + 18;
-    const trackW = w - padR - padL;
-    ctx.fillStyle = cssVar('--track'); roundRect(ctx, padL, y, trackW, 6, 4); ctx.fill();
-    const bw = trackW * Math.min(values[i]/max,1);
-    ctx.fillStyle = color; roundRect(ctx, padL, y, bw, 6, 4); ctx.fill();
-    ctx.fillStyle = cssVar('--txt-dim2'); ctx.font='10px Consolas, monospace'; ctx.textAlign='left';
-    ctx.fillText(values[i]+'٪', padL, y-4);
-  });
-}
-function renderCharts(){
-  const days = last7();
-  const dayLbl = days.map(d=>new Date(d).toLocaleDateString('fa-IR',{weekday:'short'}));
-  const taskData = days.map(d=> (DB.history[d]?.tasks)||0);
-  const habitData = days.map(d=> (DB.history[d]?.habits)||0);
-
-  drawBarChart(document.getElementById('chartTasks'), dayLbl, taskData, cssVar('--neon'));
-  drawLineChart(document.getElementById('chartHabits'), dayLbl, habitData, cssVar('--violet'), 'rgba(139,107,255,.18)');
-
-  const prCounts = {low:0,medium:0,high:0,critical:0};
-  DB.tasks.forEach(t=>prCounts[t.priority]=(prCounts[t.priority]||0)+1);
-  drawDoughnut(document.getElementById('chartPriority'), ['پایین','متوسط','بالا','بحرانی'], [prCounts.low,prCounts.medium,prCounts.high,prCounts.critical], ['#2ee6a6','#ffb545','#ff8098','#ff5470']);
-
-  if(DB.goals.length){
-    drawHBarChart(document.getElementById('chartGoals'), DB.goals.map(g=>g.title.slice(0,18)), DB.goals.map(g=>g.progress), cssVar('--neon2'), 100);
-  } else {
-    const {ctx,w,h} = setupCanvas(document.getElementById('chartGoals'), 60);
-    ctx.fillStyle = cssVar('--txt-dim2'); ctx.font='12px Segoe UI, Tahoma'; ctx.textAlign='center';
-    ctx.fillText('هنوز هدفی ثبت نشده', w/2, h/2);
-  }
-}
+/* v21.4: drawLineChart / drawDoughnut / drawHBarChart / renderCharts are gone.
+   renderCharts() had not been called since the v20 cleanup removed its four
+   canvases (chartTasks, chartHabits, chartPriority, chartGoals), so all it
+   could do was throw on null. drawBarChart, last7, setupCanvas, cssVar and
+   roundRect stay — the Pomodoro chart still draws with them. */
 
 /* ============ EXPORT / IMPORT ============ */
 function buildBackupPayload(){
@@ -5636,7 +5570,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='21.3';
+const LP_APP_VERSION='21.4';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
