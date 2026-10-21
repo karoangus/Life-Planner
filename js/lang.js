@@ -28,6 +28,67 @@
   window.lpGetLang = getLang;
 
   var EXACT = {
+    /* ---- v21.3: section guides (Dashboard / Tasks / Calendar), the one-time
+       hints and «سه قدم اول», the three-step card for a brand-new account.
+       Icons in front of a Persian core ("📖 راهنمای داشبورد", "🚀 سه قدم اول")
+       are handled by compose(), so only the core is listed here. ---- */
+    "راهنمای داشبورد": "Dashboard guide",
+    "راهنمای تسک‌ها": "Tasks guide",
+    "راهنمای بخش‌ها": "Section guides",
+    "❓ راهنمای بخش‌ها": "❓ Section guides",
+    "❓ راهنما": "❓ Guide",
+    "بستن راهنما": "Close the guide",
+    "بخش‌های راهنما": "Guide sections",
+    "راهنمای کوتاهِ داشبورد، تسک‌ها و تقویم. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.": "Short guides for the Dashboard, Tasks and the Calendar. Inside each section the same guide opens with its ❓ button.",
+    "↩️ نمایش دوباره‌ی راهنمای خودکار": "↩️ Show the automatic guides again",
+    "↩️ راهنمای خودکار بخش‌ها دوباره فعال شد": "↩️ The automatic section guides are on again",
+    "⚠️ این بخش در دسترس نیست": "⚠️ This section is not available",
+    /* the one-time hints */
+    "داشبورد یعنی «امروز چه‌کار داری؟» — یک بار راهنما را بخوان تا همه‌چیز روشن شود.": "The dashboard answers “what do I have to do today?” — read the guide once and everything becomes clear.",
+    "فقط یک عنوان بنویس و «ذخیره» را بزن؛ بقیه‌ی گزینه‌ها اختیاری‌اند.": "Just write a title and tap “Save”; every other option is optional.",
+    /* «سه قدم اول» — the new-user card */
+    "سه قدم اول": "the first three steps",
+    "تازه اینجایی؟ فقط همین سه قدم — بقیه‌ی برنامه را کم‌کم یاد می‌گیری.": "New here? Just these three steps — you will learn the rest of the app as you go.",
+    "بستن راهنمای شروع سریع": "Close the quick start guide",
+    "یه کار بنویس": "Write down one task",
+    "تیکش بزن": "Tick it off",
+    "تو تقویم جاش بده": "Give it a place in the calendar",
+    "✅ انجام شد": "✅ Done",
+    "✅ برو به تسک‌ها": "✅ Go to Tasks",
+    "🎉 سه قدم اول تمام شد — حالا برنامه مال توست!": "🎉 The first three steps are done — the app is yours now!",
+    /* the guide itself: dashboard */
+    "داشبورد یعنی «امروز چه‌کار داری؟» — همین سه کارت، نه چیز دیگر.": "The dashboard answers “what do I have to do today?” — these three cards, nothing else.",
+    "سلام و جمله‌ی امروز": "Greeting and today's line",
+    "تاریخ امروز و یک جمله‌ی انگیزشی؛ با «تغییر حال‌وهوا» فقط لحن جمله عوض می‌شود.": "Today's date and one motivational line; “change mood” only changes the tone of that line.",
+    "مأموریت روزانه": "Daily quest",
+    "یک کار کوچک با جایزه‌ی XP: «انجامش دادم» جایزه می‌دهد و «ردش کن» کمی XP کم می‌کند. با تیک «مرخصی» هیچ مأموریتی نمی‌آید.": "One small task with an XP reward: “I did it” pays out, “Skip it” costs a little XP. Tick “Time off” and no quest arrives at all.",
+    "برنامه‌ی امروز": "Today's plan",
+    "تسک‌هایی که امروز پیش رو داری. دایره‌ی کنار هر کدام را بزن تا انجام شود و XP بگیری.": "The tasks in front of you today. Tap the circle beside one to complete it and earn XP.",
+    "اینباکس سریع": "Quick inbox",
+    "📥 اینباکس سریع": "📥 Quick Inbox",
+    "دکمه‌ی 📥 بالا برای فکرهای یکهویی است: فقط بنویس، بعداً در بخش تسک‌ها مرتبش کن.": "The 📥 button above is for sudden thoughts: just write it down and sort it out later in Tasks.",
+    /* the guide itself: tasks */
+    "یک لیست از همه‌ی کارها با چهار تب. هیچ گزینه‌ی اجباری‌ای وجود ندارد.": "One list of everything you have to do, with four tabs. Nothing here is mandatory.",
+    "تسک جدید": "New task",
+    "فقط عنوان را بنویس و «ذخیره» را بزن؛ دسته، ددلاین، اولویت و بقیه همه اختیاری‌اند.": "Just write the title and tap “Save”; the category, the deadline, the priority and everything else are optional.",
+    "چهار تب": "Four tabs",
+    "همه، شروع نشده، Inbox و تکمیل‌شده. شمارنده‌ی قرمز یعنی چند کار در Inbox منتظر مرتب شدن است.": "All, Not started, Inbox and Completed. The red counter is how many Inbox items are still waiting to be sorted.",
+    "تیک یعنی XP": "Ticking means XP",
+    "با تیک زدن، تسک به تب «تکمیل‌شده» می‌رود و XP می‌گیری؛ از همان‌جا هم برمی‌گردد.": "Tick a task and it moves to the “Completed” tab and pays XP; untick it there to bring it back.",
+    "جزئیات بیشتر": "More details",
+    "روی عنوان تسک بزن تا وضعیت، زیرتسک، ددلاین اضافه، ویرایش و حذف را یک‌جا ببینی.": "Tap a task's title to see its status, subtasks, extra deadlines, editing and deleting in one place.",
+    /* the guide itself: calendar */
+    "یک هفته، ساعت‌به‌ساعت از ۶ صبح تا ۳ بامداد. همه‌چیز با کشیدن انگشت انجام می‌شود.": "One week, hour by hour from 6 AM to 3 AM. Everything is done by dragging.",
+    "رویداد جدید": "New event",
+    "بالا «رویداد جدید» را بزن؛ عنوان، روز و ساعت کافی است.": "Tap “New event” above; a title, a day and a time are enough.",
+    "جابه‌جایی و تغییر مدت": "Moving and changing the length",
+    "«الان» و «امروز»": "“Now” and “Today”",
+    "«🕒 الان» شبکه را به ساعت فعلی می‌برد و «امروز» به هفته‌ی جاری برمی‌گرداند.": "“🕒 Now” scrolls the grid to the current hour, and “Today” brings you back to the current week.",
+    "دسته‌ها و رنگ‌ها": "Categories and colors",
+    "با 🏷️ برای رویدادها دسته و رنگ بساز تا یک هفته‌ی شلوغ خوانا بماند.": "Use 🏷️ to give events a category and a color, so a busy week stays readable.",
+    "🌙 ساعت‌های بعد از نیمه‌شب، پایینِ ستونِ همان شب می‌نشینند.": "🌙 The hours after midnight sit at the bottom of that same night's column.",
+    /* the calendar's intro is one quiet line now — the long version is in the guide */
+    "رویداد را بکش تا جابه‌جا شود؛ لبه‌اش را نگه دار تا مدتش عوض شود.": "Drag an event to move it; hold its edge to change how long it lasts.",
     /* ---- v19: Redmi 120Hz + per-view +1 feature ---- */
     "چی تو ذهنته؟ سریع بنویس...": "What's on your mind? Jot it fast...",
     "➕ افزودن": "➕ Add",

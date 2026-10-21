@@ -1011,6 +1011,223 @@ if (!useFallback) {
     v211.normal.modalAlpha < 1 && v211.normal.blurs.some(b => /blur/.test(b)),
     JSON.stringify(v211.normal));
 
+  /* ---------- v21.3: section guides + «سه قدم اول» ---------- */
+  /* The three simplified sections each carry one ❓ that opens a shared guide.
+     Nothing here may block the screen: the guide is a modal the user opens,
+     and the welcome of a first visit is a slim line inside the section. */
+  const v213 = await page.evaluate(() => {
+    const clean = () => document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    clean();
+    const bg = document.getElementById('guideModalBg');
+    const isOpen = () => bg.classList.contains('open');
+    const q = s => document.querySelector(s);
+    const out = {};
+
+    out.helpButtons = document.querySelectorAll(
+      '#view-dashboard .guide-btn, #view-tasks .guide-btn, #view-calendar .guide-open-btn').length;
+    out.slotAnchors = ['guideSlot-dashboard', 'guideSlot-tasks']
+      .filter(id => document.getElementById(id)).length;
+    out.panels = [...document.querySelectorAll('#guideModalBg .guide-panel[data-g]')].map(p => p.dataset.g).join(',');
+    out.rowsPerPanel = [...document.querySelectorAll('#guideModalBg .guide-panel')].map(p => p.querySelectorAll('.guide-row').length).join(',');
+
+    /* the calendar's long gesture text moved into the guide, the intro is one line */
+    out.introChars = q('#view-calendar .calendar-intro-copy span').textContent.trim().length;
+    out.guideKeepsGestures = q('#guideModalBg .guide-panel[data-g="calendar"]')
+      .textContent.includes('لبهٔ بالا یا پایینش را یک لحظه نگه دار و بعد بکش');
+
+    /* opening it from the Tasks section lands on the Tasks panel */
+    window.openGuide('tasks');
+    out.open = isOpen();
+    out.title = q('#guideTitle').textContent;
+    out.tabSel = q('#guideTabs .chip-opt.sel').dataset.g;
+    out.panelSel = q('#guideModalBg .guide-panel.sel').dataset.g;
+    out.visiblePanels = [...document.querySelectorAll('#guideModalBg .guide-panel')]
+      .filter(p => getComputedStyle(p).display !== 'none').length;
+    out.cta = q('#guideCta').textContent;
+    out.modalOnTop = getComputedStyle(bg).zIndex;
+
+    /* a real click on another tab follows with panel, title and action */
+    q('#guideTabs [data-g="calendar"]').click();
+    out.afterTab = q('#guideModalBg .guide-panel.sel').dataset.g + '|' + q('#guideTitle').textContent + '|' + q('#guideCta').textContent;
+
+    /* the action button drops the user straight into that section's own sheet */
+    window.openGuide('calendar');
+    q('#guideCta').click();
+    out.ctaClosedGuide = !isOpen();
+    out.ctaOpenedSheet = document.getElementById('eventModalBg').classList.contains('open');
+    clean();
+
+    /* leaving is easy: ✕, Escape or the backdrop — but never a click inside */
+    window.openGuide('dashboard');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    out.escClosed = !isOpen();
+    window.openGuide('dashboard');
+    bg.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    out.backdropClosed = !isOpen();
+    window.openGuide('dashboard');
+    q('#guideModalBg .guide-panel').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    out.insideKeptOpen = isOpen();
+    window.closeGuide();
+    out.readingMarksSeen = window.lpGuide.state().seen.calendar === 1;
+    out.noNewPopupBlur = getComputedStyle(q('#guideModalBg .modal')).backdropFilter;
+    return out;
+  });
+  check('v21.3 every simplified section has its own ❓ and one guide modal explains all three',
+    v213.helpButtons === 3 && v213.slotAnchors === 2 && v213.panels === 'dashboard,tasks,calendar' &&
+    v213.rowsPerPanel === '4,4,4', JSON.stringify(v213));
+  check('v21.3 the calendar intro is one quiet line and the guide kept the full gestures',
+    v213.introChars < 90 && v213.guideKeepsGestures, JSON.stringify(v213));
+  check('v21.3 opening the guide shows exactly one panel with the right action',
+    v213.open && v213.title.includes('تسک') && v213.tabSel === 'tasks' && v213.panelSel === 'tasks' &&
+    v213.visiblePanels === 1 && v213.cta === '➕ تسک جدید', JSON.stringify(v213));
+  check('v21.3 switching section follows panel, title and action button together',
+    v213.afterTab === 'calendar|📖 راهنمای تقویم|➕ رویداد جدید', v213.afterTab);
+  check('v21.3 the action button closes the guide and opens that section’s own sheet',
+    v213.ctaClosedGuide && v213.ctaOpenedSheet, JSON.stringify(v213));
+  check('v21.3 the guide closes with ✕, Escape and the backdrop, never on a click inside',
+    v213.escClosed && v213.backdropClosed && v213.insideKeptOpen && v213.readingMarksSeen,
+    JSON.stringify(v213));
+  check('v21.3 the guide costs no new blur and sits on the usual modal layer',
+    (v213.noNewPopupBlur === 'none' || v213.noNewPopupBlur === '') && Number(v213.modalOnTop) === 200,
+    JSON.stringify(v213));
+
+  /* the welcome of a first visit: exactly one slim card, never a blocking popup */
+  const v213welcome = await page.evaluate(() => {
+    localStorage.removeItem('lifePlannerGuides_v213');
+    window.lpGuide.reset();
+    window.showView('dashboard');
+    const slot = document.getElementById('guideSlot-dashboard');
+    const html = slot.innerHTML;
+    return {
+      empty: window.lpGuide.isEmptyAccount(),
+      card: html.includes('qs-card'),
+      hint: html.includes('guide-hint-txt'),
+      steps: slot.querySelectorAll('.qs-step').length,
+      nothingModalOpen: !document.querySelector('.modal-bg.open'),
+      insideView: !!slot.closest('#view-dashboard')
+    };
+  });
+  check('v21.3 a first visit is welcomed by exactly one inline card, inside the section',
+    (v213welcome.empty ? (v213welcome.card && !v213welcome.hint && v213welcome.steps === 3)
+                        : (v213welcome.hint && !v213welcome.card)) &&
+    v213welcome.nothingModalOpen && v213welcome.insideView, JSON.stringify(v213welcome));
+
+  const v213hint = await page.evaluate(() => {
+    const out = {};
+    localStorage.removeItem('lifePlannerGuides_v213');
+    window.lpGuide.reset();
+    window.showView('tasks');
+    out.tasksHint = document.getElementById('guideSlot-tasks').innerHTML.includes('guide-hint-txt');
+    /* ✕ retires it for good … */
+    document.querySelector('#guideSlot-tasks [data-hint-x]').click();
+    out.xCleared = document.getElementById('guideSlot-tasks').innerHTML === '';
+    out.xStored = JSON.parse(localStorage.getItem('lifePlannerGuides_v213')).seen.tasks === 1;
+    /* … and so does simply walking to another section */
+    window.lpGuide.reset();
+    window.showView('dashboard');
+    out.dashboardHint = document.getElementById('guideSlot-dashboard').innerHTML.length > 0;
+    window.showView('habits');
+    out.leavingMarkedSeen = JSON.parse(localStorage.getItem('lifePlannerGuides_v213')).seen.dashboard === 1;
+    window.showView('dashboard');
+    out.neverNags = document.getElementById('guideSlot-dashboard').innerHTML === '' ||
+      document.getElementById('guideSlot-dashboard').innerHTML.includes('qs-card');
+    /* the calendar is exempt — it already carries a permanent one-line intro */
+    window.lpGuide.reset();
+    window.showView('calendar');
+    out.calendarHasNoHint = !document.querySelector('#view-calendar .guide-hint');
+    window.showView('dashboard');
+    return out;
+  });
+  check('v21.3 a hint is shown once and retires on ✕, on reading or on walking away',
+    v213hint.tasksHint && v213hint.xCleared && v213hint.xStored && v213hint.dashboardHint &&
+    v213hint.leavingMarkedSeen && v213hint.neverNags && v213hint.calendarHasNoHint,
+    JSON.stringify(v213hint));
+
+  /* «سه قدم اول» — write one task, tick it, give it a place in the calendar */
+  await page.evaluate(() => {
+    localStorage.setItem('lifePlannerAI_v1', JSON.stringify(
+      { tasks: [], habits: [], goals: [], notes: [], events: [], xp: 0, level: 1, history: {}, dayPlans: {} }));
+    localStorage.removeItem('lifePlannerGuides_v213');
+  });
+  await page.reload({ waitUntil: 'load', timeout: 30000 });
+  await new Promise(r => setTimeout(r, 700));
+  const v213qs = await page.evaluate(() => {
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    const slot = document.getElementById('guideSlot-dashboard');
+    const out = { steps: slot.querySelectorAll('.qs-step').length, done: slot.querySelectorAll('.qs-step.done').length };
+
+    /* step 1 — write one task through the real sheet */
+    slot.querySelector('[data-qs-go="0"]').click();
+    out.step1OpenedTask = document.getElementById('taskModalBg').classList.contains('open');
+    document.getElementById('tTitle').value = 'قدم اول — آزمون v21.3';
+    window.saveTask();
+    out.step1Done = document.getElementById('guideSlot-dashboard').querySelectorAll('.qs-step.done').length === 1;
+    out.cardStillThere = document.getElementById('guideSlot-dashboard').innerHTML.includes('qs-card');
+
+    /* step 2 — walk to Tasks and tick it off */
+    document.getElementById('guideSlot-dashboard').querySelector('[data-qs-go="1"]').click();
+    out.step2WentToTasks = document.getElementById('view-tasks').classList.contains('active');
+    window.showView('dashboard');
+    out.cardSurvivedTrip = document.getElementById('guideSlot-dashboard').innerHTML.includes('qs-card');
+    const id = DB.tasks.find(t => t.title.includes('آزمون v21.3')).id;
+    window.toggleTask(id);
+    out.step2Done = document.getElementById('guideSlot-dashboard').querySelectorAll('.qs-step.done').length === 2;
+
+    /* step 3 — give it a place in the calendar */
+    document.getElementById('guideSlot-dashboard').querySelector('[data-qs-go="2"]').click();
+    out.step3OpenedEvent = document.getElementById('eventModalBg').classList.contains('open');
+    document.getElementById('eventModalBg').classList.remove('open');
+    DB.events.push({ id: 'e-qs', title: 'قدم سوم', days: [(new Date().getDay() + 1) % 7], startMin: 600, endMin: 660 });
+    window.save();
+    const after = document.getElementById('guideSlot-dashboard');
+    out.cardRetired = after.innerHTML === '';
+    out.stored = JSON.parse(localStorage.getItem('lifePlannerGuides_v213'));
+    out.noHintTookItsPlace = !after.innerHTML.includes('guide-hint-txt');
+    return out;
+  });
+  check('v21.3 an empty account gets the three-step card, and each step ticks itself off',
+    v213qs.steps === 3 && v213qs.done === 0 && v213qs.step1OpenedTask && v213qs.step1Done &&
+    v213qs.step2WentToTasks && v213qs.step2Done && v213qs.step3OpenedEvent, JSON.stringify(v213qs));
+  check('v21.3 the card is sticky: it survives a trip to another section',
+    v213qs.cardStillThere && v213qs.cardSurvivedTrip, JSON.stringify(v213qs));
+  await new Promise(r => setTimeout(r, 1500));
+  const v213qsEnd = await page.evaluate(() => ({
+    toast: document.getElementById('toast').textContent,
+    slot: document.getElementById('guideSlot-dashboard').innerHTML
+  }));
+  check('v21.3 finishing the last step retires the card and says congratulations once',
+    v213qs.cardRetired && v213qs.noHintTookItsPlace && v213qs.stored.qs === 'off' &&
+    v213qs.stored.seen.dashboard === 1 && v213qsEnd.toast.includes('سه قدم اول تمام شد') &&
+    v213qsEnd.slot === '', JSON.stringify({ v213qs, toast: v213qsEnd.toast, slot: v213qsEnd.slot.slice(0, 40) }));
+  check('no fatal JS errors after the v21.3 guide flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
+
+  /* the card must never come back, and the guides must be reachable from Settings */
+  await page.reload({ waitUntil: 'load', timeout: 30000 });
+  await new Promise(r => setTimeout(r, 700));
+  const v213after = await page.evaluate(() => {
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    const out = {};
+    out.slot = document.getElementById('guideSlot-dashboard').innerHTML;
+    out.settingsCard = [...document.querySelectorAll('#view-settings .settings-card')]
+      .some(c => c.textContent.includes('راهنمای بخش‌ها') && c.querySelectorAll('[onclick^="openGuide("]').length === 3);
+    /* «نمایش دوباره» brings the automatic guides back */
+    window.lpResetGuides();
+    out.resetState = JSON.parse(localStorage.getItem('lifePlannerGuides_v213'));
+    out.cardIsBack = document.getElementById('guideSlot-dashboard').innerHTML.includes('qs-card');
+    /* English mode reads the whole guide */
+    localStorage.setItem('lifePlannerLang_v1', 'en');
+    out.translated = ['سه قدم اول', 'راهنمای بخش‌ها', 'راهنمای تسک‌ها', 'تیکش بزن',
+      'داشبورد یعنی «امروز چه‌کار داری؟» — همین سه کارت، نه چیز دیگر.']
+      .map(s => window.lpTranslate(s));
+    localStorage.setItem('lifePlannerLang_v1', 'fa');
+    return out;
+  });
+  check('v21.3 the card never comes back on its own, but Settings can bring it',
+    v213after.slot === '' && v213after.settingsCard && v213after.resetState.qs === '' &&
+    v213after.cardIsBack, JSON.stringify(v213after));
+  check('v21.3 every new string has an English translation',
+    v213after.translated.every(t => t && !/[\u0600-\u06FF]/.test(t)), JSON.stringify(v213after.translated));
+
   await browser.close();
 } else {
   // FALLBACK: no browser available (restricted sandbox). Verify core logic via file inspection.
@@ -1514,6 +1731,87 @@ if (!useFallback) {
     !/<form\b/i.test(indexHtml) &&
     !/getElementById\('(tTitle|inboxTitle|nTitle|eTitle)'\)[^;]{0,40}\.focus\(\)/.test(coreJs) &&
     v21JsSrc.includes('HTMLElement.prototype.focus') && /js\/v21\.js\?v=\d/.test(indexHtml));
+
+  // ---------- v21.3: «راهنمای سه بخش» — guides, one-time hints and the three-step card ----------
+  const v213Js = fs.readFileSync(path.join(ROOT, 'js/v213.js'), 'utf-8');
+  const v213Css = fs.readFileSync(path.join(ROOT, 'css/v213.css'), 'utf-8');
+
+  check('v21.3 every simplified section carries its own ❓ into one shared guide',
+    ["onclick=\"openGuide('dashboard')\"", "onclick=\"openGuide('tasks')\"", "onclick=\"openGuide('calendar')\""]
+      .every(h => indexHtml.includes(h)) &&
+    indexHtml.includes('id="guideSlot-dashboard"') && indexHtml.includes('id="guideSlot-tasks"') &&
+    indexHtml.includes('id="guideModalBg"') && indexHtml.includes('id="guideTabs"') &&
+    indexHtml.includes('id="guideCta"') && indexHtml.includes('onclick="guidePrimaryAction()"'));
+
+  check('v21.3 one guide modal holds three panels of four short rows each',
+    ['dashboard', 'tasks', 'calendar'].every(g => indexHtml.includes(`data-g="${g}" role="tabpanel"`)) &&
+    (indexHtml.match(/class="guide-row"/g) || []).length === 12 &&
+    (indexHtml.match(/class="guide-lead"/g) || []).length === 3 &&
+    v213Js.includes("var SECTIONS = ['dashboard', 'tasks', 'calendar'];"));
+
+  check('v21.3 each guide ends in the action it explains, not in more reading',
+    ['openInboxQuickAdd', 'openTaskModal', 'openEventModal'].every(fn => v213Js.includes(`fn: '${fn}'`)) &&
+    v213Js.includes('function guidePrimaryAction') && v213Js.includes('closeGuide();'));
+
+  check('v21.3 a first visit gets a slim hint that is gone for good',
+    v213Js.includes("'lifePlannerGuides_v213'") && v213Js.includes('function markSeen') &&
+    v213Js.includes('var HINTED = { dashboard: true, tasks: true };') &&
+    v213Js.includes('data-hint-x') && v213Js.includes('function clearSlot') &&
+    /* a hint is never a popup: nothing in this file opens a modal by itself */
+    !/openModal\('(?!guideModalBg)/.test(v213Js));
+
+  check('v21.3 the three-step card only ever appears on an empty account and retires itself',
+    v213Js.includes('function isEmptyAccount') &&
+    v213Js.includes("['tasks', 'habits', 'goals', 'notes', 'events']") &&
+    v213Js.includes('function quickStartWanted') && v213Js.includes('سه قدم اول') &&
+    v213Js.includes("state.qs = 'off'") && v213Js.includes('data-qs-go') &&
+    v213Js.includes('function quickSteps') && v213Js.includes('function quickStartDismiss'));
+
+  check('v21.3 the calendar intro shrank to one line and its long text moved into the guide',
+    indexHtml.includes('رویداد را بکش تا جابه‌جا شود؛ لبه‌اش را نگه دار تا مدتش عوض شود.') &&
+    indexHtml.includes('لبهٔ بالا یا پایینش را یک لحظه نگه دار و بعد بکش تا مدتش کم‌وزیاد شود. روی خانه‌ی خالی بزن تا رویداد جدید بسازی.') &&
+    /calendar-intro-copy"><span class="calendar-spark">✦<\/span><div><span>[^<]{0,90}<\/span>/.test(indexHtml));
+
+  /* Only the title is required — every other field of the task sheet says so. */
+  const taskSheet = indexHtml.split('id="taskModalBg"')[1].split('id="inboxQuickModalBg"')[0];
+  check('v21.3 the task sheet says out loud that only the title is needed',
+    ['دسته‌بندی', 'ددلاین اول', 'اولویت', 'وضعیت', 'زمان تخمینی (دقیقه)'].every(label =>
+      taskSheet.includes(`<label>${label} <span style="color:var(--txt-dim2); font-weight:500;">(اختیاری)</span></label>`)) &&
+    taskSheet.includes('<label>عنوان تسک</label>') &&
+    langJs.includes('"(اختیاری)": "(optional)"'));
+
+  check('v21.3 the quote card shows one control instead of two',
+    !indexHtml.includes('motivation-custom-actions') && !appCss.includes('.motivation-custom-actions{') &&
+    /id="moodPicker"[\s\S]{0,900}openCustomMotivationComposer\(\)/.test(indexHtml) &&
+    v213Css.includes('#moodPicker .btn') &&
+    coreJs.includes('function toggleMoodPicker()'));
+
+  check('v21.3 an empty category row leaves no hole above the task list',
+    v213Css.includes('#categoryFilters:empty{display:none;}'));
+
+  check('v21.3 the guides are reachable from Settings and can be brought back',
+    indexHtml.includes('❓ راهنمای بخش‌ها') && indexHtml.includes('onclick="lpResetGuides()"') &&
+    v213Js.includes('window.lpResetGuides') && v213Js.includes('window.lpGuide'));
+
+  check('v21.3 the new files ship with the page and with the worker cache',
+    fs.existsSync(path.join(ROOT, 'js/v213.js')) && fs.existsSync(path.join(ROOT, 'css/v213.css')) &&
+    /js\/v213\.js\?v=\d/.test(indexHtml) && /css\/v213\.css\?v=\d/.test(indexHtml) &&
+    /`\.\/js\/v213\.js\?v=\$\{VERSION\}`/.test(swJs) &&
+    /`\.\/css\/v213\.css\?v=\$\{VERSION\}`/.test(swJs));
+
+  const v213CssCode = v213Css.replace(/\/\*[\s\S]*?\*\//g, '');   /* comments may talk about blur */
+  check('v21.3 the guide layer stays cheap: no blur, no animation on layout',
+    !v213CssCode.includes('backdrop-filter') && !v213CssCode.includes('@keyframes') &&
+    v213Css.includes('html.lp-perf') && v213Css.includes('.guide-slot:empty{display:none;}'));
+
+  check('v21.3 every new string translates to English',
+    ['"راهنمای داشبورد"', '"راهنمای تسک‌ها"', '"❓ راهنمای بخش‌ها"', '"سه قدم اول"', '"یه کار بنویس"',
+     '"تیکش بزن"', '"تو تقویم جاش بده"', '"✅ انجام شد"', '"مأموریت روزانه"', '"برنامه‌ی امروز"',
+     '"چهار تب"', '"جابه‌جایی و تغییر مدت"', '"📥 اینباکس سریع"']
+      .every(k => langJs.includes(k)) &&
+    ['Dashboard guide', 'Tasks guide', 'Section guides', 'the first three steps', 'Write down one task',
+     'Tick it off', 'Give it a place in the calendar', 'Quick Inbox', 'Daily quest']
+      .every(en => langJs.includes(en)));
 
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];
