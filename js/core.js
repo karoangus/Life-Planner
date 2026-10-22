@@ -227,7 +227,7 @@ async function requestNotifyPermission(){
     else toast('🔕 اجازه اعلان داده نشد.');
   }catch(_){ toast('⚠️ فعال‌سازی اعلان ناموفق بود'); }
 }
-/* v21.5: this line used to be a fixed claim («🔔 نوتیفیکیشن هوشمند فعاله») that
+/* v21.6: this line used to be a fixed claim («🔔 نوتیفیکیشن هوشمند فعاله») that
    ignored DB.pomodoro.notifications, and there was no way to turn session
    notifications off. Now the status says what is really true and the switch
    under it is the control. */
@@ -1925,7 +1925,7 @@ function savePomoSettings(){
   const gm = parseInt(document.getElementById('pomoSetGoalM').value) || 0;
   DB.pomodoro.settings = { focusMin:Math.max(1,f), breakMin:Math.max(1,b), longBreakMin:Math.max(1,lb), cycleCount:Math.max(1,cy), goalMinutes:Math.max(0, gh*60+gm) };
   save();
-  /* v21.5: one setting, one truth — the preset grid of the focus tab now shows
+  /* v21.6: one setting, one truth — the preset grid of the focus tab now shows
      the mode these numbers belong to instead of staying on the old one. */
   if(typeof window.syncPomoPresetFromSettings==='function') window.syncPomoPresetFromSettings();
   renderPomoUI();
@@ -1940,7 +1940,7 @@ function renderManualTaskOptions(){
   sel.innerHTML='<option value="">بدون تسک</option>'+tasks.map(t=>`<option value="${esc(t.id)}">${esc(t.title||t.text||'تسک')}</option>`).join('');
   if(tasks.some(t=>String(t.id)===String(cur))) sel.value=cur;
 }
-/* v21.5: this ran on every boot *and* on every manual entry, scanning the whole
+/* v21.6: this ran on every boot *and* on every manual entry, scanning the whole
    manual list for records that have not been migrated — a state that has not
    existed since the day the flag was introduced. One pass, remembered. */
 function migrateLegacyManualPomoData(){
@@ -1981,7 +1981,7 @@ function addManualPomoData(){
   toast(`✅ ${toFaDigits(minutes)} دقیقه ${kind==='focus'?'مطالعه':'استراحت'} ثبت شد${kind==='focus'?` · امتیاز تمرکز ${toFaDigits(score)}/۱۰۰`:''}`);
   renderManualPomoData(); renderPomoStats(); window.renderPomoV66?.();
 }
-/* v21.5: deleteManualPomoData() had no caller (the manual list has no delete
+/* v21.6: deleteManualPomoData() had no caller (the manual list has no delete
    button — it only ever answered "this cannot be deleted") and
    getManualPomoTotal() was a stub that always returned 0. Both are gone;
    pomodoro.history stays the single source for every total. */
@@ -2349,7 +2349,7 @@ function toggleBossTaskPick(taskId){
   else { bossSetupSelected.push(taskId); }
   renderBossTaskPicker();
 }
-/* v21.5: a boss is only as good as the tasks behind it, and half a fight used to
+/* v21.6: a boss is only as good as the tasks behind it, and half a fight used to
    die here — «تسک انجام‌نشده‌ای نداری، اول چندتا تسک بساز» meant closing the
    sheet, going to the tasks section, writing them, and coming back (by which
    time the mood was gone). The picker now builds the task itself: it lands in
@@ -2481,7 +2481,7 @@ const SKILL_TREE = [
   { key:'luckyBox',      icon:'🍀', name:'شانس بلند',      desc:'هر تیر شانس جعبه‌ی رایگان توی Mystery Box بیشتر می‌شه', maxTier:3 },
   { key:'criticalBonus', icon:'🔥', name:'قاتل بحران',     desc:'هر تیر +۵ XP برای هر تسک بحرانی که تموم می‌کنی',    maxTier:3 },
   { key:'streakGuard',   icon:'🛡️', name:'محافظ استریک',  desc:'هر تیر همون لحظه ۱ Streak Shield رایگان می‌گیری',  maxTier:5 },
-  /* v21.5: five tiers instead of three — the wait for the next quest can now be
+  /* v21.6: five tiers instead of three — the wait for the next quest can now be
      shortened all the way from 20 to 15 minutes. */
   { key:'questCooldown', icon:'⏱️', name:'کوئست سریع',     desc:'هر تیر ۱ دقیقه از زمان انتظار کوئست بعدی کم می‌کنه (از ۲۰ به ۱۵ دقیقه)', maxTier:5 },
 ];
@@ -2836,7 +2836,7 @@ function jalaaliMonthLength(jy,jm){
 const JALALI_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
 const FA_DIGITS = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFaDigits(n){ return String(n).replace(/[0-9]/g, d=>FA_DIGITS[+d]); }
-/* v21.5: one way to write a count/price/HP on screen — Persian digits with the
+/* v21.6: one way to write a count/price/HP on screen — Persian digits with the
    usual thousand separator. English mode turns the digits back to Latin through
    lang.js, exactly like every other number in the app. Clock faces (MM:SS) stay
    Latin on purpose: they are timers, not counts. */
@@ -3934,6 +3934,18 @@ function renderNotes(){
 const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
 window.__editingEventId = null;
 window.__eventActionCtx = null; // {eventId, dayIdx}
+const LP_EVENT_TRAITS={
+  energy:{high:{icon:'🔋',label:'پرانرژی',tone:'high'},medium:{icon:'🔋',label:'معمولی',tone:'medium'},low:{icon:'🪫',label:'کم‌انرژی',tone:'low'}},
+  bite:{heavy:{icon:'🍲',label:'لقمه سنگین',tone:'high'},normal:{icon:'🍽️',label:'لقمه معمولی',tone:'medium'},baklava:{icon:'🧆',label:'لقمه باقلوا',tone:'low'}}
+};
+function lpSetEventTrait(groupId,value=''){
+  document.querySelectorAll(`#${groupId} .chip-opt`).forEach(chip=>{ const selected=chip.dataset.v===(value||''); chip.classList.toggle('sel',selected); chip.setAttribute('aria-pressed',String(selected)); });
+}
+function lpGetEventTrait(groupId){ return document.querySelector(`#${groupId} .chip-opt.sel`)?.dataset.v||null; }
+function lpFillEventTraits(ev={}){ lpSetEventTrait('eEnergy',ev.energy); lpSetEventTrait('eBite',ev.bite); }
+function lpEventTraitTone(ev){ return LP_EVENT_TRAITS.energy[ev?.energy]?.tone||LP_EVENT_TRAITS.bite[ev?.bite]?.tone||''; }
+function lpEventTraitBadges(ev){ return [LP_EVENT_TRAITS.energy[ev?.energy],LP_EVENT_TRAITS.bite[ev?.bite]].filter(Boolean).map(x=>`<span class="ev-trait" title="${esc(x.label)}" aria-label="${esc(x.label)}">${x.icon}</span>`).join(''); }
+document.querySelectorAll('.lp-trait-group').forEach(group=>group.addEventListener('click',e=>{ const chip=e.target.closest('.chip-opt'); if(chip) lpSetEventTrait(group.id,chip.dataset.v); }));
 function openEventModal(){
   window.__editingEventId=null;
   window.__editingEventDay=null;
@@ -3947,6 +3959,7 @@ function openEventModal(){
   document.getElementById('eHourStart').value='09:00';
   document.getElementById('eHourEnd').value='12:00';
   document.getElementById('eReminder').checked=false;
+  lpFillEventTraits();
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.remove('sel'));
   refreshEventCatChips();
   renderEventColorRow();
@@ -4011,6 +4024,8 @@ async function saveEvent(){
 
   const cat=window.__eventCategoryId||null;
   const color=window.__eventColorPicked||null;
+  const energy=lpGetEventTrait('eEnergy');
+  const bite=lpGetEventTrait('eBite');
 
   // v12.1 — "edit only this day" mode: detach this occurrence from the series
   // and save it as its own standalone event. The rest of the series is untouched.
@@ -4020,7 +4035,7 @@ async function saveEvent(){
     const editedDay=window.__editingEventDay;
     const remainderDays=eventDays(ev).filter(d=>d!==editedDay);
     const others=DB.events.filter(x=>x.id!==ev.id);
-    if(remainderDays.length) others.push({title:ev.title,days:remainderDays,startMin:eventStartMinutes(ev),endMin:eventEndMinutes(ev)});
+    if(remainderDays.length) others.push({...ev,days:remainderDays,startMin:eventStartMinutes(ev),endMin:eventEndMinutes(ev)});
     const occConflict=lpCandidateConflicts({title,days,startMin,endMin},others);
     if(occConflict){
       toast(`⚠️ «${occConflict.title}» مانع ثبت این رویداد است؛ ساعت‌ها تداخل دارند`);
@@ -4029,7 +4044,7 @@ async function saveEvent(){
     if(remainderDays.length){ ev.days=remainderDays; delete ev.day; }
     else { DB.events=DB.events.filter(x=>x.id!==ev.id); }
     DB.events.push({
-      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,
+      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,energy,bite,
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
     window.__editingEventId=null;
@@ -4054,13 +4069,13 @@ async function saveEvent(){
     if(ev){
       ev.title=title;ev.days=days;ev.startMin=startMin;ev.endMin=endMin;ev.reminder=reminder;
       ev.startHour=Math.floor(startMin/60);ev.endHour=Math.min(24,Math.floor(endMin/60));
-      ev.cat=cat;ev.color=color;ev.desc=desc;
+      ev.cat=cat;ev.color=color;ev.desc=desc;ev.energy=energy;ev.bite=bite;
       delete ev.day;
     }
     toast('✏️ رویداد ویرایش شد');
   }else{
     DB.events.push({
-      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,
+      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,energy,bite,
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
     toast(reminder?'📅 رویداد اضافه شد؛ یادآورش فعاله':'📅 رویداد اضافه شد');
@@ -4176,6 +4191,8 @@ function onEventBlockClick(eventId, dayIdx){
     const dur=d>=60?`${Math.floor(d/60)} ساعت${d%60?` و ${d%60} دقیقه`:''}`:`${d} دقیقه`;
     const cat=ev.cat?categoryById(ev.cat):null;
     meta.innerHTML=`🕒 <b style="color:var(--neon);direction:ltr;display:inline-block">${formatTimeMinutes(s%1440)} → ${formatTimeMinutes(e%1440)}</b> · ⏱️ ${dur}${cat?` · 🏷️ ${esc(cat.name)}`:''}`;
+    const traits=[LP_EVENT_TRAITS.energy[ev.energy],LP_EVENT_TRAITS.bite[ev.bite]].filter(Boolean);
+    if(traits.length) meta.innerHTML+=`<div class="lp-event-trait-summary">${traits.map(x=>`${x.icon} ${x.label}`).join(' · ')}</div>`;
   }
   // v16.6: the block's optional description, shown only when one was written
   const descEl=document.getElementById('eventActionDesc');
@@ -4200,6 +4217,7 @@ function startEditEvent(){
   document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
   document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
   document.getElementById('eReminder').checked=!!ev.reminder;
+  lpFillEventTraits(ev);
   const days=eventDays(ev);
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',days.includes(+o.dataset.v)));
   window.__eventCategoryId=ev.cat||null;
@@ -4226,6 +4244,7 @@ function startEditEventThisDay(){
   document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
   document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
   document.getElementById('eReminder').checked=!!ev.reminder;
+  lpFillEventTraits(ev);
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',+o.dataset.v===ctx.dayIdx));
   window.__eventCategoryId=ev.cat||null;
   window.__eventColorPicked=ev.color||null;
@@ -4794,7 +4813,7 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
     const newId=uid();
     DB.events.push({
       id:newId, title:ev.title, desc:eventDesc(ev), days:[toDay], startMin:ns, endMin:ne,
-      reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null,
+      reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null, energy:ev.energy||null, bite:ev.bite||null,
       startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
     if(undo) undo.removedIds.push(newId); // undoing the move must take the split day back
@@ -5150,7 +5169,7 @@ function lpApplyEventResize(evRef, dayIdx, shift, gridFrom, gridTo, edge){
     const newId=uid();
     DB.events.push({
       id:newId, title:ev.title, desc:eventDesc(ev), days:[dayIdx], startMin:ns, endMin:ne,
-      reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null,
+      reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null, energy:ev.energy||null, bite:ev.bite||null,
       startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
     if(undo) undo.removedIds.push(newId); // undoing must take the split day back
@@ -5261,7 +5280,9 @@ function renderCalendar(){
       el.style.top=((from-START*60)/60*PX_HOUR)+'px';
       el.style.height=Math.max(10,(to-from)/60*PX_HOUR-2)+'px';
       el.title=`${e.title} — ${dayNames[d]} ${calClockLabel(s)} تا ${calClockLabel(en)} · لبه را نگه دار و بکش تا زمانش عوض شود؛ وسط را بکش تا جابه‌جا شود`;
-      el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
+      el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>${lpEventTraitBadges(e)?`<span class="ev-traits">${lpEventTraitBadges(e)}</span>`:''}`;
+      const traitTone=lpEventTraitTone(e);
+      if(traitTone) el.classList.add(`ev-trait-${traitTone}`);
       if(eventDesc(e)){
         // v16.6: small hint that tapping the block reveals a description
         el.classList.add('has-desc');
@@ -5624,7 +5645,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='21.5';
+const LP_APP_VERSION='21.6';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

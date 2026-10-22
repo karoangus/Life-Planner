@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-21.5-00e5ff?style=for-the-badge&logoColor=white" alt="Version 21.5" />
+  <img src="https://img.shields.io/badge/نسخه-21.6-00e5ff?style=for-the-badge&logoColor=white" alt="Version 21.6" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -122,8 +122,8 @@ https://karoangus.github.io/Life-Planner/
   - 🌌 فضای تمرکز عمیق (Deep Space)
   - همراه با اسلایدر تنظیم بلندی صدا و پخش پیوسته و بدون وقفه.
 - **پیوند تایمر به تسک فعال:** انتخاب تسک هنگام شروع تمرکز و امکان ثبت فوری انجام تسک بلافاصله پس از اتمام تایمر.
-- **آمار یکدست (ساده‌تر در v21.5):** تب آمار یک زبان بصری دارد — فوکوس امروز، هدف روزانه، هفت روز اخیر، نمودار روند، جمع‌بندی فوکوس و ۱۰ جلسه‌ی آخر؛ هر عدد فقط یک بار نوشته می‌شود (نه یک بار ساعت و یک بار دقیقه) و همه با ارقام فارسی.
-- **اعلانِ به‌موقع، نه اعلانِ دائمی (v21.5):** اعلان‌ها فقط سه‌جا می‌آیند — شروع جلسه، پایان جلسه و پایان دور. اعلانِ زنده‌ای که هر ۵ ثانیه بازنویسی می‌شد تا شمارش معکوس را نشان بدهد حذف شد و کلید روشن/خاموش اعلان‌ها به تب «⚙️ تنظیمات» رفت (پیش از این فقط یک جمله‌ی ثابت «نوتیفیکیشن هوشمند فعاله» بود که هیچ کلیدی نداشت). زنگ هشدار دوضربی پایان جلسه با ویبره گوشی سر جایش است.
+- **آمار یکدست (ساده‌تر در v21.6):** تب آمار یک زبان بصری دارد — فوکوس امروز، هدف روزانه، هفت روز اخیر، نمودار روند، جمع‌بندی فوکوس و ۱۰ جلسه‌ی آخر؛ هر عدد فقط یک بار نوشته می‌شود (نه یک بار ساعت و یک بار دقیقه) و همه با ارقام فارسی.
+- **اعلانِ به‌موقع، نه اعلانِ دائمی (v21.6):** اعلان‌ها فقط سه‌جا می‌آیند — شروع جلسه، پایان جلسه و پایان دور. اعلانِ زنده‌ای که هر ۵ ثانیه بازنویسی می‌شد تا شمارش معکوس را نشان بدهد حذف شد و کلید روشن/خاموش اعلان‌ها به تب «⚙️ تنظیمات» رفت (پیش از این فقط یک جمله‌ی ثابت «نوتیفیکیشن هوشمند فعاله» بود که هیچ کلیدی نداشت). زنگ هشدار دوضربی پایان جلسه با ویبره گوشی سر جایش است.
 
 ### 3. 🎮 اکوسیستم گیمیفیکیشن و بازی‌سازی زندگی (Gamification & RPG)
 - **🏙️ شهر هوشمند من (Life City):**
@@ -137,7 +137,7 @@ https://karoangus.github.io/Life-Planner/
     7. لول ۱۰۰: کلان‌شهر سایبرپانک و آینده 🌆
   - گرافیک وکتوری پرجزئیات همراه با چرخه زنده روز، شب و باران، و صدای محیطی واقعی شهر.
   - نشستن اشیای تزئینی Mystery Box (درخت، نیمکت، چراغ نئونی، فواره و برج) درون محیط شهر.
-- **⚔️ باس فایت هفتگی (Weekly Boss Battles):** تبدیل اهداف بزرگ هفته به یک نبرد حماسی با نوار سلامتی (HP)؛ وارد کردن ضربه به باس با تکمیل تسک‌های متصل و مهلت ۱۴ روزه برای شکست نهایی. از v21.5 تسک‌های خودِ باس را می‌شود همان‌جا داخل صفحه‌ی انتخاب تسک ساخت (بدون بستن پنجره و رفتن به بخش تسک‌ها) — تسک تازه خودش برای باس انتخاب می‌شود و بعداً در بخش تسک‌ها هم هست.
+- **⚔️ باس فایت هفتگی (Weekly Boss Battles):** تبدیل اهداف بزرگ هفته به یک نبرد حماسی با نوار سلامتی (HP)؛ وارد کردن ضربه به باس با تکمیل تسک‌های متصل و مهلت ۱۴ روزه برای شکست نهایی. از v21.6 تسک‌های خودِ باس را می‌شود همان‌جا داخل صفحه‌ی انتخاب تسک ساخت (بدون بستن پنجره و رفتن به بخش تسک‌ها) — تسک تازه خودش برای باس انتخاب می‌شود و بعداً در بخش تسک‌ها هم هست.
 - **🌳 درخت مهارت (Skill Tree):** ارتقای مهارت‌های دائمی با امتیازهای مهارت دریافتی در هر لول‌آپ:
   - *استاد فوکوس:* افزایش درصدی XP جلسات پومودورو
   - *شکارچی کوئست:* افزایش XP مأموریت‌های تصادفی
@@ -212,7 +212,7 @@ https://karoangus.github.io/Life-Planner/
 - **حالت سبک برای گوشی‌های ضعیف (جدید در v16):** روی دستگاه‌های کم‌قدرت، سایه و گرادیان تزئینی ردیف‌های تکراری و رندر ردیف‌های بیرون از صفحه بهینه می‌شود؛ چیدمان، رنگ‌ها و همه‌ی دکمه‌ها دقیقاً مثل قبل می‌مانند.
 
 ### 9. 📖 راهنمای بخش‌ها و شروع سه‌قدمی
-- **❓ راهنمای ده بخش (v21.3، کامل‌شده در v21.5):** داشبورد، تسک‌ها، تقویم، عادت‌ها، اهداف، یادداشت‌ها، پومودورو، XP Shop، درخت مهارت و باس هفتگی هر کدام یک دکمه‌ی «❓» دارند که یک پنجره‌ی راهنمای مشترک را باز می‌کند. ده تب داخل پنجره است، پس از هر بخش می‌شود به راهنمای بخش دیگر رفت. هر راهنما یک جمله درباره‌ی کاربرد بخش دارد، چهار ردیف کوتاه درباره‌ی چیزی که روی صفحه دیده می‌شود، و یک دکمه که مستقیم به کارِ اصلی همان بخش می‌برد — از «➕ تسک جدید» تا «▶️ شروع جلسه‌ی فوکوس»، «🎁 شانس‌های جعبه»، «🛍️ برو به XP Shop» و «⚔️ ساخت باس» (که وقتی نبردی در جریان است «✏️ ویرایش باس» می‌شود).
+- **❓ راهنمای ده بخش (v21.3، کامل‌شده در v21.6):** داشبورد، تسک‌ها، تقویم، عادت‌ها، اهداف، یادداشت‌ها، پومودورو، XP Shop، درخت مهارت و باس هفتگی هر کدام یک دکمه‌ی «❓» دارند که یک پنجره‌ی راهنمای مشترک را باز می‌کند. ده تب داخل پنجره است، پس از هر بخش می‌شود به راهنمای بخش دیگر رفت. هر راهنما یک جمله درباره‌ی کاربرد بخش دارد، چهار ردیف کوتاه درباره‌ی چیزی که روی صفحه دیده می‌شود، و یک دکمه که مستقیم به کارِ اصلی همان بخش می‌برد — از «➕ تسک جدید» تا «▶️ شروع جلسه‌ی فوکوس»، «🎁 شانس‌های جعبه»، «🛍️ برو به XP Shop» و «⚔️ ساخت باس» (که وقتی نبردی در جریان است «✏️ ویرایش باس» می‌شود).
 - **👋 اشاره‌ی یک‌بارمصرف:** اولین باری که داشبورد، تسک‌ها، عادت‌ها، اهداف، یادداشت‌ها، پومودورو، XP Shop، درخت مهارت یا باس هفتگی باز شود، یک نوار باریکِ داخلِ بخش (نه پنجره‌ی مزاحم) می‌گوید آن بخش برای چیست؛ با «✕»، با خواندن راهنما یا فقط با رفتن به بخش دیگر برای همیشه می‌رود. تقویم از این نوار معاف است چون معرفیِ دائمیِ یک‌خطیِ خودش را دارد.
 - **🚀 سه قدم اول:** روی حساب کاملاً خالی، کارتِ سه‌مرحله‌ی «یه کار بنویس ← تیکش بزن ← تو تقویم جاش بده» بالای داشبورد می‌آید. هر قدم از روی داده‌ی واقعی تیک می‌خورد و بعد از قدم سوم کارت با یک پیام تبریک برای همیشه می‌رود؛ کاربر قدیمی هرگز نمی‌بیندش.
 - **⚙️ دسترسی از تنظیمات:** کارت «❓ راهنمای بخش‌ها» در تنظیمات هر ده راهنما را باز می‌کند و «↩️ نمایش دوباره‌ی راهنمای خودکار» همه‌ی اشاره‌ها و کارت سه‌قدمی را برمی‌گرداند.
@@ -318,7 +318,7 @@ npm test
 5. فایل `README.md` ➔ نشان نسخه در بالای صفحه و بخش تاریخچه تغییرات.
 6. فایل `sw.js` ➔ ارتقای نام کش:
    ```javascript
-   const CACHE_NAME = 'life-planner-cache-v86';
+   const CACHE_NAME = 'life-planner-cache-v87';
    ```
 7. اگر فایل `css`/`js` جدیدی اضافه شد، آن را هم در `index.html` (با `?v=`) و هم در لیست `SHELL` داخل `sw.js` قرار بده.
 
@@ -328,7 +328,7 @@ npm test
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
 
-### ✨ نسخه 21.5 — «راهنمای ده بخش» + پاک‌کاری پومودورو، XP Shop، درخت مهارت و باس هفتگی
+### ✨ نسخه 21.6 — «راهنمای ده بخش» + پاک‌کاری پومودورو، XP Shop، درخت مهارت و باس هفتگی
 ادامه‌ی مسیر ساده‌سازی. چهار بخشِ باقی‌مانده هم راهنما گرفتند و همان فهرستِ «نکات آسان‌سازی» که از دلِ کد بیرون آمده بود صاف شد. **XP Shop هیچ قابلیتی از دست نداد**؛ از پومودورو فقط چیزی رفت که خودِ کاربر خواسته بود برود (اعلانِ زنده‌ی شمارش معکوس) و در عوض دو چیز اضافه شد: کلید واقعیِ اعلان‌ها و ساختِ تسک داخل صفحه‌ی باس.
 
 - ❓ **راهنمای پومودورو، XP Shop، درخت مهارت و باس هفتگی:** هر چهار بخش یک دکمه‌ی «❓» در نوار بالای خودشان گرفتند که همان پنجره‌ی راهنمای مشترک را باز می‌کند. پنجره حالا ده تب دارد و هر راهنما یک جمله درباره‌ی کاربرد بخش، چهار ردیف کوتاه درباره‌ی چیزی که روی صفحه دیده می‌شود و یک دکمه‌ی پایانی دارد: «▶️ شروع جلسه‌ی فوکوس»، «🎁 شانس‌های جعبه»، «🛍️ برو به XP Shop» و «⚔️ ساخت باس» — که اگر نبردی در جریان باشد خودش «✏️ ویرایش باس» می‌شود تا HPِ باسِ جاری دور ریخته نشود. موتور راهنما (`js/v213.js`) همان است و فایل یا کلید ذخیره‌ی تازه‌ای اضافه نشد؛ فقط داده‌اش ده بخش شد.
@@ -344,7 +344,7 @@ npm test
 - 📉 **داده‌ی بی‌مصرف هم رفت:** آرایه‌ی `DB.pomodoro.presets` که هر بار از روی ثابتِ `PRESETS` ساخته می‌شد و هیچ خواننده‌ای نداشت (رندر همیشه از خودِ ثابت می‌خواند) دیگر نوشته نمی‌شود و از داده‌ی موجود هم پاک می‌شود، و دو فیلدِ `pomodoroMinutes` و `lastPomodoroAt` روی تسک‌ها که نوشته می‌شدند ولی هیچ‌جا نمایش داده نمی‌شدند دیگر نوشته نمی‌شوند (`pomodorosCount` که در لیست تسک‌ها دیده می‌شود سر جایش است). مهاجرتِ `migrateLegacyManualPomoData()` هم که در هر بوت و در هر ثبت دستی کل فهرست را می‌گشت، حالا یک بار اجرا می‌شود و نتیجه‌اش با یک پرچم ذخیره می‌شود.
 - 🌐 **ترجمه‌ی کامل انگلیسی:** همه‌ی رشته‌های جدید (چهار راهنما، چهار اشاره، چهار دکمه‌ی اقدام، ردیفِ ساخت تسک در باس، کارت اعلان‌ها و سرتیترهای تازه‌ی آمار) در یک بلوک `EXTRA_V215` با ۶۳ ورودی به `js/lang.js` رفتند؛ کلیدهایی که رشته‌شان عوض شده بود به‌روز شدند و پنج کلیدِ مرده (مثل «🔔 نوتیفیکیشن هوشمند فعاله» و «همگام شد») حذف شدند.
 - 🧪 **تست‌های جدید:** ده تب/پنل راهنما با چهار ردیف در هر پنل، دکمه‌ی اقدامِ درست برای هر چهار بخش جدید (شامل «✏️ ویرایش باس» وقتی نبرد در جریان است)، اشاره‌های یک‌بارمصرف در چهار بخش تازه، نبودِ اعلانِ زنده و ماندنِ سه اعلانِ دیگر، پنج‌تیر شدن «کوئست سریع»، ساخت تسک از داخل پنجره‌ی باس (و انتخاب شدنش)، سوئیچ اعلان‌ها، ارقام فارسیِ کیف پول و HP و امتیاز مهارت و شمارش معکوس باس، یکی شدن آمار پومودورو، هم‌قدم شدن پرست‌ها با تب تنظیمات، و نبودِ کد و داده‌ی مرده.
-- ♻️ نسخه در هر شش محل به `21.5` رفت و نام کش سرویس‌ورکر `life-planner-cache-v86` شد.
+- ♻️ نسخه در هر شش محل به `21.6` رفت و نام کش سرویس‌ورکر `life-planner-cache-v87` شد.
 
 
 ### ✨ نسخه 21.4 — «راهنمای شش بخش» + پاک‌کاری عادت‌ها، اهداف و یادداشت‌ها
@@ -581,7 +581,7 @@ npm test
 **Life Planner** is a modern, high-performance, fully offline personal productivity suite and gamified life RPG built with pure Vanilla JavaScript, modern CSS3, and HTML5 (Zero Dependencies).
 
 ### 🚀 Key Highlights
-- **📖 Ten guided sections + a simpler Pomodoro, XP Shop, skill tree and weekly boss (new in v21.5):** the last four sections carry the same single ❓, the same one-time in-section hint and the same shared guide modal (ten tabs now), so every part of the app explains itself. The Pomodoro lost the notification that rewrote itself every five seconds — a session still announces its start, its end and the end of a round, and there is finally a real on/off switch for them in Settings; its stats tab speaks with one voice (each number written once, in the same cards as the rest of the app, in Persian digits); the ⚙️ tab and the preset grid can no longer disagree. The weekly boss builds its own tasks: the picker has an inline “create task” row, so a fight no longer dies on “go and create some tasks first”. “Quick Quest” grew from three tiers to five (the wait drops from 20 to 15 minutes). Dead code went out with no feature lost: the never-invoked `window.tickPomo` override, a no-op `fullscreenchange` listener, four unused references, two stub functions, a `DB.pomodoro.presets` mirror nothing read, two task fields that were written and never shown, and one interval out of two. The XP Shop kept everything it had — it only reads better (Persian digits everywhere).
+- **📖 Ten guided sections + a simpler Pomodoro, XP Shop, skill tree and weekly boss (new in v21.6):** the last four sections carry the same single ❓, the same one-time in-section hint and the same shared guide modal (ten tabs now), so every part of the app explains itself. The Pomodoro lost the notification that rewrote itself every five seconds — a session still announces its start, its end and the end of a round, and there is finally a real on/off switch for them in Settings; its stats tab speaks with one voice (each number written once, in the same cards as the rest of the app, in Persian digits); the ⚙️ tab and the preset grid can no longer disagree. The weekly boss builds its own tasks: the picker has an inline “create task” row, so a fight no longer dies on “go and create some tasks first”. “Quick Quest” grew from three tiers to five (the wait drops from 20 to 15 minutes). Dead code went out with no feature lost: the never-invoked `window.tickPomo` override, a no-op `fullscreenchange` listener, four unused references, two stub functions, a `DB.pomodoro.presets` mirror nothing read, two task fields that were written and never shown, and one interval out of two. The XP Shop kept everything it had — it only reads better (Persian digits everywhere).
 - **📖 Six guided sections + a tidy-up of Habits, Goals and Notes (new in v21.4):** Habits, Goals and Notes joined the shared guide — six tabs, one ❓ per section, a one-time in-section hint, and the same closing button that opens that section's own sheet. Nothing was removed from the user; the leftovers of earlier releases were. The dead chart layer went out (`renderCharts` plus three canvas painters whose canvases were deleted back in v20), two empty render stubs, an always-hidden element in the habit sheet and two DB fields nothing ever read. Five behaviours were made honest: the habit week grid always shows the current week (the calendar's week switch used to fill it with seven untickable boxes), the 6 XP is earned once per habit per day instead of every re-tick, deleting a habit or a goal asks first like tasks and notes already did, streaks and goal percentages use Persian digits like the rest of the app, and the ▦ button finally shows whether you are in the grid or the list view.
 - **📖 Section guides + a three-step start (new in v21.3):** The Dashboard, Tasks and Calendar each carry one ❓ button that opens a single shared guide — three tabs, one short line about what the section is for, four short rows about what is on screen, and a button that jumps straight into that section's main action (Quick Inbox / New task / New event). A first visit shows a slim in-section hint instead of a popup, and it retires for good on ✕, on reading the guide, or simply on walking away. A brand-new (completely empty) account also gets «The first three steps»: write one task → tick it → give it a place in the calendar; every step ticks itself off from real data and the card retires itself after the third one. Guides are reachable from Settings too, and the calendar's long gesture text moved into its guide, leaving one quiet line above the grid.
 - **⌨️ Calm keyboard (new in v21.0):** Opening “New task”, Inbox, “New note”, “New event” or “Add subtask” no longer pops the on-screen keyboard by itself — the sheet opens, and you tap the field when you are ready. Every text field is also marked `autocomplete="off"` / `spellcheck="false"` in a form-free page, so Chrome's password-manager / autofill strip stays out of the way and you get a plain, empty keyboard.

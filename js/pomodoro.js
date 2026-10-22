@@ -5,7 +5,7 @@
    Load order: after core.js + enhancements.js.
    Self-contained IIFE — does not add unnecessary globals.
 
-   v21.5 simplification (no feature was taken away from the user):
+   v21.6 simplification (no feature was taken away from the user):
      • the live countdown notification is gone — a session still
        announces its start, its end and the end of a round, but no
        notification is rewritten every five seconds any more;
@@ -57,7 +57,7 @@
     if(DB.pomodoro.settings.longBreakMin===undefined) DB.pomodoro.settings.longBreakMin = 15;
     if(DB.pomodoro.settings.cycleCount===undefined) DB.pomodoro.settings.cycleCount = 4;
     if(!Array.isArray(DB.pomodoro.sessionHistory)) DB.pomodoro.sessionHistory = [];
-    /* v21.5: DB.pomodoro.presets was a copy of PRESETS that the UI never read
+    /* v21.6: DB.pomodoro.presets was a copy of PRESETS that the UI never read
        (the preset grid is painted from the constant). Drop it, so backups and
        localStorage stop carrying a stale second source of truth. */
     if(DB.pomodoro.presets) delete DB.pomodoro.presets;
@@ -88,7 +88,7 @@
   /* -------------------------------------------------------------
      PERSISTENT DURATION FORMATTERS (Hours + Minutes in Persian)
   ------------------------------------------------------------- */
-  /* v21.5: every number this file paints goes through the app's own digit
+  /* v21.6: every number this file paints goes through the app's own digit
      helper, so the Pomodoro reads like the rest of the app (and English mode
      still gets Latin digits back through lang.js). */
   const fa = (n) => (typeof toFaDigits === 'function' ? toFaDigits(n) : String(n));
@@ -129,7 +129,7 @@
     return id ? ((DB.tasks||[]).find(t=>String(t.id)===String(id)) || null) : null;
   }
 
-  /* v21.5: dates read the way the rest of the app reads them — Jalali. */
+  /* v21.6: dates read the way the rest of the app reads them — Jalali. */
   function jalaliOrIso(iso){
     return (typeof isoToJalaliText === 'function' && iso) ? (isoToJalaliText(iso) || iso) : (iso || '');
   }
@@ -582,7 +582,7 @@
     return `⏱️ دقیقه ${fa(info.currentMin)} از ${fa(info.totalMin)} (${fa(info.remMin)} دقیقه باقی‌مانده)`;
   }
 
-  /* v13.1 / v21.5: ONE 1s interval for everything that moves by itself here —
+  /* v13.1 / v21.6: ONE 1s interval for everything that moves by itself here —
      the "Minute X of Y" badge of the main view and the Focus Mode overlay.
      It touches single text nodes in place (no DOM rebuild) and stays idle
      unless the Pomodoro view or the overlay is actually on screen. */
@@ -772,7 +772,7 @@
     toast(`✅ ${p.label}: ${fa(p.focus)} دقیقه فوکوس / ${fa(p.break)} دقیقه استراحت`);
   }
 
-  /* v21.5: the ⚙️ tab and the preset grid both write DB.pomodoro.settings, so
+  /* v21.6: the ⚙️ tab and the preset grid both write DB.pomodoro.settings, so
      after saving numbers by hand the grid follows: a matching preset becomes
      the active one, anything else becomes the saved custom preset. The two
      places can no longer disagree on screen. */
@@ -897,7 +897,7 @@
         source: meta.source || 'pomodoro'
       });
       DB.pomodoro.sessionHistory = DB.pomodoro.sessionHistory.slice(0, 500);
-      /* v21.5: only pomodorosCount is ever shown (in the task picker), so only
+      /* v21.6: only pomodorosCount is ever shown (in the task picker), so only
          that counter is written now. pomodoroMinutes / lastPomodoroAt had no
          reader anywhere in the app. */
       if(meta.taskId){
@@ -1214,7 +1214,7 @@
   /* -------------------------------------------------------------
      POMODORO STATISTICS (Hours & Minutes Formatting)
   ------------------------------------------------------------- */
-  /* v21.5: the stats tab used to mix two visual languages — the plain cards of
+  /* v21.6: the stats tab used to mix two visual languages — the plain cards of
      core.js on top and two .pomo-v66-card blocks below — and the two summary
      tiles wrote the same duration twice ("1.5h" over "۱ ساعت و ۳۰ دقیقه").
      Same data, one language, one number per tile. */
@@ -1289,7 +1289,7 @@
   /* -------------------------------------------------------------
      GLOBAL ACTION OVERRIDES FOR SMOOTH FOCUS TO-DO FLOW
   ------------------------------------------------------------- */
-  /* v21.5: four of these six references were never used — the overrides below
+  /* v21.6: four of these six references were never used — the overrides below
      rebuild the behaviour instead of delegating to it — and the whole live
      notification layer went away with them. A session still announces its
      start, its end and the end of a round (see startFocus / startBreak /
@@ -1489,7 +1489,7 @@
     }
   };
 
-  /* v21.5: the window.tickPomo override was dead — core.js's setInterval
+  /* v21.6: the window.tickPomo override was dead — core.js's setInterval
      captured the original tickPomo at definition time and nothing else in the
      app calls tickPomo() by name. Its two jobs (the minute badge and the Focus
      Mode overlay) are done by the single 1s interval above. */
