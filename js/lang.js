@@ -1281,7 +1281,7 @@
   };
   for(var _k16 in EXTRA_V16){ if(Object.prototype.hasOwnProperty.call(EXTRA_V16, _k16)) EXACT[_k16] = EXTRA_V16[_k16]; }
   for(var _k214 in EXTRA_V214){ if(Object.prototype.hasOwnProperty.call(EXTRA_V214, _k214)) EXACT[_k214] = EXTRA_V214[_k214]; }
-  /* v21.5: the Pomodoro, the XP Shop, the skill tree and the weekly boss joined
+  /* v21.6: the Pomodoro, the XP Shop, the skill tree and the weekly boss joined
      the section guides, so every section of the app is explainable from inside
      itself. Icon-prefixed cores ("📖 راهنمای پومودورو", "⚔️ ساخت باس") are still
      handled by compose(); a paragraph that *starts* with an icon is listed whole.

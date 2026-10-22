@@ -554,7 +554,7 @@ body{ font-size: 1rem; }
 .boss-task-pick-row{display:flex; align-items:center; gap:10px; padding:9px 8px; border-radius:10px; cursor:pointer;}
 .boss-task-pick-row.sel{background:rgba(0,229,255,.08);}
 .boss-task-pick-row .chk-box{width:18px; height:18px; border-radius:6px; border:2px solid var(--line2); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px;}
-/* v21.5: a boss task can be written inside the picker itself */
+/* v21.6: a boss task can be written inside the picker itself */
 .boss-new-task{display:flex; gap:8px; align-items:center; margin-top:10px;}
 .boss-new-task input{flex:1; min-width:0; border:1px solid var(--line); background:var(--panel2); color:var(--txt); border-radius:10px; padding:9px 10px; font:inherit; font-size:12.5px; outline:none;}
 .boss-new-task input:focus{border-color:var(--neon);}
@@ -662,7 +662,7 @@ html[data-theme="light"] .pomo-minute-badge{background:rgba(8,145,178,.1); borde
 .pomo-stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;}
 .pomo-stat-mini{padding:12px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);text-align:center;}
 .pomo-stat-mini .n{font-size:19px;font-weight:950;font-family:'Consolas','JetBrains Mono',monospace;color:var(--txt);}
-/* v21.5: a duration tile («۱.۵ ساعت») is text, not a counter — a little smaller
+/* v21.6: a duration tile («۱.۵ ساعت») is text, not a counter — a little smaller
    so it stays on one line in the five-column grid. */
 .pomo-stat-mini .n.dur{font-size:14.5px;line-height:1.5;}
 .pomo-stat-mini .l{font-size:10.5px;color:var(--txt-dim2);margin-top:4px;font-weight:700;line-height:1.4;}
@@ -1986,3 +1986,16 @@ body.dplan-dragging{cursor:grabbing; user-select:none;}
   font-size:12px; font-weight:800; color:var(--txt-dim);
   padding:6px 2px 8px;
 }
+
+/* Calendar event effort and bite-size markers — deliberately compact. */
+.lp-event-traits .lp-trait-group{gap:6px}
+.lp-event-traits .chip-opt{font-family:inherit;cursor:pointer}
+.lp-trait-hint{margin-top:7px;color:var(--txt-dim2);font-size:10.5px;line-height:1.7}
+.ev-block.ev-trait-high{border:2px solid #16a34a!important;box-shadow:inset 0 0 0 1px rgba(22,163,74,.18),0 2px 8px rgba(22,163,74,.2)!important}
+.ev-block.ev-trait-medium{border:2px solid #eab308!important;box-shadow:inset 0 0 0 1px rgba(234,179,8,.16),0 2px 8px rgba(234,179,8,.18)!important}
+.ev-block.ev-trait-low{border:2px solid #f97316!important;box-shadow:inset 0 0 0 1px rgba(249,115,22,.16),0 2px 8px rgba(249,115,22,.18)!important}
+.ev-traits{position:absolute;top:2px;right:3px;display:flex;gap:1px;line-height:1;font-size:9px;z-index:8;pointer-events:none}
+.ev-trait{filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))}
+.ev-block.event-short .ev-traits,.ev-block.event-tiny .ev-traits{display:none}
+.lp-event-trait-summary{margin-top:5px;color:var(--txt);font-size:11px}
+html[data-lang="en"] .ev-traits{right:auto;left:3px}
