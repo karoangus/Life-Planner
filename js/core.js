@@ -227,7 +227,7 @@ async function requestNotifyPermission(){
     else toast('🔕 اجازه اعلان داده نشد.');
   }catch(_){ toast('⚠️ فعال‌سازی اعلان ناموفق بود'); }
 }
-/* v21.6: this line used to be a fixed claim («🔔 نوتیفیکیشن هوشمند فعاله») that
+/* v21.7: this line used to be a fixed claim («🔔 نوتیفیکیشن هوشمند فعاله») that
    ignored DB.pomodoro.notifications, and there was no way to turn session
    notifications off. Now the status says what is really true and the switch
    under it is the control. */
@@ -1925,7 +1925,7 @@ function savePomoSettings(){
   const gm = parseInt(document.getElementById('pomoSetGoalM').value) || 0;
   DB.pomodoro.settings = { focusMin:Math.max(1,f), breakMin:Math.max(1,b), longBreakMin:Math.max(1,lb), cycleCount:Math.max(1,cy), goalMinutes:Math.max(0, gh*60+gm) };
   save();
-  /* v21.6: one setting, one truth — the preset grid of the focus tab now shows
+  /* v21.7: one setting, one truth — the preset grid of the focus tab now shows
      the mode these numbers belong to instead of staying on the old one. */
   if(typeof window.syncPomoPresetFromSettings==='function') window.syncPomoPresetFromSettings();
   renderPomoUI();
@@ -1940,7 +1940,7 @@ function renderManualTaskOptions(){
   sel.innerHTML='<option value="">بدون تسک</option>'+tasks.map(t=>`<option value="${esc(t.id)}">${esc(t.title||t.text||'تسک')}</option>`).join('');
   if(tasks.some(t=>String(t.id)===String(cur))) sel.value=cur;
 }
-/* v21.6: this ran on every boot *and* on every manual entry, scanning the whole
+/* v21.7: this ran on every boot *and* on every manual entry, scanning the whole
    manual list for records that have not been migrated — a state that has not
    existed since the day the flag was introduced. One pass, remembered. */
 function migrateLegacyManualPomoData(){
@@ -1981,7 +1981,7 @@ function addManualPomoData(){
   toast(`✅ ${toFaDigits(minutes)} دقیقه ${kind==='focus'?'مطالعه':'استراحت'} ثبت شد${kind==='focus'?` · امتیاز تمرکز ${toFaDigits(score)}/۱۰۰`:''}`);
   renderManualPomoData(); renderPomoStats(); window.renderPomoV66?.();
 }
-/* v21.6: deleteManualPomoData() had no caller (the manual list has no delete
+/* v21.7: deleteManualPomoData() had no caller (the manual list has no delete
    button — it only ever answered "this cannot be deleted") and
    getManualPomoTotal() was a stub that always returned 0. Both are gone;
    pomodoro.history stays the single source for every total. */
@@ -2349,7 +2349,7 @@ function toggleBossTaskPick(taskId){
   else { bossSetupSelected.push(taskId); }
   renderBossTaskPicker();
 }
-/* v21.6: a boss is only as good as the tasks behind it, and half a fight used to
+/* v21.7: a boss is only as good as the tasks behind it, and half a fight used to
    die here — «تسک انجام‌نشده‌ای نداری، اول چندتا تسک بساز» meant closing the
    sheet, going to the tasks section, writing them, and coming back (by which
    time the mood was gone). The picker now builds the task itself: it lands in
@@ -2481,7 +2481,7 @@ const SKILL_TREE = [
   { key:'luckyBox',      icon:'🍀', name:'شانس بلند',      desc:'هر تیر شانس جعبه‌ی رایگان توی Mystery Box بیشتر می‌شه', maxTier:3 },
   { key:'criticalBonus', icon:'🔥', name:'قاتل بحران',     desc:'هر تیر +۵ XP برای هر تسک بحرانی که تموم می‌کنی',    maxTier:3 },
   { key:'streakGuard',   icon:'🛡️', name:'محافظ استریک',  desc:'هر تیر همون لحظه ۱ Streak Shield رایگان می‌گیری',  maxTier:5 },
-  /* v21.6: five tiers instead of three — the wait for the next quest can now be
+  /* v21.7: five tiers instead of three — the wait for the next quest can now be
      shortened all the way from 20 to 15 minutes. */
   { key:'questCooldown', icon:'⏱️', name:'کوئست سریع',     desc:'هر تیر ۱ دقیقه از زمان انتظار کوئست بعدی کم می‌کنه (از ۲۰ به ۱۵ دقیقه)', maxTier:5 },
 ];
@@ -2836,7 +2836,7 @@ function jalaaliMonthLength(jy,jm){
 const JALALI_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
 const FA_DIGITS = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFaDigits(n){ return String(n).replace(/[0-9]/g, d=>FA_DIGITS[+d]); }
-/* v21.6: one way to write a count/price/HP on screen — Persian digits with the
+/* v21.7: one way to write a count/price/HP on screen — Persian digits with the
    usual thousand separator. English mode turns the digits back to Latin through
    lang.js, exactly like every other number in the app. Clock faces (MM:SS) stay
    Latin on purpose: they are timers, not counts. */
@@ -4752,11 +4752,11 @@ function lpAutoscrollStep(){
   if(scrolled) lpDragMove({});
   requestAnimationFrame(lpAutoscrollStep);
 }
-function lpDragCleanup(){
+function lpDragCleanup(keepClone=false){
   const d=lpDragState.drag;
   document.removeEventListener('touchmove', lpBlockScroll);
   if(d){
-    d.clone.remove();
+    if(!keepClone) d.clone.remove();
     d.ghost.remove();
     d.el.classList.remove('lp-dragging-src');
     document.querySelectorAll('#weekGrid .lp-cal-day.lp-drop-target').forEach(c=>c.classList.remove('lp-drop-target'));
@@ -4769,11 +4769,33 @@ function lpDragCancel(){
 }
 function lpDragEnd(){
   const d=lpDragState.drag;
-  lpDragCleanup();
-  if(!d) return;
+  if(!d){ lpDragCleanup(); return; }
+  const destination=d.curDay==null?null:d.ghost.getBoundingClientRect();
+  const shouldLand=d.moved&&destination;
+  lpDragCleanup(!!shouldLand);
   if(d.moved) lpDragState.suppressClickUntil=Date.now()+600; // swallow the trailing click
-  if(!d.moved || d.curDay==null) return;
+  if(!shouldLand){ d.clone.remove(); return; }
+  // Let the lifted card glide into the snapped slot instead of disappearing.
+  requestAnimationFrame(()=>{
+    d.clone.classList.add('lp-drag-landing');
+    d.clone.style.left=destination.left+'px'; d.clone.style.top=destination.top+'px';
+    d.clone.style.width=destination.width+'px'; d.clone.style.height=destination.height+'px';
+    d.clone.style.opacity='0'; d.clone.style.transform='rotate(0) scale(1)';
+  });
+  setTimeout(()=>d.clone.remove(),240);
   lpApplyEventDrag(d.evRef, d.dayIdx, d.curDay, d.curStart);
+}
+function lpRelocateEventOccurrence(ev,fromDay,toDay,startMin,endMin){
+  const days=eventDays(ev);
+  if(days.length>1){
+    ev.days=days.filter(day=>day!==fromDay); delete ev.day;
+    const copy={...JSON.parse(JSON.stringify(ev)),id:uid(),days:[toDay],startMin,endMin,
+      startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))};
+    DB.events.push(copy); return copy;
+  }
+  ev.days=[toDay]; delete ev.day; ev.startMin=startMin; ev.endMin=endMin;
+  ev.startHour=Math.floor(startMin/60); ev.endHour=Math.min(24,Math.floor(endMin/60));
+  return ev;
 }
 function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
   const ev=DB.events.find(x=>x.id===evRef.id)||evRef;
@@ -4799,8 +4821,39 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
   }
   const conflict=lpCandidateConflicts(candidate,others);
   if(conflict){
-    toast(`⚠️ «${esc(conflict.title)}» مانع این جابه‌جایی است؛ ساعت‌ها تداخل دارند`);
-    renderCalendar();
+    // A direct collision is a swap: the block under the pointer takes the exact
+    // slot that the dragged occurrence just left. Both keep their own duration.
+    // A repeated target is intentionally left alone: swapping one occurrence
+    // must never silently rewrite the rest of its series.
+    if(!conflict.id||eventDays(conflict).length!==1){
+      toast(`⚠️ «${esc(conflict.title)}» تکرارشونده است؛ برای جابه‌جایی اول همان روز را جدا کن`);
+      renderCalendar();
+      return;
+    }
+    const sourceStart=eventStartMinutes(ev);
+    const conflictDuration=Math.max(15,eventEndMinutes(conflict)-eventStartMinutes(conflict));
+    const displaced={title:conflict.title,days:[fromDay],startMin:sourceStart,endMin:sourceStart+conflictDuration};
+    const unaffected=DB.events.filter(x=>x.id!==ev.id&&x.id!==conflict.id);
+    const targetConflict=lpCandidateConflicts(candidate,unaffected);
+    const secondConflict=lpCandidateConflicts(displaced,unaffected);
+    const candidatesClash=lpCandidateConflicts(candidate,[displaced]);
+    if(targetConflict||secondConflict||candidatesClash){
+      const blocker=targetConflict||secondConflict||conflict;
+      toast(`⚠️ این جابه‌جایی با «${esc(blocker.title)}» تداخل چندگانه دارد`);
+      renderCalendar();
+      return;
+    }
+    const undo=lpCaptureEventUndo(ev);
+    if(undo) undo.affected=[{id:conflict.id,before:JSON.parse(JSON.stringify(conflict))}];
+    const moved=lpRelocateEventOccurrence(ev,fromDay,toDay,ns,ne);
+    const displacedEvent=lpRelocateEventOccurrence(conflict,toDay,fromDay,sourceStart,sourceStart+conflictDuration);
+    if(undo){
+      if(moved!==ev) undo.removedIds.push(moved.id);
+      if(displacedEvent!==conflict) undo.removedIds.push(displacedEvent.id);
+    }
+    lpEventUndoRecord=undo;
+    save(); rescheduleAllEventReminders();
+    lpAnnounceEventChange(`🔄 «${esc(ev.title)}» و «${esc(conflict.title)}» خیلی مرتب جایشان را عوض کردند`);
     return;
   }
 
@@ -4877,6 +4930,7 @@ function lpUndoEventResize(){
   const i=list?list.findIndex(x=>x&&x.id===rec.id):-1;
   if(i<0){ toast('⚠️ این رویداد دیگر وجود ندارد؛ بازگردانده نشد'); return; }
   rec.removedIds.forEach(id=>{ const j=list.findIndex(x=>x&&x.id===id); if(j>=0) list.splice(j,1); });
+  (rec.affected||[]).forEach(item=>{ const j=list.findIndex(x=>x&&x.id===item.id); if(j>=0) list[j]=JSON.parse(JSON.stringify(item.before)); });
   list[i]=JSON.parse(JSON.stringify(rec.before));
   save();
   rescheduleAllEventReminders();
@@ -5645,7 +5699,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='21.6';
+const LP_APP_VERSION='21.7';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

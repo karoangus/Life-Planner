@@ -8,10 +8,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=21.6">
-<link rel="stylesheet" href="css/design-system.css?v=21.6">
-<link rel="stylesheet" href="css/v20.css?v=21.6">
-<link rel="stylesheet" href="css/v213.css?v=21.6">
+<link rel="stylesheet" href="css/app.css?v=21.7">
+<link rel="stylesheet" href="css/design-system.css?v=21.7">
+<link rel="stylesheet" href="css/v20.css?v=21.7">
+<link rel="stylesheet" href="css/v213.css?v=21.7">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -282,11 +282,11 @@ try{
       <div class="topbar">
         <div><h1>پومودورو</h1><div class="sub">فوکوس متمرکز، با ریتم درست</div></div>
         <div class="top-actions">
-          <!-- v21.6: the same single ❓ every guided section carries -->
+          <!-- v21.7: the same single ❓ every guided section carries -->
           <button class="guide-btn" type="button" onclick="openGuide('pomodoro')" title="راهنمای پومودورو" aria-label="راهنمای پومودورو">❓</button>
         </div>
       </div>
-      <!-- v21.6: one slot for the first-visit hint — it retires itself for good -->
+      <!-- v21.7: one slot for the first-visit hint — it retires itself for good -->
       <div class="guide-slot" id="guideSlot-pomodoro"></div>
 
       <div class="chip-group" id="pomoTabs" style="margin-bottom:18px;">
@@ -779,11 +779,11 @@ try{
       <div class="topbar">
         <div><h1>🛍️ XP Shop</h1><div class="sub">با XP هایی که جمع کردی، وسیله بخر</div></div>
         <div class="top-actions">
-          <!-- v21.6 -->
+          <!-- v21.7 -->
           <button class="guide-btn" type="button" onclick="openGuide('shop')" title="راهنمای XP Shop" aria-label="راهنمای XP Shop">❓</button>
         </div>
       </div>
-      <!-- v21.6 -->
+      <!-- v21.7 -->
       <div class="guide-slot" id="guideSlot-shop"></div>
 
       <div class="card xp-wallet-card">
@@ -838,11 +838,11 @@ try{
       <div class="topbar">
         <div><h1>🌳 درخت مهارت</h1><div class="sub">هر بار لول‌آپ می‌شی، یه امتیاز مهارت می‌گیری</div></div>
         <div class="top-actions">
-          <!-- v21.6 -->
+          <!-- v21.7 -->
           <button class="guide-btn" type="button" onclick="openGuide('skills')" title="راهنمای درخت مهارت" aria-label="راهنمای درخت مهارت">❓</button>
         </div>
       </div>
-      <!-- v21.6 -->
+      <!-- v21.7 -->
       <div class="guide-slot" id="guideSlot-skills"></div>
       <div class="card" style="text-align:center; background:linear-gradient(120deg, rgba(46,230,166,.10), var(--panel) 60%); border-color:rgba(46,230,166,.3);">
         <div style="font-size:12px; color:var(--txt-dim); font-weight:700;">امتیاز مهارت در دسترس</div>
@@ -856,11 +856,11 @@ try{
       <div class="topbar">
         <div><h1>⚔️ باس هفتگی</h1><div class="sub">یه هدف بزرگ رو به یه نبرد تبدیل کن</div></div>
         <div class="top-actions">
-          <!-- v21.6 -->
+          <!-- v21.7 -->
           <button class="guide-btn" type="button" onclick="openGuide('boss')" title="راهنمای باس هفتگی" aria-label="راهنمای باس هفتگی">❓</button>
         </div>
       </div>
-      <!-- v21.6 -->
+      <!-- v21.7 -->
       <div class="guide-slot" id="guideSlot-boss"></div>
       <div id="bossContent"></div>
     </div>
@@ -959,7 +959,7 @@ try{
       </div>
 
       <!-- v21.3: the section guides also live here, so they can be found
-           without hunting for a ❓ in each section (v21.6: all ten of them). -->
+           without hunting for a ❓ in each section (v21.7: all ten of them). -->
       <div class="card settings-card">
         <div class="card-head"><h3>❓ راهنمای بخش‌ها</h3></div>
         <p class="muted settings-help">راهنمای کوتاهِ هر ده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.</p>
@@ -979,7 +979,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">21.6</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">21.7</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1227,7 +1227,7 @@ try{
   <div class="field">
     <label>چندتا تسک انتخاب کن که هرکدوم بهش ضربه بزنه <span id="bossTaskCount" class="num">(۰ تسک)</span></label>
     <div id="bossTaskPicker" style="max-height:220px; overflow-y:auto;"></div>
-    <!-- v21.6: no more "go and create some tasks first" — the fight is built here -->
+    <!-- v21.7: no more "go and create some tasks first" — the fight is built here -->
     <div class="boss-new-task">
       <input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="bossNewTaskInput" maxlength="80" placeholder="تسک جدید… (مثلاً: فصل ۳ رو بخون)">
       <button class="btn ghost sm" type="button" onclick="addBossTaskInline()">➕ ساخت تسک</button>
@@ -1290,7 +1290,7 @@ try{
     <div class="chip-opt" data-g="habits" role="tab" tabindex="0" aria-selected="false">🔥 عادت‌ها</div>
     <div class="chip-opt" data-g="goals" role="tab" tabindex="0" aria-selected="false">🎯 اهداف</div>
     <div class="chip-opt" data-g="notes" role="tab" tabindex="0" aria-selected="false">📝 یادداشت‌ها</div>
-    <!-- v21.6: the four remaining sections joined the same guide -->
+    <!-- v21.7: the four remaining sections joined the same guide -->
     <div class="chip-opt" data-g="pomodoro" role="tab" tabindex="0" aria-selected="false">🍅 پومودورو</div>
     <div class="chip-opt" data-g="shop" role="tab" tabindex="0" aria-selected="false">🛍️ XP Shop</div>
     <div class="chip-opt" data-g="skills" role="tab" tabindex="0" aria-selected="false">🌳 درخت مهارت</div>
@@ -1362,7 +1362,7 @@ try{
     <p class="muted guide-note">🧹 «پاک کردن فیلتر» فقط وقتی جست‌وجو یا برچسب فعال باشد ظاهر می‌شود؛ حذف یادداشت هم تأیید می‌خواهد.</p>
   </section>
 
-  <!-- v21.6: Pomodoro, XP Shop, the skill tree and the weekly boss — same shape -->
+  <!-- v21.7: Pomodoro, XP Shop, the skill tree and the weekly boss — same shape -->
   <section class="guide-panel" data-g="pomodoro" role="tabpanel">
     <p class="guide-lead">تایمر فوکوس با ریتمِ دور و جلسه — فقط «▶️ شروع» را بزن، بقیه خودش می‌آید.</p>
     <div class="guide-rows">
@@ -1437,18 +1437,18 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=21.6"></script>
-<script src="js/enhancements.js?v=21.6"></script>
-<script src="js/sw-register.js?v=21.6"></script>
+<script src="js/core.js?v=21.7"></script>
+<script src="js/enhancements.js?v=21.7"></script>
+<script src="js/sw-register.js?v=21.7"></script>
 
-<script src="js/pomodoro.js?v=21.6"></script>
+<script src="js/pomodoro.js?v=21.7"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=21.6"></script>
-<script src="js/v16.js?v=21.6"></script>
-<script src="js/v162.js?v=21.6"></script>
-<script src="js/v21.js?v=21.6"></script>
+<script src="js/lang.js?v=21.7"></script>
+<script src="js/v16.js?v=21.7"></script>
+<script src="js/v162.js?v=21.7"></script>
+<script src="js/v21.js?v=21.7"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=21.6"></script>
+<script src="js/v213.js?v=21.7"></script>
 
 </body>
 </html>

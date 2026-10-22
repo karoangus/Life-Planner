@@ -1,5 +1,5 @@
 /* ============================================================
-   Life Planner v21.3 / v21.4 / v21.6 — «راهنمای بخش‌ها» / section guides
+   Life Planner v21.3 / v21.4 / v21.7 — «راهنمای بخش‌ها» / section guides
 
    The simplification path (v20 → v21.2) took the clutter out of
    the Dashboard, Tasks and Calendar. This file adds the missing
@@ -11,7 +11,7 @@
    first-visit hint each. Nothing else about them changed here —
    the fixes of that release live in core.js.
 
-   v21.6 finishes the job: the Pomodoro, the XP Shop, the skill
+   v21.7 finishes the job: the Pomodoro, the XP Shop, the skill
    tree and the weekly boss carry the same ❓ and the same single
    hint, so every section of the app is now explainable from
    inside itself. Still the same engine, still one storage key,
@@ -67,7 +67,7 @@
                   'pomodoro', 'shop', 'skills', 'boss'];
   var HINTED = {
     dashboard: true, tasks: true, habits: true, goals: true, notes: true,
-    /* v21.6 */ pomodoro: true, shop: true, skills: true, boss: true
+    /* v21.7 */ pomodoro: true, shop: true, skills: true, boss: true
   };
 
   var TITLES = {
@@ -77,7 +77,7 @@
     habits: '📖 راهنمای عادت‌ها',
     goals: '📖 راهنمای اهداف',
     notes: '📖 راهنمای یادداشت‌ها',
-    /* v21.6 */
+    /* v21.7 */
     pomodoro: '📖 راهنمای پومودورو',
     shop: '📖 راهنمای XP Shop',
     skills: '📖 راهنمای درخت مهارت',
@@ -94,7 +94,7 @@
     habits: { label: '➕ عادت جدید', fn: 'openHabitModal' },
     goals: { label: '➕ هدف جدید', fn: 'openGoalModal' },
     notes: { label: '➕ یادداشت جدید', fn: 'openNoteModal' },
-    /* v21.6 — `fn` is a global name, `local` a function of this file: the two
+    /* v21.7 — `fn` is a global name, `local` a function of this file: the two
        sections below have no sheet of their own to open. */
     pomodoro: { label: '▶️ شروع جلسه‌ی فوکوس', fn: 'pomoQuickStart' },
     shop: { label: '🎁 شانس‌های جعبه', fn: 'openMysteryInfo' },
@@ -118,7 +118,7 @@
   };
 
   var HINTS = {
-    /* v21.6: one line each for the last four sections */
+    /* v21.7: one line each for the last four sections */
     pomodoro: {
       ic: '🍅',
       txt: 'فقط «▶️ شروع» را بزن؛ دور، استراحت و XP خودش می‌آید.'

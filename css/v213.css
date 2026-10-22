@@ -123,7 +123,7 @@ html[data-theme="light"] .qs-card{border-color:rgba(8,145,178,.24);}
 .guide-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
 .guide-head h2{margin:0;font-size:16px;}
 .guide-tabs{margin-bottom:14px;}
-/* v21.6: ten sections, so the chips are a touch tighter — they still wrap. */
+/* v21.7: ten sections, so the chips are a touch tighter — they still wrap. */
 .guide-tabs .chip-opt{padding:6px 11px; font-size:11.8px;}
 .guide-panel{display:none;}
 .guide-panel.sel{display:block;}
