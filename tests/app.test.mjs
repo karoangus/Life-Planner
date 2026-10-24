@@ -563,6 +563,78 @@ if (!useFallback) {
     v182.english.tip === '10:00 to 12:30 · 2 h 30 min' &&
     v182.english.blocked.includes('blocks this change'), JSON.stringify(v182.english));
 
+  // ---------- v21.9: cross-day drag keeps a target column and stays smooth ----------
+  const v219 = await page.evaluate(async () => {
+    showView('calendar');
+    lpDragState.suppressClickUntil = 0;
+    DB.events = []; save(); renderCalendar();
+    DB.events.push({ id:'v219-a', title:'جابه‌جایی بین روزها', days:[2], startMin:600, endMin:660,
+      startHour:10, endHour:11 });
+    save(); renderCalendar();
+    const col = (i) => document.querySelector(`#weekGrid .lp-cal-day[data-day="${i}"]`);
+    const block = () => col(2).querySelector('.ev-block');
+    const center = (el) => { const r = el.getBoundingClientRect(); return { x:r.left+r.width/2, y:r.top+r.height/2 }; };
+    const ptr = (type, target, x, y, pointerType='mouse') => target.dispatchEvent(new PointerEvent(type,
+      { bubbles:true, cancelable:true, pointerType, button:0, clientX:x, clientY:y }));
+    const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const b0 = block(); const p0 = center(b0);
+
+    // ride the 1px borders between columns on the way to Thursday (day 4)
+    ptr('pointerdown', b0, p0.x, p0.y);
+    const borderXs = [2,3,4].map(i => col(i).getBoundingClientRect().left - 0.5);
+    const end = col(4).getBoundingClientRect();
+    for (const x of borderXs) { ptr('pointermove', document, x, p0.y); await frame(); }
+    const neverNull = !!lpDragState.drag && lpDragState.drag.curDay !== null &&
+      !document.querySelector('.ev-ghost.lp-ghost-off');
+    ptr('pointermove', document, end.left + end.width/2, p0.y); await frame();
+    const targetDay = lpDragState.drag.curDay;
+    const oneHighlight = document.querySelectorAll('#weekGrid .lp-drop-target').length === 1;
+    // the root bug: a background save() mid-gesture used to rebuild #weekGrid,
+    // orphaning the cached columns so the drop silently failed
+    const blockEl = lpDragState.drag.el;
+    save();
+    await frame();
+    const survivesSave = blockEl.isConnected && !!lpDragState.drag && lpDragState.drag.ghost.isConnected
+      && lpDragState.drag.curDay === 4;
+    ptr('pointerup', document, end.left + end.width/2, p0.y);
+    const moved = DB.events.find(e => e.id === 'v219-a');
+    const movedOk = !!moved && moved.days.join(',') === '4' && moved.startMin === 600 && moved.endMin === 660;
+    // the landing glide keeps the clone for 240 ms before removing it
+    await new Promise(r => setTimeout(r, 320));
+    const clean = document.querySelectorAll('#weekGrid .lp-drop-target').length === 0
+      && !document.querySelector('.lp-drag-clone') && !document.querySelector('.ev-ghost');
+
+    // touch: a diagonal slide must still grab the block for a cross-day move
+    DB.events = []; save(); renderCalendar();
+    DB.events.push({ id:'v219-b', title:'لمس قطری', days:[1], startMin:600, endMin:660, startHour:10, endHour:11 });
+    save(); renderCalendar();
+    const b1 = col(1).querySelector('.ev-block'); const p1 = center(b1);
+    ptr('pointerdown', b1, p1.x, p1.y, 'touch');
+    ptr('pointermove', document, p1.x + 12, p1.y + 8, 'touch');
+    const diagonalGrabbed = !!lpDragState.drag;
+    ptr('pointerup', document, p1.x + 12, p1.y + 8, 'touch');
+
+    // purely vertical touch keeps scrolling instead of grabbing
+    DB.events = []; save(); renderCalendar();
+    DB.events.push({ id:'v219-c', title:'اسکرول عمودی', days:[1], startMin:600, endMin:660, startHour:10, endHour:11 });
+    save(); renderCalendar();
+    const b2 = col(1).querySelector('.ev-block'); const p2 = center(b2);
+    ptr('pointerdown', b2, p2.x, p2.y, 'touch');
+    ptr('pointermove', document, p2.x + 3, p2.y + 16, 'touch');
+    const verticalScrolls = !lpDragState.drag;
+    ptr('pointerup', document, p2.x + 3, p2.y + 16, 'touch');
+
+    lpDragState.suppressClickUntil = 0;
+    DB.events = []; save(); renderCalendar();
+    return { neverNull, targetDay, oneHighlight, survivesSave, movedOk, clean, diagonalGrabbed, verticalScrolls };
+  });
+  check('v21.9 crossing column borders while dragging never drops the target day',
+    v219.neverNull && v219.targetDay === 4 && v219.oneHighlight && v219.survivesSave, JSON.stringify(v219));
+  check('v21.9 a cross-day pointer drag lands the event on the new day and cleans up',
+    v219.movedOk && v219.clean, JSON.stringify(v219));
+  check('v21.9 a diagonal touch slide grabs the block while a vertical slide still scrolls',
+    v219.diagonalGrabbed && v219.verticalScrolls, JSON.stringify(v219));
+
   // ---------- v18.3: quiet resize edges + hour-start / free-gap quick-add ----------
   const v183 = await page.evaluate(async () => {
     showView('calendar');
@@ -2228,6 +2300,14 @@ if (!useFallback) {
     coreJs.includes('if(lpGestureBusy()) return;') &&
     appCss.includes('.ev-block.lp-edge-armed .ev-resize-grip{display:block;') &&
     appCss.includes('@media(hover:none){.ev-resize-handle{height:9px;}}'));
+  check('v21.9 cross-day drag caches column geometry and leaves the clone transition-free',
+    coreJs.includes('function lpRefreshDragGeom') && coreJs.includes('function lpColumnAtX') &&
+    coreJs.includes('lp-ghost-off') && coreJs.includes("Math.abs(dx)*1.2>=Math.abs(dy)") &&
+    coreJs.includes("if(viewActive('calendar') && !lpGestureBusy()) renderCalendar();") &&
+    coreJs.includes('never rebuild the grid while a drag/resize owns the pointer') &&
+    appCss.includes('.lp-drag-clone{will-change:transform,opacity}') &&
+    appCss.includes('.ev-ghost.lp-ghost-off{opacity:0}') &&
+    !appCss.includes('.lp-drag-clone{will-change:transform,opacity;transition'));
   check('v21.2 the undo button is a reachable tap target inside the click-through toast',
     appCss.includes('.toast .dp-undo-btn{') &&
     /pointer-events:auto/.test(appCss.slice(appCss.indexOf('.toast .dp-undo-btn{'))) &&

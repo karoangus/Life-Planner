@@ -4666,9 +4666,12 @@ function attachEventDrag(el, ev, dayIdx, shift){
       const dx=m.clientX-sx, dy=m.clientY-sy;
       if(Math.abs(dx)>CAL_DRAG_START_PX||Math.abs(dy)>CAL_DRAG_START_PX){
         // horizontal grab or any mouse movement picks the event up;
-        // a plain vertical touch keeps scrolling the page instead
-        if((isMouse && (Math.abs(dx)>CAL_DRAG_START_PX||Math.abs(dy)>CAL_DRAG_START_PX))
-           || (Math.abs(dx)>=CAL_DRAG_START_PX && Math.abs(dx)>Math.abs(dy))) lpBeginDrag(m, el, ev, dayIdx, shift);
+        // a plain vertical touch keeps scrolling the page instead.
+        // v21.9: a diagonal slide (natural when crossing days) also counts as
+        // a grab as long as the horizontal part nearly keeps up — a clearly
+        // vertical gesture still scrolls.
+        const sideways=Math.abs(dx)>=CAL_DRAG_START_PX && Math.abs(dx)*1.2>=Math.abs(dy);
+        if((isMouse && (Math.abs(dx)>CAL_DRAG_START_PX||Math.abs(dy)>CAL_DRAG_START_PX)) || sideways) lpBeginDrag(m, el, ev, dayIdx, shift);
         else lpCancelHold();
       }
     };
@@ -4719,13 +4722,48 @@ function lpBeginDrag(e, el, ev, dayIdx, shift){
   document.body.appendChild(clone);
   el.classList.add('lp-dragging-src');
   const ghost=document.createElement('div');
-  ghost.className='ev-ghost';
-  lpDragState.drag={ evRef:ev, el, clone, ghost, grabY, w:rect.width, dayIdx, shift,
+  ghost.className='ev-ghost lp-ghost-off';
+  const ghostLabel=document.createElement('span');
+  ghostLabel.className='ev-ghost-time';
+  ghost.appendChild(ghostLabel);
+  const daysWrap=document.querySelector('#weekGrid .lp-cal-days');
+  const d={ evRef:ev, el, clone, ghost, ghostLabel, grabY, w:rect.width, dayIdx, shift,
     curDay:((dayIdx-(shift?1:0))%7+7)%7, curStart:eventStartMinutes(ev)+shift,
-    moved:false, lastX:e.clientX, lastY:e.clientY, raf:0, firstFrame:true };
+    moved:false, lastX:e.clientX, lastY:e.clientY, raf:0, firstFrame:true,
+    daysWrap, cols:[], colRects:[], vw:window.innerWidth,
+    dur:Math.max(15, eventEndMinutes(ev)-eventStartMinutes(ev)),
+    lastCol:null, dropCol:-1, ghostLabelTxt:'' };
+  lpDragState.drag=d;
+  lpRefreshDragGeom(d);
   document.addEventListener('touchmove', lpBlockScroll, {passive:false});
   lpDragMove(e);
   lpAutoscrollStep();
+}
+/* v21.9 — snapshot the column geometry once per drag. Column x-ranges never
+   change while a finger is down (only a rotation/resize can move them), so the
+   per-frame hit test reads plain numbers instead of forcing 14 synchronous
+   layouts. lpDragMove re-snapshots when the viewport width changes. */
+function lpRefreshDragGeom(d){
+  if(!d||!d.daysWrap) return;
+  d.cols=lpCalColumns();
+  d.colRects=d.cols.map(col=>{ const r=col.getBoundingClientRect(); return {left:r.left,right:r.right,width:r.width}; });
+  d.vw=window.innerWidth;
+}
+/* Which day column sits under x? Cached rects only — no layout reads. On the
+   1px borders between columns the nearest column wins (so crossing days never
+   flickers to "no target"), and just outside the outer edges the last valid
+   column sticks until the pointer is clearly away (>0.6 of a column). */
+function lpColumnAtX(d,x){
+  const rs=d.colRects;
+  if(!rs.length) return null;
+  for(let i=0;i<rs.length;i++){ if(x>=rs[i].left && x<rs[i].right) return i; }
+  const band=rs[0].width*0.6;
+  if(x<rs[0].left) return (rs[0].left-x)<=band ? 0 : (d.lastCol??null);
+  const last=rs[rs.length-1];
+  if(x>=last.right) return (x-last.right)<=band ? rs.length-1 : (d.lastCol??null);
+  let best=d.lastCol??0, bd=Infinity;
+  rs.forEach((r,i)=>{ const dd=x<r.left?r.left-x:x-r.right; if(dd<bd){ bd=dd; best=i; } });
+  return best;
 }
 /* v21.8 — pointer events can fire several times per frame. Coalesce them into
    one lpDragMove per animation frame (the first move stays synchronous, so a
@@ -4748,54 +4786,51 @@ function lpEdgeScrollDelta(lastY, zone, maxPx){
 }
 function lpDragMove(e){
   const d=lpDragState.drag; if(!d) return;
-  const daysWrap=document.querySelector('#weekGrid .lp-cal-days');
-  if(!daysWrap){ lpDragCancel(); return; }
+  if(!d.daysWrap){ lpDragCancel(); return; }
   if(typeof e.clientX==='number'){ d.lastX=e.clientX; d.lastY=e.clientY; }
+  if(d.vw!==window.innerWidth) lpRefreshDragGeom(d); // rotation / split-screen
   // GPU-only movement: translate3d instead of left/top, so the lifted card
   // follows the finger without any layout work on the main thread.
   const tx=d.lastX-d.w/2, ty=d.lastY-d.grabY;
   d.clone.style.transform=`translate3d(${tx.toFixed(2)}px,${ty.toFixed(2)}px,0) rotate(1.5deg) scale(1.04)`;
-  const cols=lpCalColumns();
-  const daysRect=daysWrap.getBoundingClientRect();
-  let target=null;
-  if(d.lastX>=daysRect.left-16 && d.lastX<=daysRect.right+16){
-    cols.forEach((col,i)=>{
-      const r=col.getBoundingClientRect();
-      if(d.lastX>=r.left && d.lastX<r.right) target=i;
-    });
-    if(target===null){ // on a border between columns → snap to nearest
-      let bd=1e9;
-      cols.forEach((col,i)=>{
-        const r=col.getBoundingClientRect();
-        const dd=d.lastX<r.left ? r.left-d.lastX : d.lastX-r.right;
-        if(dd<bd){ bd=dd; target=i; }
-      });
-    }
-  }
-  const dur=Math.max(15, eventEndMinutes(d.evRef)-eventStartMinutes(d.evRef));
-  const maxStart=CAL_END_HOUR*60 - Math.min(dur,CAL_SPAN_MIN);
-  let min=Math.round(((d.lastY-daysRect.top-d.grabY)/CAL_PX_HOUR*60 + CAL_START_HOUR*60)/CAL_SNAP_MIN)*CAL_SNAP_MIN;
+  // v21.9: hit test against cached column rects — zero layout reads for the
+  // columns; the single daysWrap rect below is the only forced layout per frame.
+  const target=lpColumnAtX(d,d.lastX);
+  const daysTop=d.daysWrap.getBoundingClientRect().top;
+  const maxStart=CAL_END_HOUR*60 - Math.min(d.dur,CAL_SPAN_MIN);
+  let min=Math.round(((d.lastY-daysTop-d.grabY)/CAL_PX_HOUR*60 + CAL_START_HOUR*60)/CAL_SNAP_MIN)*CAL_SNAP_MIN;
   min=Math.max(CAL_START_HOUR*60, Math.min(maxStart, min));
   d.curDay=target;
   d.curStart=min;
   d.moved=true;
   if(target==null){
-    d.ghost.remove();
-    cols.forEach(c=>c.classList.remove('lp-drop-target'));
-  }else{
-    const ghostMin=d.ghost.dataset.min, ghostDay=d.ghost.dataset.day;
-    if(cols[target]!==d.ghost.parentElement || String(min)!==ghostMin || String(target)!==ghostDay){
-      cols[target].appendChild(d.ghost);
-      d.ghost.dataset.day=String(target);
-      d.ghost.dataset.min=String(min);
-      d.ghost.style.top=((min-CAL_START_HOUR*60)/60*CAL_PX_HOUR)+'px';
-      d.ghost.style.height=Math.max(12, Math.min(dur,CAL_SPAN_MIN)/60*CAL_PX_HOUR-2)+'px';
-      // past midnight the slot already belongs to the next day — say so
-      const slot=calNormalizeSlot(target,min);
-      d.ghost.classList.toggle('ev-ghost-night', min>=CAL_DAY_MIN);
-      d.ghost.innerHTML=`<span class="ev-ghost-time">${dayNames[slot.day]} · ${calClockLabel(min)}</span>`;
-    }
-    cols.forEach((c,i)=>c.classList.toggle('lp-drop-target', i===target));
+    // hide instead of remove/append: re-entering the grid must not rebuild it
+    d.ghost.classList.add('lp-ghost-off');
+    if(d.dropCol!==-1){ d.cols[d.dropCol]?.classList.remove('lp-drop-target'); d.dropCol=-1; }
+    return;
+  }
+  d.lastCol=target;
+  d.ghost.classList.remove('lp-ghost-off');
+  // the highlight moves only when the column actually changes — no more
+  // class toggling on all seven columns every single frame
+  if(d.dropCol!==target){
+    if(d.dropCol!==-1) d.cols[d.dropCol]?.classList.remove('lp-drop-target');
+    d.cols[target]?.classList.add('lp-drop-target');
+    d.cols[target]?.appendChild(d.ghost);
+    d.dropCol=target;
+  }
+  const slot=calNormalizeSlot(target,min);
+  const label=`${dayNames[slot.day]} · ${calClockLabel(min)}`;
+  if(d.ghostLabelTxt!==label){ // innerHTML was rebuilt on every crossing before
+    d.ghostLabelTxt=label;
+    d.ghostLabel.textContent=label;
+    d.ghost.classList.toggle('ev-ghost-night', min>=CAL_DAY_MIN);
+  }
+  if(String(min)!==d.ghost.dataset.min || String(target)!==d.ghost.dataset.day){
+    d.ghost.dataset.day=String(target);
+    d.ghost.dataset.min=String(min);
+    d.ghost.style.top=((min-CAL_START_HOUR*60)/60*CAL_PX_HOUR)+'px';
+    d.ghost.style.height=Math.max(12, Math.min(d.dur,CAL_SPAN_MIN)/60*CAL_PX_HOUR-2)+'px';
   }
 }
 function lpAutoscrollStep(){
@@ -4813,6 +4848,7 @@ function lpDragCleanup(keepClone=false){
     if(!keepClone) d.clone.remove();
     d.ghost.remove();
     d.el.classList.remove('lp-dragging-src');
+    if(d.dropCol>=0) d.cols[d.dropCol]?.classList.remove('lp-drop-target');
     document.querySelectorAll('#weekGrid .lp-cal-day.lp-drop-target').forEach(c=>c.classList.remove('lp-drop-target'));
   }
   lpDragState.drag=null;
@@ -4824,7 +4860,8 @@ function lpDragCancel(){
 function lpDragEnd(){
   const d=lpDragState.drag;
   if(!d){ lpDragCleanup(); return; }
-  const destination=d.curDay==null?null:d.ghost.getBoundingClientRect();
+  // a ghost that never entered a column has no landing rectangle
+  const destination=(d.curDay==null||!d.ghost.isConnected)?null:d.ghost.getBoundingClientRect();
   const shouldLand=d.moved&&destination;
   lpDragCleanup(!!shouldLand);
   if(d.moved) lpDragState.suppressClickUntil=Date.now()+600; // swallow the trailing click
@@ -5341,6 +5378,11 @@ document.addEventListener('keydown', e=>{
 });
 
 function renderCalendar(){
+  /* v21.9: never rebuild the grid while a drag/resize owns the pointer.
+     save()'s coalesced renderAll used to replace #weekGrid mid-gesture,
+     orphaning the lifted clone's cached column geometry so cross-day drops
+     silently failed. The gesture's own apply/cancel renders once it ends. */
+  if(lpGestureBusy()) return;
   const START=CAL_START_HOUR,END=CAL_END_HOUR,PX_HOUR=CAL_PX_HOUR;
   const now=new Date();
   const thisWeek = CAL_WEEK_OFFSET===0;
@@ -5709,7 +5751,7 @@ function renderAll(){
     ['Habits', ()=>{ if(viewActive('habits')) renderHabits(); }],
     ['Goals', ()=>{ if(viewActive('goals')) renderGoals(); }],
     ['Notes', ()=>{ if(viewActive('notes')) renderNotes(); }],
-    ['Calendar', ()=>{ if(viewActive('calendar')) renderCalendar(); }],
+    ['Calendar', ()=>{ if(viewActive('calendar') && !lpGestureBusy()) renderCalendar(); }],
     ['Dashboard', ()=>{ if(onDashboard) renderDashboard(); }],
     ['Quest', ()=>{ if(onDashboard) renderQuestBox(); }],
     ['Profile', ()=>{ if(viewActive('profile')) renderProfile(); }],
@@ -5771,7 +5813,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='21.8';
+const LP_APP_VERSION='21.9';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
