@@ -12,6 +12,11 @@ const THEME_META = {
   neonPurple:    { label:'بنفش نئون',      icon:'💜', cost:200, color:'#140a24', swatch:'linear-gradient(135deg,#e64dff,#6d28d9)' },
   fireSunset:    { label:'غروب آتشین',     icon:'🌇', cost:300, color:'#1a0e12', swatch:'linear-gradient(135deg,#ff7a3d,#c0257a)' },
   legendaryGold: { label:'طلایی افسانه‌ای', icon:'👑', cost:500, color:'#0f0a04', swatch:'linear-gradient(135deg,#ffd76b,#e69500)' },
+  /* v22 — the endgame theme: 4x the price of Legendary Gold on purpose.
+     Its palette lives in css/app.css + css/design-system.css and every
+     animation in css/v22.css, all scoped to [data-theme="auroraPrism"],
+     so the other six themes never pay for it. */
+  auroraPrism:   { label:'شفق منشوری',     icon:'🌌', cost:2000, color:'#050816', swatch:'linear-gradient(135deg,#2df2c4 0%,#38cfff 32%,#8b7cff 62%,#ff7ad9 85%,#ffd76b 100%)' },
 };
 function applyTheme(theme){
   const meta = THEME_META[theme] || THEME_META.dark;
@@ -2677,6 +2682,9 @@ function buyTheme(theme){
   renderXP();
   renderXPShop();
   toast(`🎉 تم ${meta.label} باز شد!`);
+  /* v22: unlocking the 2,000 XP theme earns one quiet prismatic burst
+     (js/v22.js; it silently does nothing in Performance Mode). */
+  if(theme==='auroraPrism'){ try{ if(window.lpCelebrateAurora) window.lpCelebrateAurora(); }catch(_){ } }
 }
 /* PERF: the shop used to rebuild its entire grid (themes, inventory, costs)
    every second. The full render now runs only when the data signature changes;
@@ -2747,6 +2755,22 @@ function renderXPShop(){
     const meta = THEME_META[k];
     const owned = DB.themes.owned.includes(k);
     const active = activeTheme===k;
+    /* v22: «شفق منشوری» is the shop's crown piece, so its card is a wide
+       hero instead of a fourth small tile (styles: css/v22.css). Every
+       other theme keeps the exact card it always had. */
+    if(k==='auroraPrism'){
+      return `<div class="theme-card theme-card-aurora" data-theme-card="auroraPrism">
+      <div class="aurora-ultra-badge">✦ تم نهایی · ULTRA</div>
+      <div class="theme-swatch aurora-swatch" style="background:${meta.swatch}"></div>
+      <div class="theme-name aurora-name">${meta.icon} ${meta.label}</div>
+      <div class="aurora-tagline">آسمانِ شفقِ زنده روی کل برنامه؛ گرون‌ترین و ظریف‌ترین تم Life Planner</div>
+      <div class="aurora-feats"><span>🌈 نور شفقِ شناور</span><span>✨ برق منشوریِ ظریف</span><span>💎 درخشش زنده‌ی کارت‌ها</span></div>
+      ${owned
+        ? `<button class="btn ${active?'ghost':''} sm aurora-buy" onclick="useTheme('${k}')" ${active?'disabled':''}>${active?'✓ در حال استفاده':'استفاده کن'}</button>`
+        : `<div class="theme-cost num aurora-cost">${faNum(applyShopDiscount(meta.cost))} XP</div><button class="btn sm aurora-buy" onclick="buyTheme('${k}')">خرید تم نهایی</button>`
+      }
+    </div>`;
+    }
     return `<div class="theme-card">
       <div class="theme-swatch" style="background:${meta.swatch}"></div>
       <div class="theme-name">${meta.icon} ${meta.label}</div>
@@ -5581,7 +5605,9 @@ function buildBackupPayload(){
     pinnedNavCount:PINNED_VIEW_COUNT,
     pinnedNavExtra:[...PINNED_VIEWS_EXTRA],
     /* v16.2: the Performance switch travels with the backup like the other UI settings */
-    perfMode:localStorage.getItem('lifePlannerPerfMode_v1')||''
+    perfMode:localStorage.getItem('lifePlannerPerfMode_v1')||'',
+    /* v22: the Liquid Glass switch travels too ('' = never touched) */
+    liquidGlass:localStorage.getItem('lifePlannerLiquidGlass_v1')||''
   };
   return payload;
 }
@@ -5651,6 +5677,9 @@ document.getElementById('importFile').onchange = (e)=>{
         /* v16.2: restore the Performance switch (js/v162.js applies the class) */
         if(restoredUI.perfMode) localStorage.setItem('lifePlannerPerfMode_v1',restoredUI.perfMode);
         try{ if(window.lpV162){ window.lpV162.applyPerfMode(); window.lpV162.syncPerfUI(); } }catch(_){ }
+        /* v22: restore the Liquid Glass switch (js/v22.js applies the class) */
+        if(restoredUI.liquidGlass) localStorage.setItem('lifePlannerLiquidGlass_v1',restoredUI.liquidGlass);
+        try{ if(window.lpV22){ window.lpV22.applyLiquidGlass(); window.lpV22.syncLiquidUI(); } }catch(_){ }
       }
       DB.notes = Array.isArray(DB.notes)?DB.notes:[];
       DB.events = Array.isArray(DB.events)?DB.events:[];
@@ -5813,7 +5842,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='21.9';
+const LP_APP_VERSION='22.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

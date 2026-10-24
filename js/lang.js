@@ -1317,7 +1317,7 @@
     "سپر استریک": "Streak shield",
     "۵۰۰ XP برای روزی که عادتی را جا انداختی. دو قانون ضدِ زیاده‌روی دارد: حداکثر ۱ سپر در دست و ۳ خرید در هفته — شمارِ باقی‌مانده زیر همان کارت نوشته می‌شود.": "500 XP for the day you missed a habit. It has two anti-overuse rules: at most 1 shield held and 3 purchases a week — the number left is written under the same card.",
     "تم‌ها و دارایی‌ها": "Themes and items",
-    "سه تمِ ویژه با XP باز می‌شوند (تاریک و روشن رایگان‌اند) و «🎒 دارایی‌های ویژه» هرچه خریده‌ای را با تعداد نشان می‌دهد: سپرها و آیتم‌های Life City.": "Three special themes unlock with XP (dark and light are free) and “🎒 Special items” shows everything you have bought with its count: shields and Life City items.",
+    "چهار تمِ ویژه با XP باز می‌شوند (تاریک و روشن رایگان‌اند)؛ آخری و گرون‌ترینشون «🌌 شفق منشوری» با ۲۰۰۰ XP ـه، با آسمانِ شفقِ زنده و نورهای شناور. «🎒 دارایی‌های ویژه» هم هرچه خریده‌ای را با تعداد نشان می‌دهد: سپرها و آیتم‌های Life City.": "Four special themes unlock with XP (dark and light are free); the last and priciest, “🌌 Aurora Prism” at 2,000 XP, brings a living aurora sky with floating lights. “🎒 Special items” shows everything you have bought with its count: shields and Life City items.",
     "💰 مهارت «چانه‌زن» در درخت مهارت هر تیر ۱۰٪ از همه‌ی قیمت‌های همین فروشگاه کم می‌کند.": "💰 The “Bargainer” skill in the skill tree takes 10% off every price in this shop, per tier.",
     /* skill tree guide */
     "امتیاز از کجا می‌آید": "Where the points come from",
@@ -1365,6 +1365,29 @@
     "مجموع فوکوس": "Total focus"
   };
   for(var _k215 in EXTRA_V215){ if(Object.prototype.hasOwnProperty.call(EXTRA_V215, _k215)) EXACT[_k215] = EXTRA_V215[_k215]; }
+
+  /* v22: «🌌 شفق منشوری» (the 2,000 XP theme) and the «💧 لیکویید گلس»
+     switch. Icon-prefixed cores are handled by compose(), so plain cores
+     are listed; whole sentences that start with an icon are listed whole. */
+  var EXTRA_V22 = {
+    "شفق منشوری": "Aurora Prism",
+    "تم نهایی · ULTRA": "ULTRA · the final theme",
+    "آسمانِ شفقِ زنده روی کل برنامه؛ گرون‌ترین و ظریف‌ترین تم Life Planner": "A living aurora sky over the whole app; Life Planner's priciest, most delicate theme",
+    "نور شفقِ شناور": "floating aurora light",
+    "برق منشوریِ ظریف": "a delicate prismatic sheen",
+    "درخشش زنده‌ی کارت‌ها": "living card glow",
+    "خرید تم نهایی": "Buy the final theme",
+    "💧 لیکویید گلس": "💧 Liquid Glass",
+    "💧 لیکویید گلس (رابط کاربری شیشه‌ای)": "💧 Liquid Glass (a glass interface)",
+    "با فعال کردنش، همه‌ی کارت‌ها، پنجره‌ها و نوار پایین به شیشه‌ی مایع تبدیل می‌شن: نور از لبه‌ی بالاشون رد می‌شه، هرچی پشتشونه به‌نرمی بلور می‌خوره و هر سطح یه برقِ ظریفِ شیشه‌ای می‌گیره؛ تمیز و یکدست، روی همه‌ی تم‌ها. روی تم «🌌 شفق منشوری» شیشه‌ها ته‌رنگِ شفق می‌گیرن و قشنگ‌تر هم می‌شن. اگه «⚡ حالت پرفورمنس» روشن باشه، پرفورمنس اولویت داره و بلورها خاموش می‌مونن تا برنامه روان بمونه.": "Turn it on and every card, window and the bottom bar become liquid glass: light passes over their top edge, whatever is behind them blurs softly and every surface gains a delicate glass sheen — clean and uniform, on every theme. On the “🌌 Aurora Prism” theme the glass takes an aurora tint and looks even better. If “⚡ Performance mode” is on, performance wins and the blurs stay off so the app stays smooth.",
+    "🃏 کارت شیشه‌ای": "🃏 Glass card",
+    "🪟 پنجره شیشه‌ای": "🪟 Glass window",
+    "🧭 نوار پایین شیشه‌ای": "🧭 Glass bottom bar",
+    "پیش‌نمایش بالایی زنده‌ست؛ همین حالا روشنش کن تا فرقش رو روی همین سه‌تا ببینی.": "The preview above is live; switch it on now and see the difference on these three.",
+    "💧 لیکویید گلس فعال شد — رابط کاربری شیشه‌ای شد": "💧 Liquid Glass on — the interface is glass now",
+    "💧 لیکویید گلس خاموش شد": "💧 Liquid Glass off"
+  };
+  for(var _k22 in EXTRA_V22){ if(Object.prototype.hasOwnProperty.call(EXTRA_V22, _k22)) EXACT[_k22] = EXTRA_V22[_k22]; }
 
   /* ---------- digits ---------- */
   var FA_D = '۰۱۲۳۴۵۶۷۸۹';

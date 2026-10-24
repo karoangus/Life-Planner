@@ -8,10 +8,11 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=21.9">
-<link rel="stylesheet" href="css/design-system.css?v=21.9">
-<link rel="stylesheet" href="css/v20.css?v=21.9">
-<link rel="stylesheet" href="css/v213.css?v=21.9">
+<link rel="stylesheet" href="css/app.css?v=22.0">
+<link rel="stylesheet" href="css/design-system.css?v=22.0">
+<link rel="stylesheet" href="css/v20.css?v=22.0">
+<link rel="stylesheet" href="css/v213.css?v=22.0">
+<link rel="stylesheet" href="css/v22.css?v=22.0">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -21,6 +22,7 @@ try{
   var v = localStorage.getItem('lifePlannerPerfMode_v1');
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(v === '1' || (v !== '0' && reduce)) document.documentElement.classList.add('lp-perf');
+  if(localStorage.getItem('lifePlannerLiquidGlass_v1') === '1') document.documentElement.classList.add('lp-liquid');
 }catch(e){}
 </script>
 
@@ -935,6 +937,19 @@ try{
         <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="settingsPerfMode" onchange="setSettingsPerfMode(this.checked)"><span>⚡ حالت پرفورمنس (خاموش کردن انیمیشن‌ها)</span></label>
       </div>
 
+      <!-- v22: Liquid Glass — one switch, one class (html.lp-liquid, css/v22.css) -->
+      <div class="card settings-card settings-liquid-card">
+        <div class="card-head"><h3>💧 لیکویید گلس</h3><span class="muted settings-liquid-state" id="settingsLiquidState">⛔ غیرفعال</span></div>
+        <p class="muted settings-help">با فعال کردنش، همه‌ی کارت‌ها، پنجره‌ها و نوار پایین به شیشه‌ی مایع تبدیل می‌شن: نور از لبه‌ی بالاشون رد می‌شه، هرچی پشتشونه به‌نرمی بلور می‌خوره و هر سطح یه برقِ ظریفِ شیشه‌ای می‌گیره؛ تمیز و یکدست، روی همه‌ی تم‌ها. روی تم «🌌 شفق منشوری» شیشه‌ها ته‌رنگِ شفق می‌گیرن و قشنگ‌تر هم می‌شن. اگه «⚡ حالت پرفورمنس» روشن باشه، پرفورمنس اولویت داره و بلورها خاموش می‌مونن تا برنامه روان بمونه.</p>
+        <label class="liquid-toggle-row"><input type="checkbox" class="liquid-switch-input" id="settingsLiquidGlass" onchange="setSettingsLiquidGlass(this.checked)"><span>💧 لیکویید گلس (رابط کاربری شیشه‌ای)</span></label>
+        <div class="liquid-preview" aria-hidden="true">
+          <div class="liquid-chip">🃏 کارت شیشه‌ای</div>
+          <div class="liquid-chip">🪟 پنجره شیشه‌ای</div>
+          <div class="liquid-chip">🧭 نوار پایین شیشه‌ای</div>
+        </div>
+        <p class="muted liquid-note">پیش‌نمایش بالایی زنده‌ست؛ همین حالا روشنش کن تا فرقش رو روی همین سه‌تا ببینی.</p>
+      </div>
+
       <div class="card settings-card">
         <div class="card-head"><h3>📱 نوار پایین</h3></div>
         <p class="muted settings-help">ردیف اصلی نوار پایین را از حداقل ۲ تا حداکثر ۴ دکمه انتخاب و مرتب کن؛ حتی می‌توانی فقط ۲ میان‌بر کنار «بیشتر» داشته باشی. دکمه‌های اضافی اختیاری‌اند و تا ۵ مورد می‌توانی اضافه کنی.</p>
@@ -979,7 +994,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">21.9</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">22.0</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1380,7 +1395,7 @@ try{
       <div class="guide-row"><span class="guide-ic">💰</span><div class="guide-row-txt"><b>موجودیِ جدا</b><span>«موجودی XP Shop» یک کیف پولِ جدا از نوار XPِ سطح است: هر XP که از هر جای برنامه بگیری اینجا جمع می‌شود و خرج کردنش نه لولت را کم می‌کند و نه نوار پیشرفت را.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🎁</span><div class="guide-row-txt"><b>بوست و جعبه‌ی شانس</b><span>«⚡ XP Boost» سی دقیقه هر XP را دوبرابر می‌کند. «Mystery Box» یک جایزه‌ی تصادفیِ وزنی می‌دهد — از ۱۰ XP تا جکپات ۲۰۰، سپر، کوئست ویژه، آیتم شهر و جعبه‌ی رایگان — و دکمه‌ی ⓘ شانسِ دقیقِ هر ده جایزه را می‌گوید.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🛡️</span><div class="guide-row-txt"><b>سپر استریک</b><span>۵۰۰ XP برای روزی که عادتی را جا انداختی. دو قانون ضدِ زیاده‌روی دارد: حداکثر ۱ سپر در دست و ۳ خرید در هفته — شمارِ باقی‌مانده زیر همان کارت نوشته می‌شود.</span></div></div>
-      <div class="guide-row"><span class="guide-ic">🎨</span><div class="guide-row-txt"><b>تم‌ها و دارایی‌ها</b><span>سه تمِ ویژه با XP باز می‌شوند (تاریک و روشن رایگان‌اند) و «🎒 دارایی‌های ویژه» هرچه خریده‌ای را با تعداد نشان می‌دهد: سپرها و آیتم‌های Life City.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🎨</span><div class="guide-row-txt"><b>تم‌ها و دارایی‌ها</b><span>چهار تمِ ویژه با XP باز می‌شوند (تاریک و روشن رایگان‌اند)؛ آخری و گرون‌ترینشون «🌌 شفق منشوری» با ۲۰۰۰ XP ـه، با آسمانِ شفقِ زنده و نورهای شناور. «🎒 دارایی‌های ویژه» هم هرچه خریده‌ای را با تعداد نشان می‌دهد: سپرها و آیتم‌های Life City.</span></div></div>
     </div>
     <p class="muted guide-note">💰 مهارت «چانه‌زن» در درخت مهارت هر تیر ۱۰٪ از همه‌ی قیمت‌های همین فروشگاه کم می‌کند.</p>
   </section>
@@ -1437,18 +1452,20 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=21.9"></script>
-<script src="js/enhancements.js?v=21.9"></script>
-<script src="js/sw-register.js?v=21.9"></script>
+<script src="js/core.js?v=22.0"></script>
+<script src="js/enhancements.js?v=22.0"></script>
+<script src="js/sw-register.js?v=22.0"></script>
 
-<script src="js/pomodoro.js?v=21.9"></script>
+<script src="js/pomodoro.js?v=22.0"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=21.9"></script>
-<script src="js/v16.js?v=21.9"></script>
-<script src="js/v162.js?v=21.9"></script>
-<script src="js/v21.js?v=21.9"></script>
+<script src="js/lang.js?v=22.0"></script>
+<script src="js/v16.js?v=22.0"></script>
+<script src="js/v162.js?v=22.0"></script>
+<script src="js/v21.js?v=22.0"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=21.9"></script>
+<script src="js/v213.js?v=22.0"></script>
+<!-- v22: Liquid Glass switch + Aurora Prism celebration -->
+<script src="js/v22.js?v=22.0"></script>
 
 </body>
 </html>

@@ -1,0 +1,512 @@
+/* ============================================================
+   Life Planner — v22 «شفق منشوری + لیکویید گلس»
+
+   Two independent layers, both strictly opt-in:
+
+   A) 🌌 AURORA PRISM — the 2,000 XP endgame theme (THEME_META in
+      js/core.js; palette in css/app.css + css/design-system.css).
+      Here live only its *motion*: a slowly drifting aurora sky,
+      floating light ribbons, a prismatic sheen and a breathing
+      glow on the hero surfaces. Everything animates transform /
+      opacity only, and everything is scoped to
+      [data-theme="auroraPrism"]:not(.lp-perf), so the six other
+      themes never pay a single frame for it and Performance Mode
+      (or the phone's reduced-motion setting) turns it all off.
+
+   B) 💧 LIQUID GLASS — Settings -> «💧 لیکویید گلس» adds
+      `html.lp-liquid` (js/v22.js, stored in
+      localStorage 'lifePlannerLiquidGlass_v1', applied before the
+      first paint from index.html). Cards, windows and the bottom
+      bar become clean liquid glass: translucent tint, a bright
+      specular edge on top, soft inner glow and a real blur of
+      whatever scrolls underneath. It is a skin over the existing
+      theme variables, so it works with every theme — including
+      Aurora Prism, where the glass picks up the aurora tint.
+      Performance Mode always wins: with .lp-perf present every
+      liquid blur is gone, exactly as that switch promises.
+   ============================================================ */
+
+/* ================================================================
+   A) 🌌 AURORA PRISM — living sky & delicate motion
+   ================================================================ */
+
+/* --- A1) the sky itself drifts -----------------------------------
+   body::before is the app's fixed, non-scrolling glow layer (see
+   css/app.css). Under Aurora it slowly breathes across the screen;
+   scale stays > 1 so its edges never show. */
+html[data-theme="auroraPrism"]:not(.lp-perf) body::before{
+  animation:lpAuroraSky 26s ease-in-out infinite alternate;
+}
+@keyframes lpAuroraSky{
+  from{ transform:translate3d(-1.4%,-.6%,0) scale(1.07); opacity:.94; }
+  to  { transform:translate3d(1.5%,1.1%,0)  scale(1.13); opacity:1; }
+}
+
+/* --- A2) aurora ribbons floating above the sky ------------------
+   A second fixed layer: three wide, heavily blurred colour bands
+   (mint / violet / pink) sliding against each other very slowly,
+   like curtains of polar light. Painted once, moved by transform,
+   so scrolling content never repaints them. */
+html[data-theme="auroraPrism"] body::after{
+  content:''; position:fixed; inset:-24% -12%; z-index:-1; pointer-events:none;
+  background:
+    linear-gradient(103deg, transparent 22%, rgba(45,242,196,.13) 40%, rgba(56,207,255,.07) 52%, transparent 68%),
+    linear-gradient(83deg,  transparent 30%, rgba(139,124,255,.12) 48%, rgba(255,122,217,.06) 60%, transparent 76%),
+    linear-gradient(116deg, transparent 42%, rgba(255,122,217,.07) 55%, transparent 70%);
+  filter:blur(34px) saturate(1.25);
+  opacity:.85;
+}
+html[data-theme="auroraPrism"]:not(.lp-perf) body::after{
+  animation:lpAuroraRibbons 34s ease-in-out infinite alternate;
+}
+@keyframes lpAuroraRibbons{
+  from{ transform:translate3d(-2.5%,-1%,0) rotate(-.6deg); }
+  to  { transform:translate3d(2.5%,1.6%,0)  rotate(.7deg); }
+}
+
+/* --- A3) hero surfaces breathe with a soft aurora halo ---------- */
+html[data-theme="auroraPrism"]:not(.lp-perf) #view-dashboard .dash-hero,
+html[data-theme="auroraPrism"]:not(.lp-perf) .xp-wallet-card,
+html[data-theme="auroraPrism"]:not(.lp-perf) .profile-hero,
+html[data-theme="auroraPrism"]:not(.lp-perf) .theme-card-aurora{
+  animation:lpAuroraBreathe 7s ease-in-out infinite alternate;
+}
+@keyframes lpAuroraBreathe{
+  from{ box-shadow:var(--shadow-card), var(--glass-inset), 0 0 22px -12px var(--neon-55); }
+  to  { box-shadow:var(--shadow-card), var(--glass-inset), 0 0 34px -10px rgba(139,124,255,.55); }
+}
+
+/* --- A4) primary buttons carry a slowly flowing prism ----------- */
+html[data-theme="auroraPrism"]:not(.lp-perf) .btn:not(.ghost){
+  background-size:210% 210%;
+  animation:lpAuroraFlow 9s ease infinite;
+}
+@keyframes lpAuroraFlow{
+  0%,100%{ background-position:0% 50%; }
+  50%    { background-position:100% 50%; }
+}
+
+/* --- A5) progress fills get one travelling highlight ------------ */
+html[data-theme="auroraPrism"]:not(.lp-perf) .xp-bar-fill,
+html[data-theme="auroraPrism"]:not(.lp-perf) .bar-fill,
+html[data-theme="auroraPrism"]:not(.lp-perf) .boss-hp-fill,
+html[data-theme="auroraPrism"]:not(.lp-perf) .quest-wait-fill{
+  position:relative; overflow:hidden;
+}
+html[data-theme="auroraPrism"]:not(.lp-perf) .xp-bar-fill::after,
+html[data-theme="auroraPrism"]:not(.lp-perf) .bar-fill::after,
+html[data-theme="auroraPrism"]:not(.lp-perf) .boss-hp-fill::after,
+html[data-theme="auroraPrism"]:not(.lp-perf) .quest-wait-fill::after{
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(100deg, transparent 25%, rgba(255,255,255,.45) 50%, transparent 75%);
+  transform:translateX(-130%);
+  animation:lpAuroraSheen 3.4s ease-in-out infinite;
+}
+@keyframes lpAuroraSheen{
+  0%,55% { transform:translateX(-130%); }
+  90%,100%{ transform:translateX(130%); }
+}
+
+/* --- A6) the shop's crown piece ----------------------------------
+   A wide hero card with a live prismatic border (double-background
+   trick, so the gradient follows the rounded corners), an animated
+   swatch and one slow sheen sweep across its face. */
+#shopThemes .theme-card-aurora{
+  grid-column:1 / -1;
+  position:relative; overflow:hidden; text-align:center;
+  border:1px solid transparent;
+  background:
+    linear-gradient(165deg, var(--glass-a), var(--glass-b)) padding-box,
+    linear-gradient(135deg,#2df2c4,#38cfff,#8b7cff,#ff7ad9,#ffd76b) border-box;
+}
+.aurora-ultra-badge{
+  display:inline-block; margin-bottom:10px; padding:3px 12px; border-radius:99px;
+  font-size:10.5px; font-weight:900; letter-spacing:.4px; color:#06121f;
+  background:linear-gradient(90deg,#2df2c4,#38cfff,#b18cff,#ff7ad9);
+  background-size:200% 100%;
+  box-shadow:0 4px 16px -6px rgba(56,207,255,.65);
+}
+html[data-theme="auroraPrism"]:not(.lp-perf) .aurora-ultra-badge,
+html:not(.lp-perf) .theme-card-aurora .aurora-ultra-badge{
+  animation:lpAuroraFlow 7s ease infinite;
+}
+.aurora-swatch{
+  height:64px !important; border-radius:14px !important;
+  background-size:220% 220% !important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 -18px 28px rgba(3,6,20,.35), 0 10px 26px -12px rgba(139,124,255,.7);
+}
+html:not(.lp-perf) .aurora-swatch{ animation:lpAuroraFlow 8s ease infinite; }
+.aurora-name{ font-size:16px !important; margin-top:2px; }
+.aurora-tagline{
+  margin-top:6px; font-size:12px; line-height:1.9; color:var(--txt-dim); font-weight:600;
+}
+.aurora-feats{
+  display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:10px;
+}
+.aurora-feats span{
+  font-size:10.5px; font-weight:800; padding:4px 10px; border-radius:99px;
+  border:1px solid var(--glass-border-hi, var(--line2));
+  background:linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+  color:var(--txt);
+}
+.aurora-cost{ font-size:18px !important; margin-top:12px !important; }
+.aurora-buy{ width:100%; justify-content:center; margin-top:10px; }
+html:not(.lp-perf) .theme-card-aurora::before{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:linear-gradient(115deg, transparent 32%, rgba(255,255,255,.13) 48%, transparent 64%);
+  transform:translateX(-130%);
+  animation:lpAuroraSweep 6.5s ease-in-out infinite;
+}
+.theme-card-aurora > *{ position:relative; z-index:1; }
+@keyframes lpAuroraSweep{
+  0%,58% { transform:translateX(-130%); }
+  92%,100%{ transform:translateX(130%); }
+}
+
+/* the Aurora option in Settings -> «🌓 تم برنامه» gets the same live swatch */
+.settings-theme-option.settings-theme-aurora .theme-option-swatch{
+  background-size:220% 220% !important;
+  box-shadow:0 0 12px -2px rgba(139,124,255,.65), inset 0 0 0 1px rgba(255,255,255,.25);
+}
+html:not(.lp-perf) .settings-theme-option.settings-theme-aurora .theme-option-swatch{
+  animation:lpAuroraFlow 8s ease infinite;
+}
+.settings-theme-option.settings-theme-aurora.active{
+  border-color:rgba(56,207,255,.55);
+  box-shadow:0 0 0 1px rgba(56,207,255,.35), 0 0 18px -6px rgba(139,124,255,.6);
+}
+
+/* --- A7) the one-time unlock celebration (js/v22.js builds it) -- */
+.lp-aurora-burst{
+  position:fixed; inset:0; z-index:100000; pointer-events:none; overflow:hidden;
+}
+.lp-aurora-burst i{
+  position:absolute; left:50%; top:42%; width:8px; height:8px; border-radius:50%;
+  background:hsl(var(--h,170) 95% 72%);
+  box-shadow:0 0 10px 2px hsl(var(--h,170) 95% 65% / .55);
+  opacity:0;
+  animation:lpAuroraSpark 1.9s cubic-bezier(.17,.67,.28,1) forwards;
+}
+@keyframes lpAuroraSpark{
+  0%  { opacity:0; transform:translate(-50%,-50%) scale(.4); }
+  12% { opacity:1; }
+  100%{ opacity:0; transform:translate(calc(-50% + var(--x,0px)), calc(-50% + var(--y,0px))) scale(.15); }
+}
+
+/* ================================================================
+   B) 💧 LIQUID GLASS — one clean glass skin over every theme
+   ================================================================ */
+
+html.lp-liquid{
+  --lg-blur: blur(22px) saturate(1.75) brightness(1.06);
+  --lg-blur-sm: blur(13px) saturate(1.55) brightness(1.04);
+  --lg-hi: rgba(255,255,255,.38);
+  --lg-edge: rgba(255,255,255,.22);
+  --lg-edge-soft: rgba(255,255,255,.13);
+  --lg-tint-a: rgba(255,255,255,.15);
+  --lg-tint-b: rgba(255,255,255,.045);
+  --lg-shadow: 0 22px 44px -18px rgba(0,0,0,.55);
+  --lg-input: rgba(255,255,255,.07);
+}
+html[data-theme="light"].lp-liquid{
+  --lg-blur: blur(22px) saturate(1.5) brightness(1.02);
+  --lg-blur-sm: blur(13px) saturate(1.4);
+  --lg-hi: rgba(255,255,255,.9);
+  --lg-edge: rgba(255,255,255,.68);
+  --lg-edge-soft: rgba(15,23,42,.10);
+  --lg-tint-a: rgba(255,255,255,.52);
+  --lg-tint-b: rgba(255,255,255,.26);
+  --lg-shadow: 0 22px 42px -20px rgba(28,42,84,.30);
+  --lg-input: rgba(255,255,255,.55);
+}
+/* on Aurora the glass itself is faintly mint-lit from inside */
+html[data-theme="auroraPrism"].lp-liquid{
+  --lg-tint-a: rgba(140,255,224,.13);
+  --lg-tint-b: rgba(150,140,255,.05);
+  --lg-edge: rgba(170,225,255,.26);
+}
+@media (max-width:820px){
+  /* phones: a smaller blur radius costs a fraction of the GPU time and,
+     over these smooth gradient backdrops, looks exactly the same */
+  html.lp-liquid{ --lg-blur: blur(16px) saturate(1.7) brightness(1.06); --lg-blur-sm: blur(10px) saturate(1.5); }
+  html[data-theme="light"].lp-liquid{ --lg-blur: blur(16px) saturate(1.45) brightness(1.02); }
+}
+
+/* --- B1) every card becomes a sheet of liquid glass ------------- */
+html.lp-liquid:not(.lp-perf) .card,
+html.lp-liquid:not(.lp-perf) .lp62-card,
+html.lp-liquid:not(.lp-perf) .settings-card,
+html.lp-liquid:not(.lp-perf) .settings-version-card,
+html.lp-liquid:not(.lp-perf) .motivation-card,
+html.lp-liquid:not(.lp-perf) .stat-card,
+html.lp-liquid:not(.lp-perf) .goal-card,
+html.lp-liquid:not(.lp-perf) .habit-card,
+html.lp-liquid:not(.lp-perf) .note-card,
+html.lp-liquid:not(.lp-perf) .shop-item-card,
+html.lp-liquid:not(.lp-perf) .mystery-card,
+html.lp-liquid:not(.lp-perf) .skill-card,
+html.lp-liquid:not(.lp-perf) .boss-card,
+html.lp-liquid:not(.lp-perf) .xp-wallet-card,
+html.lp-liquid:not(.lp-perf) .pomo-v66-card,
+html.lp-liquid:not(.lp-perf) .theme-card,
+html.lp-liquid:not(.lp-perf) .quest-box,
+html.lp-liquid:not(.lp-perf) #view-dashboard .dash-hero,
+html.lp-liquid:not(.lp-perf) #view-dashboard .dash-tile,
+html.lp-liquid:not(.lp-perf) .profile-hero,
+html.lp-liquid:not(.lp-perf) .yvy-hero,
+html.lp-liquid:not(.lp-perf) .pomo-hero,
+html.lp-liquid:not(.lp-perf) .glass-surface{
+  background:
+    linear-gradient(128deg, var(--lg-tint-a), transparent 46%, rgba(255,255,255,.06) 82%, var(--lg-tint-b)),
+    linear-gradient(165deg, var(--glass-a), var(--glass-b));
+  border:1px solid var(--lg-edge);
+  backdrop-filter:var(--lg-blur);
+  -webkit-backdrop-filter:var(--lg-blur);
+  box-shadow:
+    inset 0 1px 0 var(--lg-hi),
+    inset 0 -1px 0 rgba(255,255,255,.05),
+    inset 1px 0 0 rgba(255,255,255,.05),
+    var(--lg-shadow);
+  border-radius:22px;
+}
+@media (hover:hover){
+  html.lp-liquid:not(.lp-perf) .card.hover:hover,
+  html.lp-liquid:not(.lp-perf) .goal-card:hover,
+  html.lp-liquid:not(.lp-perf) .habit-card:hover,
+  html.lp-liquid:not(.lp-perf) .skill-card:hover,
+  html.lp-liquid:not(.lp-perf) .shop-item-card:hover,
+  html.lp-liquid:not(.lp-perf) .theme-card:hover,
+  html.lp-liquid:not(.lp-perf) .note-card:hover{
+    border-color:var(--lg-hi);
+    transform:translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 var(--lg-hi),
+      inset 0 -1px 0 rgba(255,255,255,.05),
+      0 26px 48px -18px rgba(0,0,0,.5),
+      0 0 26px -10px var(--neon-55);
+  }
+}
+
+/* inner rows sit *inside* the glass, so they only get the tint —
+   a second blur there would be invisible and pure GPU cost */
+html.lp-liquid .task-row,
+html.lp-liquid .sheet-nav-item,
+html.lp-liquid .sheet-xp,
+html.lp-liquid .pinned-nav-row,
+html.lp-liquid .yvy-record-row,
+html.lp-liquid .milestone-row,
+html.lp-liquid .city-entry-row,
+html.lp-liquid .shop-inv-row,
+html.lp-liquid .boss-task-row,
+html.lp-liquid .pomo-history-item,
+html.lp-liquid .dplan-row,
+html.lp-liquid .dplan-linked-row,
+html.lp-liquid .reward-item{
+  background:linear-gradient(160deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
+  border:1px solid var(--lg-edge-soft);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07);
+}
+html[data-theme="light"].lp-liquid .task-row,
+html[data-theme="light"].lp-liquid .sheet-nav-item,
+html[data-theme="light"].lp-liquid .sheet-xp,
+html[data-theme="light"].lp-liquid .yvy-record-row,
+html[data-theme="light"].lp-liquid .milestone-row,
+html[data-theme="light"].lp-liquid .city-entry-row,
+html[data-theme="light"].lp-liquid .shop-inv-row,
+html[data-theme="light"].lp-liquid .pinned-nav-row{
+  background:linear-gradient(160deg, rgba(255,255,255,.65), rgba(255,255,255,.35));
+}
+
+/* --- B2) floating glass: nav, windows, drawer, toast ------------ */
+html.lp-liquid:not(.lp-perf) .bottom-nav{
+  bottom:14px; left:12px; right:12px;
+  border-radius:29px;
+  background:
+    linear-gradient(120deg, var(--lg-tint-a), transparent 55%, var(--lg-tint-b)),
+    var(--nav-bg);
+  border:1px solid var(--lg-hi);
+  backdrop-filter:var(--lg-blur);
+  -webkit-backdrop-filter:var(--lg-blur);
+  box-shadow:
+    inset 0 1px 0 var(--lg-hi),
+    inset 0 -8px 18px rgba(255,255,255,.05),
+    0 24px 48px -16px rgba(0,0,0,.6);
+}
+/* while the page is moving, the nav's blur pauses (same trick as
+   v16.2) — the glass tint stays, so nothing flashes */
+html.lp-scrolling.lp-liquid .bottom-nav{
+  backdrop-filter:none; -webkit-backdrop-filter:none;
+}
+html.lp-liquid:not(.lp-perf) .bnav-item.active::before{
+  background:linear-gradient(160deg, rgba(255,255,255,.20), var(--neon-15) 70%);
+  box-shadow:inset 0 1px 0 var(--lg-hi), inset 0 0 0 1px var(--neon-35), 0 6px 18px -8px var(--neon-55);
+  border-radius:17px;
+}
+html.lp-liquid:not(.lp-perf) .modal{
+  border-radius:27px;
+  border:1px solid var(--lg-hi);
+  background:
+    linear-gradient(150deg, var(--lg-tint-a), transparent 52%, var(--lg-tint-b)),
+    linear-gradient(170deg, var(--glass-a), var(--glass-b));
+  backdrop-filter:var(--lg-blur);
+  -webkit-backdrop-filter:var(--lg-blur);
+  box-shadow:
+    inset 0 1px 0 var(--lg-hi),
+    inset 0 -1px 0 rgba(255,255,255,.05),
+    0 34px 74px -20px rgba(0,0,0,.65);
+}
+html.lp-liquid:not(.lp-perf) .sheet-drawer{
+  border-radius:29px 29px 0 0;
+  border:1px solid var(--lg-edge); border-bottom:none;
+  background:
+    linear-gradient(180deg, var(--lg-tint-a), transparent 42%, var(--lg-tint-b)),
+    linear-gradient(180deg, var(--glass-a), var(--glass-b));
+  box-shadow:inset 0 1px 0 var(--lg-hi), 0 -24px 60px -20px rgba(0,0,0,.55);
+}
+html.lp-liquid:not(.lp-perf) .toast{
+  border-radius:19px;
+  border:1px solid var(--lg-hi);
+  backdrop-filter:var(--lg-blur);
+  -webkit-backdrop-filter:var(--lg-blur);
+  box-shadow:inset 0 1px 0 var(--lg-hi), var(--lg-shadow);
+}
+html.lp-liquid:not(.lp-perf) .modal-bg,
+html.lp-liquid:not(.lp-perf) .sheet-overlay{
+  backdrop-filter:blur(7px) saturate(1.3);
+  -webkit-backdrop-filter:blur(7px) saturate(1.3);
+}
+
+/* --- B3) controls: buttons, chips, fields ------------------------ */
+html.lp-liquid:not(.lp-perf) .btn:not(.ghost){
+  background-image:linear-gradient(180deg, rgba(255,255,255,.38), rgba(255,255,255,.02) 48%, rgba(0,0,0,.05)), var(--grad);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    inset 0 -10px 18px rgba(255,255,255,.14),
+    0 12px 26px -10px var(--neon-55);
+  border-radius:15px;
+}
+html.lp-liquid:not(.lp-perf) .btn.ghost,
+html.lp-liquid:not(.lp-perf) .icon-btn,
+html.lp-liquid:not(.lp-perf) .guide-btn{
+  background:linear-gradient(150deg, var(--lg-tint-a), var(--lg-tint-b));
+  border:1px solid var(--lg-edge);
+  backdrop-filter:var(--lg-blur-sm);
+  -webkit-backdrop-filter:var(--lg-blur-sm);
+  box-shadow:inset 0 1px 0 var(--lg-hi), 0 8px 20px -12px rgba(0,0,0,.45);
+}
+html.lp-liquid .chip-opt,
+html.lp-liquid .pomo-preset{
+  background:linear-gradient(150deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  border:1px solid var(--lg-edge-soft);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07);
+}
+html.lp-liquid .chip-opt.sel,
+html.lp-liquid .pomo-preset.active{
+  background:linear-gradient(150deg, var(--neon-15), rgba(255,255,255,.04));
+  border-color:var(--neon-35) !important;
+  box-shadow:inset 0 1px 0 var(--lg-hi), 0 0 16px -6px var(--neon-55);
+}
+html.lp-liquid:not(.lp-perf) input[type=text],
+html.lp-liquid:not(.lp-perf) input[type=date],
+html.lp-liquid:not(.lp-perf) input[type=time],
+html.lp-liquid:not(.lp-perf) input[type=number],
+html.lp-liquid:not(.lp-perf) textarea,
+html.lp-liquid:not(.lp-perf) select,
+html.lp-liquid:not(.lp-perf) .settings-select,
+html.lp-liquid:not(.lp-perf) .pomo-select,
+html.lp-liquid:not(.lp-perf) .pomo-sound-select,
+html.lp-liquid:not(.lp-perf) .pinned-nav-select,
+html.lp-liquid:not(.lp-perf) .dplan-add-input,
+html.lp-liquid:not(.lp-perf) .dplan-note{
+  background:var(--lg-input);
+  border:1px solid var(--lg-edge);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), inset 0 2px 8px rgba(0,0,0,.10);
+  border-radius:14px;
+}
+html.lp-liquid .xp-bar-track,
+html.lp-liquid .bar-track,
+html.lp-liquid .boss-hp-track,
+html.lp-liquid .quest-wait-track,
+html.lp-liquid .dplan-bar{
+  background:rgba(140,155,195,.16) !important;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.22), inset 0 -1px 0 rgba(255,255,255,.06);
+}
+html.lp-liquid .xp-bar-fill,
+html.lp-liquid .bar-fill,
+html.lp-liquid .boss-hp-fill,
+html.lp-liquid .quest-wait-fill,
+html.lp-liquid .dplan-bar-fill{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 0 14px -2px var(--neon-55);
+}
+
+/* the sky gets a touch more saturated so the glass has colour to bend */
+html.lp-liquid:not(.lp-perf) body::before{ filter:saturate(1.22); }
+html[data-theme="auroraPrism"].lp-liquid:not(.lp-perf) body::before{ filter:none; } /* its own drift owns the layer */
+
+/* --- B4) the Settings home of the switch ------------------------- */
+.settings-liquid-card{ position:relative; overflow:hidden; }
+.liquid-toggle-row{
+  display:flex; align-items:center; gap:11px; cursor:pointer; user-select:none;
+  margin-top:4px; font-size:13.5px; font-weight:700;
+}
+.liquid-switch-input{
+  appearance:none; -webkit-appearance:none;
+  width:48px; height:28px; flex:0 0 48px; margin:0; cursor:pointer; position:relative;
+  border-radius:99px; outline:none;
+  background:linear-gradient(160deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+  border:1px solid var(--line2);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.10);
+  transition:background .3s, border-color .3s, box-shadow .3s;
+}
+.liquid-switch-input::after{
+  content:''; position:absolute; top:2px; inset-inline-start:3px;
+  width:22px; height:22px; border-radius:50%;
+  background:linear-gradient(160deg,#ffffff,#dbe4f5);
+  box-shadow:0 2px 6px rgba(0,0,0,.35), inset 0 1px 0 #fff;
+  transition:transform .32s cubic-bezier(.3,1.4,.4,1);
+}
+.liquid-switch-input:checked{
+  background:linear-gradient(120deg,#2df2c4,#38cfff 55%,#8b7cff);
+  border-color:rgba(255,255,255,.35);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 6px 18px -6px rgba(56,207,255,.65);
+}
+/* RTL (default): the knob starts at the right and glides left when on */
+.liquid-switch-input:checked::after{ transform:translateX(-19px); }
+html[data-lang="en"] .liquid-switch-input:checked::after{ transform:translateX(19px); }
+.liquid-switch-input:focus-visible{ outline:2px solid var(--neon-55); outline-offset:2px; }
+
+.liquid-preview{ display:flex; gap:8px; margin-top:13px; }
+.liquid-chip{
+  flex:1; text-align:center; padding:10px 6px; border-radius:15px;
+  font-size:11px; font-weight:800; color:var(--txt-dim);
+  border:1px solid var(--line); background:var(--panel2);
+  transition:border-color .3s, color .3s;
+}
+html.lp-liquid:not(.lp-perf) .liquid-chip{
+  color:var(--txt);
+  background:linear-gradient(140deg, var(--lg-tint-a), var(--lg-tint-b));
+  border:1px solid var(--lg-edge);
+  backdrop-filter:var(--lg-blur-sm);
+  -webkit-backdrop-filter:var(--lg-blur-sm);
+  box-shadow:inset 0 1px 0 var(--lg-hi), 0 10px 22px -12px rgba(0,0,0,.5);
+}
+.liquid-note{ font-size:11px; line-height:1.9; margin-top:10px; }
+
+/* ================================================================
+   C) calm states — reduced motion & Performance Mode win
+   ================================================================ */
+@media (prefers-reduced-motion: reduce){
+  html[data-theme="auroraPrism"] body::before,
+  html[data-theme="auroraPrism"] body::after,
+  .theme-card-aurora::before,
+  .aurora-swatch,
+  .aurora-ultra-badge,
+  .lp-aurora-burst i{
+    animation:none !important;
+  }
+  .liquid-switch-input, .liquid-switch-input::after{ transition:none !important; }
+}
+html.lp-perf .theme-card-aurora::before,
+html.lp-perf .aurora-swatch,
+html.lp-perf .aurora-ultra-badge{ animation:none !important; }
+html.lp-perf[data-theme="auroraPrism"] body::after{ filter:none; opacity:.5; }

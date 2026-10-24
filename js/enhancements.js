@@ -47,7 +47,7 @@ function renderSettings(){
     const entries=Object.entries(THEME_META);
     themeMenu.innerHTML=entries.map(([id,meta])=>{
       const isActive=id===active, isOwned=owned.includes(id);
-      return `<button type="button" class="settings-theme-option ${isActive?'active':''} ${isOwned?'':'locked'}" data-theme-id="${esc(id)}">
+      return `<button type="button" class="settings-theme-option ${isActive?'active':''} ${isOwned?'':'locked'} ${id==='auroraPrism'?'settings-theme-aurora':''}" data-theme-id="${esc(id)}">
         <span class="theme-option-swatch" style="background:${meta.swatch}"></span>
         <span class="theme-option-name">${esc(meta.icon+' '+meta.label)}</span>
         <span class="theme-option-state">${isActive?'✅ فعال':isOwned?'انتخاب':'🔒 قفل'}</span>
