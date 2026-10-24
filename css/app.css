@@ -74,6 +74,27 @@ html[data-theme="legendaryGold"]{
     radial-gradient(circle at 90% 15%, rgba(255,181,69,.12), transparent 45%),
     radial-gradient(circle at 50% 100%, rgba(230,149,0,.08), transparent 50%);
 }
+/* v22 — 🌌 شفق منشوری (Aurora Prism), the 2,000 XP endgame theme.
+   A deep polar night lit by aurora ribbons: mint -> cyan -> violet -> pink.
+   Only variables live here; the drifting sky, the prismatic sheen and the
+   living card glow are painted in css/v22.css so they can be switched off
+   wholesale by Performance Mode / reduced-motion without touching this. */
+html[data-theme="auroraPrism"]{
+  --bg:#050816; --bg2:#0a0f2b; --panel:#0d1433; --panel2:#121a42;
+  --line:rgba(148,180,255,.13); --line2:rgba(170,200,255,.22);
+  --txt:#eef3ff; --txt-dim:#a3b0d8; --txt-dim2:#6e7ca8;
+  --neon:#2df2c4; --neon2:#38cfff; --violet:#b18cff;
+  --ok:#2ee6a6; --warn:#ffc85e; --danger:#ff6b8a;
+  --grad: linear-gradient(135deg,#2df2c4 0%,#38cfff 34%,#8b7cff 67%,#ff7ad9 100%);
+  --track: rgba(150,175,255,.13);
+  --hover: rgba(120,160,255,.07);
+  --shadow: 0 10px 34px rgba(2,6,24,.55);
+  --body-glow: radial-gradient(ellipse 90% 55% at 12% -6%, rgba(45,242,196,.20), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 88% 4%, rgba(139,124,255,.22), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 55% 108%, rgba(255,122,217,.12), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 50% 45%, rgba(56,207,255,.07), transparent 60%);
+}
+html[data-theme="auroraPrism"] ::selection{background:rgba(45,242,196,.32);}
 /* life city — 7 real-time phases across the day */
 /* v6 Life City polish */
 .landscape-only{display:block;}

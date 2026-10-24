@@ -73,6 +73,18 @@ html[data-theme="legendaryGold"]{
   --neon-15:rgba(255,215,107,.15); --neon-35:rgba(255,215,107,.32);
   --neon-55:rgba(255,215,107,.5);  --neon-75:rgba(255,215,107,.72);
 }
+/* v22 — 🌌 aurora glass: cooler, more translucent panels so the drifting
+   sky behind them stays faintly visible through every card. */
+html[data-theme="auroraPrism"]{
+  --glass-a:rgba(24,34,78,.46); --glass-b:rgba(10,15,40,.34);
+  --glass-border:rgba(140,190,255,.17);
+  --glass-border-hi:rgba(195,225,255,.28);
+  --glass-inset:inset 0 1px 0 rgba(210,235,255,.12);
+  --shadow-card:0 14px 34px -12px rgba(1,4,18,.62);
+  --nav-bg:rgba(8,12,34,.68);
+  --neon-15:rgba(45,242,196,.15); --neon-35:rgba(45,242,196,.34);
+  --neon-55:rgba(45,242,196,.52); --neon-75:rgba(45,242,196,.74);
+}
 
 .glass-surface{
   background:linear-gradient(165deg, var(--glass-a), var(--glass-b));
@@ -338,6 +350,12 @@ html[data-theme="legendaryGold"]{
   --body-glow: radial-gradient(circle at 12% 8%, rgba(255,215,107,.17), transparent 42%),
     radial-gradient(circle at 90% 15%, rgba(255,181,69,.16), transparent 48%),
     radial-gradient(circle at 50% 100%, rgba(230,184,0,.12), transparent 55%);
+}
+html[data-theme="auroraPrism"]{
+  --body-glow: radial-gradient(ellipse 90% 55% at 12% -6%, rgba(45,242,196,.22), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 88% 4%, rgba(139,124,255,.24), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 55% 108%, rgba(255,122,217,.13), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 50% 45%, rgba(56,207,255,.08), transparent 60%);
 }
 
 *{ scrollbar-width:thin; scrollbar-color:var(--glass-border-hi) transparent; }

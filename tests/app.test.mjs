@@ -1836,7 +1836,7 @@ if (!useFallback) {
     DB.streakShields = 0;
     DB.streakShieldWeekly = { weekStart: 0, count: 0 };
     const ownedThemes = (DB.themes.owned || []).slice();
-    DB.themes.owned = [];                        /* so the three price tags are all on screen */
+    DB.themes.owned = [];                        /* so the four price tags are all on screen */
     window.renderXPShop();
     out.wallet = document.getElementById('xpWalletVal').textContent;
     out.costs = ['costBoost', 'costMystery', 'costShield'].map(id => document.getElementById(id).textContent).join(' | ');
@@ -1885,7 +1885,7 @@ if (!useFallback) {
   check('v21.7 the XP Shop kept every feature and reads in the app’s own digits',
     v215shop.wallet === '۱,۲۳۴' && v215shop.costs === '۱۰۰ XP | ۲۰۰ XP | ۵۰۰ XP' &&
     v215shop.shieldCap.includes('۰/۳') && v215shop.shieldCap.includes('۳ خرید باقی‌مانده') &&
-    v215shop.themes === 3 && v215shop.themeCost === '۲۰۰ XP' && v215shop.buttons &&
+    v215shop.themes === 4 && v215shop.themeCost === '۲۰۰ XP' && v215shop.buttons &&
     v215shop.discounted === '۱۸۰ XP' && /٪$/.test(v215shop.odds), JSON.stringify(v215shop));
   check('v21.7 «کوئست سریع» has five tiers and the wait drops from 20 to 15 minutes',
     v215shop.qcDots === 5 && v215shop.qcDesc.includes('۲۰ به ۱۵ دقیقه') &&
@@ -1894,6 +1894,72 @@ if (!useFallback) {
     v215shop.pointsLeft === 0 && v215shop.refused && v215shop.otherSkills && v215shop.flatPrice &&
     v215shop.points === '۵', JSON.stringify(v215shop));
   check('no fatal JS errors after the v21.7 flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
+
+  // ---------- v22: «شفق منشوری» (2,000 XP) + «لیکویید گلس» ----------
+  const v22 = await page.evaluate(() => {
+    const out = {};
+    out.metaCost = window.THEME_META ? THEME_META.auroraPrism.cost : (typeof THEME_META !== 'undefined' ? THEME_META.auroraPrism.cost : -1);
+    out.metaLabel = THEME_META.auroraPrism.label;
+    /* the shop renders the crown card, wide, at 2,000 XP */
+    window.showView('shop');
+    DB.skillTiers.shopDiscount = 0;
+    DB.xpWallet = 0;
+    DB.themes.owned = ['dark', 'light'];
+    window.renderXPShop();
+    const card = document.querySelector('#shopThemes .theme-card-aurora');
+    out.cardFound = !!card;
+    out.cardInGrid = !!card && card.parentElement.id === 'shopThemes';
+    out.cardCost = card ? card.querySelector('.aurora-cost').textContent : '';
+    out.cardFeats = card ? card.querySelectorAll('.aurora-feats span').length : 0;
+    out.badge = card ? card.querySelector('.aurora-ultra-badge').textContent : '';
+    /* poor: the buy is refused and nothing is owned */
+    window.buyTheme('auroraPrism');
+    out.refusedWhenPoor = !DB.themes.owned.includes('auroraPrism') && DB.xpWallet === 0;
+    /* rich: exactly 2,000 XP buys it, once, and the burst is built */
+    DB.xpWallet = 2000;
+    window.buyTheme('auroraPrism');
+    out.bought = DB.themes.owned.includes('auroraPrism') && DB.xpWallet === 0;
+    out.burstBuilt = !!document.querySelector('.lp-aurora-burst i');
+    /* and it really applies as a theme */
+    window.useTheme('auroraPrism');
+    out.applied = document.documentElement.getAttribute('data-theme') === 'auroraPrism';
+    /* Liquid Glass: switch -> class -> state text */
+    window.showView('settings');
+    out.liquidBox = !!document.getElementById('settingsLiquidGlass');
+    window.setSettingsLiquidGlass(true);
+    out.liquidOn = document.documentElement.classList.contains('lp-liquid') &&
+      localStorage.getItem('lifePlannerLiquidGlass_v1') === '1' &&
+      document.getElementById('settingsLiquidGlass').checked === true &&
+      document.getElementById('settingsLiquidState').textContent.trim().length >= 2;
+    out.liquidInBackup = window.buildBackupPayload ? buildBackupPayload().uiSettings.liquidGlass === '1' : false;
+    window.setSettingsLiquidGlass(false);
+    out.liquidOff = !document.documentElement.classList.contains('lp-liquid') &&
+      localStorage.getItem('lifePlannerLiquidGlass_v1') === '0';
+    /* leave the app the way we found it */
+    DB.themes.owned = ['dark', 'light']; DB.xpWallet = 0;
+    window.useTheme('dark'); window.renderXPShop();
+    return out;
+  });
+  check('v22 Aurora Prism is the 2,000 XP crown card of the shop',
+    v22.metaCost === 2000 && v22.metaLabel === 'شفق منشوری' && v22.cardFound && v22.cardInGrid &&
+    v22.cardCost === '۲,۰۰۰ XP' && v22.cardFeats === 3 && v22.badge.includes('ULTRA'),
+    JSON.stringify(v22));
+  check('v22 Aurora refuses a poor wallet and unlocks (with its burst) at exactly 2,000 XP',
+    v22.refusedWhenPoor && v22.bought && v22.burstBuilt && v22.applied, JSON.stringify(v22));
+  check('v22 Liquid Glass switch toggles the class, the state and travels with the backup',
+    v22.liquidBox && v22.liquidOn && v22.liquidInBackup && v22.liquidOff, JSON.stringify(v22));
+
+  /* Liquid Glass survives a reload (the pre-paint script re-applies it) */
+  await page.evaluate(() => window.lpSetLiquidGlass(true));
+  await page.reload({ waitUntil: 'load' });
+  await new Promise(r => setTimeout(r, 1800));
+  const v22kept = await page.evaluate(() => {
+    const kept = document.documentElement.classList.contains('lp-liquid');
+    window.lpSetLiquidGlass(false);
+    return kept && !document.documentElement.classList.contains('lp-liquid');
+  });
+  check('v22 Liquid Glass survives a reload and turns off cleanly', v22kept);
+  check('no fatal JS errors after the v22 flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
   await browser.close();
 } else {
@@ -2731,6 +2797,69 @@ if (!useFallback) {
     ['Dashboard guide', 'Tasks guide', 'Section guides', 'the first three steps', 'Write down one task',
      'Tick it off', 'Give it a place in the calendar', 'Quick Inbox', 'Daily quest']
       .every(en => langJs.includes(en)));
+
+  // ---------- v22: «شفق منشوری» (2,000 XP) + «لیکویید گلس» ----------
+  const v22CssPath = path.join(ROOT, 'css/v22.css');
+  const v22Css = fs.existsSync(v22CssPath) ? fs.readFileSync(v22CssPath, 'utf-8') : '';
+  const v22JsPath = path.join(ROOT, 'js/v22.js');
+  const v22Js = fs.existsSync(v22JsPath) ? fs.readFileSync(v22JsPath, 'utf-8') : '';
+  const enhJs = fs.readFileSync(path.join(ROOT, 'js/enhancements.js'), 'utf-8');
+  const dsCss = fs.readFileSync(path.join(ROOT, 'css/design-system.css'), 'utf-8');
+
+  check('v22 Aurora Prism is in the theme catalogue at exactly 2,000 XP',
+    /auroraPrism:\s*\{ label:'شفق منشوری',\s+icon:'🌌', cost:2000/.test(coreJs) &&
+    appCss.includes('html[data-theme="auroraPrism"]{') && appCss.includes('--neon:#2df2c4') &&
+    dsCss.includes('html[data-theme="auroraPrism"]{') && dsCss.includes('--glass-a:rgba(24,34,78,.46)'));
+
+  check('v22 the shop gives Aurora a wide crown card and keeps the plain cards for the rest',
+    coreJs.includes('theme-card theme-card-aurora') && coreJs.includes('data-theme-card="auroraPrism"') &&
+    coreJs.includes('aurora-ultra-badge') && coreJs.includes('خرید تم نهایی') &&
+    coreJs.includes("if(theme==='auroraPrism'){ try{ if(window.lpCelebrateAurora)") &&
+    v22Css.includes('#shopThemes .theme-card-aurora{') && v22Css.includes('grid-column:1 / -1'));
+
+  check('v22 Aurora motion is delicate, scoped and calm-able',
+    v22Css.includes('@keyframes lpAuroraSky') && v22Css.includes('@keyframes lpAuroraRibbons') &&
+    v22Css.includes('@keyframes lpAuroraSheen') && v22Css.includes('@keyframes lpAuroraSpark') &&
+    v22Css.includes('html[data-theme="auroraPrism"]:not(.lp-perf) body::before') &&
+    v22Css.includes('@media (prefers-reduced-motion: reduce)') &&
+    v22Js.includes('lpCelebrateAurora') && v22Js.includes('prefersReducedMotion()'));
+
+  check('v22 Liquid Glass has its Settings card, switch and live preview',
+    indexHtml.includes('id="settingsLiquidGlass"') && indexHtml.includes('id="settingsLiquidState"') &&
+    indexHtml.includes('💧 لیکویید گلس') && indexHtml.includes('setSettingsLiquidGlass(this.checked)') &&
+    indexHtml.includes('liquid-preview') && indexHtml.includes('settings-liquid-card') &&
+    indexHtml.includes("lifePlannerLiquidGlass_v1') === '1'") &&
+    indexHtml.includes('class="liquid-switch-input"'));
+
+  check('v22 Liquid Glass paints real glass and always loses to Performance Mode',
+    v22Css.includes('html.lp-liquid:not(.lp-perf) .card,') && v22Css.includes('--lg-blur: blur(22px)') &&
+    v22Css.includes('html.lp-liquid:not(.lp-perf) .bottom-nav{') && v22Css.includes('html.lp-liquid:not(.lp-perf) .modal{') &&
+    v22Css.includes('html[data-theme="light"].lp-liquid') && v22Css.includes('html[data-theme="auroraPrism"].lp-liquid') &&
+    v22Css.includes('html.lp-scrolling.lp-liquid .bottom-nav') &&
+    v22Js.includes("var LIQUID_KEY = 'lifePlannerLiquidGlass_v1';") &&
+    v22Js.includes('window.setSettingsLiquidGlass') && v22Js.includes('window.lpV22 = {') &&
+    coreJs.includes("liquidGlass:localStorage.getItem('lifePlannerLiquidGlass_v1')||''") &&
+    coreJs.includes('if(restoredUI.liquidGlass)'));
+
+  check('v22 the new files ship with the page and with the worker cache',
+    indexHtml.includes('css/v22.css?v=') && indexHtml.includes('js/v22.js?v=') &&
+    /`\.\/css\/v22\.css\?v=\$\{VERSION\}`/.test(swJs) && /`\.\/js\/v22\.js\?v=\$\{VERSION\}`/.test(swJs));
+
+  check('v22 every new string has an English translation and the guide counts four themes',
+    ['"شفق منشوری":', '"تم نهایی · ULTRA":', '"خرید تم نهایی":', '"💧 لیکویید گلس":',
+     '"💧 لیکویید گلس (رابط کاربری شیشه‌ای)":', '"🃏 کارت شیشه‌ای":', '"🧭 نوار پایین شیشه‌ای":',
+     '"💧 لیکویید گلس فعال شد — رابط کاربری شیشه‌ای شد":', '"💧 لیکویید گلس خاموش شد":',
+     'var EXTRA_V22 = {', 'EXACT[_k22] = EXTRA_V22[_k22];']
+      .every(k => langJs.includes(k)) &&
+    ['Aurora Prism', 'ULTRA · the final theme', 'Buy the final theme', 'Liquid Glass', 'Glass card', 'Glass bottom bar']
+      .every(en => langJs.includes(en)) &&
+    indexHtml.includes('چهار تمِ ویژه با XP باز می‌شوند') && !indexHtml.includes('سه تمِ ویژه با XP باز می‌شوند') &&
+    enhJs.includes("id==='auroraPrism'?'settings-theme-aurora':''"));
+
+  check('v22 the README tells the truth about the new theme and the glass',
+    readme.includes('شفق منشوری (Aurora Prism) — ۲۰۰۰ XP') && readme.includes('لیکویید گلس') &&
+    readme.includes('### ✨ نسخه 22.0') && readme.includes('css/v22.css') &&
+    readme.includes("life-planner-cache-v91"));
 
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];
