@@ -1001,7 +1001,9 @@ textarea{resize:vertical; min-height:70px;}
 /* v17.1 — the grid is blocked out from 06:00 to 03:00 of the next morning,
    so its height follows the row count renderCalendar() puts on the wrapper
    (--lp-cal-rows) instead of being hard-coded. */
-.lp-cal-wrap{--lp-cal-rows:21;--lp-cal-px-hour:52px;width:100%;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--line);}
+/* v21.8: promote the whole grid to its own GPU layer so a page scroll moves a
+   single composited layer instead of repainting every block gradient + shadow. */
+.lp-cal-wrap{--lp-cal-rows:21;--lp-cal-px-hour:52px;width:100%;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--line);transform:translateZ(0);}
 .lp-cal-header{display:grid;grid-template-columns:42px repeat(7,minmax(0,1fr));height:38px;background:var(--bg2);}
 .lp-cal-head{display:flex;align-items:center;justify-content:center;min-width:0;padding:0 2px;border-left:1px solid var(--line);font-size:10px;font-weight:800;overflow:hidden;white-space:nowrap;}
 .lp-cal-head.today{color:var(--neon);}
@@ -1405,7 +1407,7 @@ html{font-size:var(--lp-base-font-size,clamp(13px,2.5vw,16px));}
 /* drag & drop on the weekly grid */
 .ev-block{touch-action:pan-y;-webkit-user-select:none;-webkit-touch-callout:none;}
 .ev-block.lp-dragging-src{opacity:.25;filter:grayscale(.5);}
-.lp-drag-clone{position:fixed;z-index:99999;pointer-events:none;opacity:.95;margin:0;display:flex;align-items:center;justify-content:center;flex-direction:column;border-radius:9px;overflow:hidden;transform:rotate(1.5deg) scale(1.04);box-shadow:0 14px 34px rgba(0,0,0,.45);}
+.lp-drag-clone{position:fixed;left:0;top:0;z-index:99999;pointer-events:none;opacity:.95;margin:0;display:flex;align-items:center;justify-content:center;flex-direction:column;border-radius:9px;overflow:hidden;transform:rotate(1.5deg) scale(1.04);box-shadow:0 14px 34px rgba(0,0,0,.45);}
 .ev-ghost{position:absolute;left:2px;right:2px;border:2px dashed var(--neon);background:var(--neon-15);border-radius:9px;z-index:3;pointer-events:none;display:flex;align-items:flex-start;justify-content:center;box-sizing:border-box;}
 /* v17.1 — dropping past midnight: the ghost says which day it really lands on */
 .ev-ghost.ev-ghost-night{border-color:#a99bff;background:rgba(139,107,255,.16);}
@@ -2000,9 +2002,13 @@ body.dplan-dragging{cursor:grabbing; user-select:none;}
 .lp-event-trait-summary{margin-top:5px;color:var(--txt);font-size:11px}
 html[data-lang="en"] .ev-traits{right:auto;left:3px}
 
-/* v21.7 — fluid page scrolling and calendar block movement. */
-*{scroll-behavior:smooth}
-.lp-drag-clone{will-change:left,top,transform,opacity;transition:left 70ms linear,top 70ms linear,transform .16s ease,opacity .16s ease,width .16s ease,height .16s ease}
-.lp-drag-clone.lp-drag-landing{transition:left .2s cubic-bezier(.2,.8,.2,1),top .2s cubic-bezier(.2,.8,.2,1),width .2s ease,height .2s ease,transform .2s ease,opacity .2s ease}
+/* v21.8 — buttery page scrolling and calendar block movement.
+   No global scroll-behavior:smooth: it turned every per-frame scrollBy() of the
+   drag auto-scroll into competing animated jumps, which is what made dragging
+   near the screen edges feel stuck. Smooth scrolling is driven explicitly by
+   lpSmoothScrollToY() in js/core.js instead. */
+.lp-drag-clone{will-change:transform,opacity;transition:transform .16s ease,opacity .16s ease}
+.lp-drag-clone.lp-drag-landing{transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s ease}
 .ev-ghost{transition:top .12s cubic-bezier(.2,.8,.2,1),height .12s ease,background .12s ease,border-color .12s ease}
+.ev-resize-tip{left:0;top:0;will-change:transform}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}.lp-drag-clone,.ev-ghost{transition:none!important}}

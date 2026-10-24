@@ -4442,7 +4442,11 @@ const CAL_RESIZE_INTENT_PX=12; // ignore touch jitter; an intentional drag still
      • mouse — the grip is visible on hover and the pointer is precise, so the
        edge resizes as soon as it is dragged vertically; a clearly sideways first
        movement is handed over to the move instead. */
-const CAL_EDGE_ARM_MS=300, CAL_EDGE_MOVE_PX=10, CAL_EDGE_SIDE_PX=6;
+/* v21.8 — touch gestures arm fast: a short, light press is enough, so the block
+   never feels "stuck" to the finger. Vertical touch scroll still wins when the
+   finger moves before the arm delay. */
+const CAL_HOLD_ARM_MS=170, CAL_DRAG_START_PX=6;
+const CAL_EDGE_ARM_MS=200, CAL_EDGE_MOVE_PX=6, CAL_EDGE_SIDE_PX=6;
 /* An undo offered in a toast stays valid only as long as that toast is on screen. */
 const LP_UNDO_WINDOW_MS=8000;
 const CAL_DAY_MIN=1440;
@@ -4574,6 +4578,26 @@ function openCalendarSlot(dayIdx,gridHour,clientY,slotEl){
   /* v21 — no focus(): the event sheet opens with the keyboard closed, so the
      form is never half covered before the user starts typing (js/v21.js). */
 }
+/* v21.8 — one rAF-driven easeOutCubic scroll instead of nested/blocking
+   scrollIntoView calls. Cancels itself when a newer scroll starts. */
+let lpCalScrollAnim=0;
+function lpSmoothScrollToY(targetY, duration=480){
+  if(lpCalScrollAnim) cancelAnimationFrame(lpCalScrollAnim);
+  const doc=document.documentElement;
+  const maxY=Math.max(0,(doc.scrollHeight||targetY)-window.innerHeight);
+  const to=Math.max(0,Math.min(targetY,maxY));
+  const from=window.scrollY||doc.scrollTop||0;
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce||Math.abs(to-from)<2){ window.scrollTo(0,to); lpCalScrollAnim=0; return; }
+  const t0=performance.now();
+  const step=(t)=>{
+    const p=Math.min(1,(t-t0)/duration);
+    const e=1-Math.pow(1-p,3); // easeOutCubic
+    window.scrollTo(0,from+(to-from)*e);
+    if(p<1) lpCalScrollAnim=requestAnimationFrame(step); else lpCalScrollAnim=0;
+  };
+  lpCalScrollAnim=requestAnimationFrame(step);
+}
 function scrollCalendarToNow(){
   if(!viewActive('calendar')){
     showView('calendar');
@@ -4581,8 +4605,15 @@ function scrollCalendarToNow(){
     return;
   }
   updateCalendarNowMarker();
-  const target=document.querySelector('#weekGrid .lp-cal-now-line')||document.querySelector('#weekGrid .lp-cal-wrap');
-  target?.scrollIntoView?.({behavior:'smooth',block:target.classList.contains('lp-cal-now-line')?'center':'start',inline:'nearest'});
+  const line=document.querySelector('#weekGrid .lp-cal-now-line');
+  if(line){
+    const r=line.getBoundingClientRect();
+    // a little above center, so the hours around "now" stay in context
+    lpSmoothScrollToY(window.scrollY+r.top-window.innerHeight*0.38);
+    return;
+  }
+  const wrap=document.querySelector('#weekGrid .lp-cal-wrap');
+  if(wrap) lpSmoothScrollToY(window.scrollY+wrap.getBoundingClientRect().top-12);
 }
 /* Where an event shows up on the grid. A block lands in its own column, and
    anything that happens before 06:00 is drawn in the night tail of the
@@ -4626,17 +4657,18 @@ function attachEventDrag(el, ev, dayIdx, shift){
     if(e.button!==undefined && e.button!==0) return;
     const isMouse=(e.pointerType==='mouse');
     const sx=e.clientX, sy=e.clientY;
-    lpDragState.holdTimer=setTimeout(()=>{ // long-press lifts the event (touch)
+    lpDragState.holdTimer=setTimeout(()=>{ // short long-press lifts the event (touch)
       lpDragState.holdTimer=null;
       if(!lpGestureBusy()) lpBeginDrag(e, el, ev, dayIdx, shift);
-    }, 340);
+    }, CAL_HOLD_ARM_MS);
     const move=(m)=>{
-      if(lpDragState.drag){ lpDragMove(m); return; }
+      if(lpDragState.drag){ lpQueueDragMove(m); return; }
       const dx=m.clientX-sx, dy=m.clientY-sy;
-      if(Math.abs(dx)>8||Math.abs(dy)>8){
+      if(Math.abs(dx)>CAL_DRAG_START_PX||Math.abs(dy)>CAL_DRAG_START_PX){
         // horizontal grab or any mouse movement picks the event up;
         // a plain vertical touch keeps scrolling the page instead
-        if((isMouse && (Math.abs(dx)>8||Math.abs(dy)>8)) || (Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy))) lpBeginDrag(m, el, ev, dayIdx, shift);
+        if((isMouse && (Math.abs(dx)>CAL_DRAG_START_PX||Math.abs(dy)>CAL_DRAG_START_PX))
+           || (Math.abs(dx)>=CAL_DRAG_START_PX && Math.abs(dx)>Math.abs(dy))) lpBeginDrag(m, el, ev, dayIdx, shift);
         else lpCancelHold();
       }
     };
@@ -4659,7 +4691,7 @@ function attachEventDrag(el, ev, dayIdx, shift){
    turned out to be a move (v21.2) never ran that closure, so it binds them here —
    without this the lifted block would follow the finger and never land. */
 function lpDragBindPointer(){
-  const mv=(m)=>{ if(lpDragState.drag) lpDragMove(m); };
+  const mv=(m)=>{ if(lpDragState.drag) lpQueueDragMove(m); };
   const off=()=>{
     document.removeEventListener('pointermove',mv);
     document.removeEventListener('pointerup',up);
@@ -4680,26 +4712,49 @@ function lpBeginDrag(e, el, ev, dayIdx, shift){
   const clone=el.cloneNode(true);
   clone.classList.add('lp-drag-clone');
   clone.classList.remove('lp-dragging-src');
+  clone.style.left='0px';
+  clone.style.top='0px';
   clone.style.width=rect.width+'px';
   clone.style.height=rect.height+'px';
   document.body.appendChild(clone);
   el.classList.add('lp-dragging-src');
   const ghost=document.createElement('div');
   ghost.className='ev-ghost';
-  lpDragState.drag={ evRef:ev, el, clone, ghost, grabY, dayIdx, shift,
+  lpDragState.drag={ evRef:ev, el, clone, ghost, grabY, w:rect.width, dayIdx, shift,
     curDay:((dayIdx-(shift?1:0))%7+7)%7, curStart:eventStartMinutes(ev)+shift,
-    moved:false, lastX:e.clientX, lastY:e.clientY };
+    moved:false, lastX:e.clientX, lastY:e.clientY, raf:0, firstFrame:true };
   document.addEventListener('touchmove', lpBlockScroll, {passive:false});
   lpDragMove(e);
   lpAutoscrollStep();
+}
+/* v21.8 — pointer events can fire several times per frame. Coalesce them into
+   one lpDragMove per animation frame (the first move stays synchronous, so a
+   tap-drag reacts instantly and headless tests see the preview immediately). */
+function lpQueueDragMove(e){
+  const d=lpDragState.drag; if(!d) return;
+  if(e&&typeof e.clientX==='number'){ d.lastX=e.clientX; d.lastY=e.clientY; }
+  if(d.raf) return;
+  if(d.firstFrame){ d.firstFrame=false; lpDragMove({}); return; }
+  d.raf=requestAnimationFrame(()=>{ d.raf=0; if(lpDragState.drag===d) lpDragMove({}); });
+}
+/* Edge-zone auto scroll while dragging/resizing. Speed ramps with how deep the
+   pointer is inside the zone, instead of jumping a fixed 16px every frame. */
+function lpEdgeScrollDelta(lastY, zone, maxPx){
+  const vh=window.innerHeight||document.documentElement.clientHeight||0;
+  if(!vh||typeof lastY!=='number') return 0;
+  if(lastY<zone) return -Math.round(maxPx*Math.max(0,1-lastY/zone));
+  if(lastY>vh-zone) return Math.round(maxPx*Math.max(0,1-(vh-lastY)/zone));
+  return 0;
 }
 function lpDragMove(e){
   const d=lpDragState.drag; if(!d) return;
   const daysWrap=document.querySelector('#weekGrid .lp-cal-days');
   if(!daysWrap){ lpDragCancel(); return; }
   if(typeof e.clientX==='number'){ d.lastX=e.clientX; d.lastY=e.clientY; }
-  d.clone.style.left=(d.lastX - d.clone.offsetWidth/2)+'px';
-  d.clone.style.top=(d.lastY - d.grabY)+'px';
+  // GPU-only movement: translate3d instead of left/top, so the lifted card
+  // follows the finger without any layout work on the main thread.
+  const tx=d.lastX-d.w/2, ty=d.lastY-d.grabY;
+  d.clone.style.transform=`translate3d(${tx.toFixed(2)}px,${ty.toFixed(2)}px,0) rotate(1.5deg) scale(1.04)`;
   const cols=lpCalColumns();
   const daysRect=daysWrap.getBoundingClientRect();
   let target=null;
@@ -4746,16 +4801,15 @@ function lpDragMove(e){
 function lpAutoscrollStep(){
   const d=lpDragState.drag;
   if(!d) return;
-  let scrolled=false;
-  if(d.lastY<100){ window.scrollBy(0,-16); scrolled=true; }
-  else if(d.lastY>window.innerHeight-100){ window.scrollBy(0,16); scrolled=true; }
-  if(scrolled) lpDragMove({});
+  const delta=lpEdgeScrollDelta(d.lastY,96,24);
+  if(delta){ window.scrollBy(0,delta); lpDragMove({}); }
   requestAnimationFrame(lpAutoscrollStep);
 }
 function lpDragCleanup(keepClone=false){
   const d=lpDragState.drag;
   document.removeEventListener('touchmove', lpBlockScroll);
   if(d){
+    if(d.raf) cancelAnimationFrame(d.raf);
     if(!keepClone) d.clone.remove();
     d.ghost.remove();
     d.el.classList.remove('lp-dragging-src');
@@ -4776,11 +4830,13 @@ function lpDragEnd(){
   if(d.moved) lpDragState.suppressClickUntil=Date.now()+600; // swallow the trailing click
   if(!shouldLand){ d.clone.remove(); return; }
   // Let the lifted card glide into the snapped slot instead of disappearing.
+  // GPU-only: one translate/scale transform, no left/top/width/height layout.
   requestAnimationFrame(()=>{
+    const cur=d.clone.getBoundingClientRect();
+    const sx=destination.width/cur.width, sy=destination.height/cur.height;
     d.clone.classList.add('lp-drag-landing');
-    d.clone.style.left=destination.left+'px'; d.clone.style.top=destination.top+'px';
-    d.clone.style.width=destination.width+'px'; d.clone.style.height=destination.height+'px';
-    d.clone.style.opacity='0'; d.clone.style.transform='rotate(0) scale(1)';
+    d.clone.style.transform=`translate3d(${(destination.left-cur.left).toFixed(2)}px,${(destination.top-cur.top).toFixed(2)}px,0) rotate(0) scale(${sx.toFixed(4)},${sy.toFixed(4)})`;
+    d.clone.style.opacity='0';
   });
   setTimeout(()=>d.clone.remove(),240);
   lpApplyEventDrag(d.evRef, d.dayIdx, d.curDay, d.curStart);
@@ -5107,13 +5163,25 @@ function lpBeginResize(e, el, ev, dayIdx, shift, edge, gridFrom, gridTo){
     origStart:eventStartMinutes(ev), origEnd:eventEndMinutes(ev),
     origFrom:Number(gridFrom), origTo:Number(gridTo), curFrom:Number(gridFrom), curTo:Number(gridTo),
     startY:e.clientY, moved:false, lastX:e.clientX, lastY:e.clientY,
-    lastSnap:edge==='start'?Number(gridFrom):Number(gridTo), conflict:null };
+    lastSnap:edge==='start'?Number(gridFrom):Number(gridTo), conflict:null,
+    raf:0, firstFrame:true };
   lpDragState.resize=r;
   document.addEventListener('touchmove', lpBlockScroll, {passive:false});
-  const move=(m)=>lpResizeMove(m);
+  // Coalesce pointer storms to one apply per frame; the first move stays
+  // synchronous so the block reacts the instant the finger starts pulling.
+  const queueResizeMove=(m)=>{
+    if(m&&typeof m.clientX==='number'){ r.lastX=m.clientX; r.lastY=m.clientY; }
+    if(lpDragState.resize!==r) return;
+    if(r.raf) return;
+    if(r.firstFrame){ r.firstFrame=false; lpResizeMove({}); return; }
+    r.raf=requestAnimationFrame(()=>{ r.raf=0; if(lpDragState.resize===r) lpResizeMove({}); });
+  };
+  const move=(m)=>queueResizeMove(m);
   const up=()=>{ cleanup(); lpResizeEnd(); };
   const cancel=()=>{ cleanup(); lpResizeCancel(); };
   const cleanup=()=>{
+    // r.raf is intentionally left alone here: lpResizeEnd flushes the last
+    // queued frame before reading the times; lpResizeCleanup cancels it.
     document.removeEventListener('pointermove',move);
     document.removeEventListener('pointerup',up);
     document.removeEventListener('pointercancel',cancel);
@@ -5156,27 +5224,29 @@ function lpResizeMove(e){
   const dur=r.curTo-r.curFrom;
   r.el.classList.toggle('event-tiny', dur<15);
   r.el.classList.toggle('event-short', dur>=15 && dur<30);
-  r.guide.style.top=(((r.edge==='start'?r.curFrom:r.curTo)-CAL_START_HOUR*60)/60*CAL_PX_HOUR)+'px';
+  // GPU-friendly guide: translate3d instead of rewriting `top` every frame
+  const guideY=((r.edge==='start'?r.curFrom:r.curTo)-CAL_START_HOUR*60)/60*CAL_PX_HOUR-1;
+  r.guide.style.transform=`translate3d(0,${guideY.toFixed(2)}px,0)`;
   const {startMin,endMin}=lpResizeTimes(r);
   r.conflict=intentional?lpResizeConflict(r):null;
   r.el.classList.toggle('lp-resize-blocked', !!r.conflict);
   r.tip.classList.toggle('is-blocked', !!r.conflict);
   r.tip.textContent=`${calClockLabel(startMin)} تا ${calClockLabel(endMin)} · ${lpDurationLabel(endMin-startMin)}${r.conflict?' · ⚠️ تداخل دارد':''}`;
-  r.tip.style.left=Math.max(8, Math.min(window.innerWidth-8-r.tip.offsetWidth, r.lastX-r.tip.offsetWidth/2))+'px';
-  r.tip.style.top=Math.max(8, r.lastY-46)+'px';
+  const tipX=Math.max(8, Math.min(window.innerWidth-8-r.tip.offsetWidth, r.lastX-r.tip.offsetWidth/2));
+  const tipY=Math.max(8, r.lastY-46);
+  r.tip.style.transform=`translate3d(${tipX.toFixed(2)}px,${tipY.toFixed(2)}px,0)`;
 }
 function lpResizeAutoscrollStep(r){
   if(lpDragState.resize!==r) return;
-  let scrolled=false;
-  if(r.lastY<90){ window.scrollBy(0,-14); scrolled=true; }
-  else if(r.lastY>window.innerHeight-90){ window.scrollBy(0,14); scrolled=true; }
-  if(scrolled) lpResizeMove({});
+  const delta=lpEdgeScrollDelta(r.lastY,90,22);
+  if(delta){ window.scrollBy(0,delta); lpResizeMove({}); }
   requestAnimationFrame(()=>lpResizeAutoscrollStep(r));
 }
 function lpResizeCleanup(){
   const r=lpDragState.resize;
   document.removeEventListener('touchmove', lpBlockScroll);
   if(r){
+    if(r.raf){ cancelAnimationFrame(r.raf); r.raf=0; }
     r.tip.remove();
     r.guide.remove();
     r.el.classList.remove('lp-resizing','lp-resize-blocked','lp-edge-armed');
@@ -5190,6 +5260,8 @@ function lpResizeCancel(){
 }
 function lpResizeEnd(){
   const r=lpDragState.resize;
+  // apply the last queued frame before the stored times are read
+  if(r&&r.raf){ cancelAnimationFrame(r.raf); r.raf=0; lpResizeMove({}); }
   lpResizeCleanup();
   if(!r) return;
   if(r.moved) lpDragState.suppressClickUntil=Date.now()+600; // swallow the trailing click
@@ -5661,7 +5733,7 @@ checkStreakShields();
 renderPinnedNav();
 renderAll();
 startEventReminderScheduler();
-setInterval(()=>{ const cv=document.getElementById('view-calendar'); if(cv&&cv.classList.contains('active')) renderCalendar(); },30000);
+setInterval(()=>{ const cv=document.getElementById('view-calendar'); if(cv&&cv.classList.contains('active')&&!lpGestureBusy()) renderCalendar(); },30000);
 function scheduleCalendarMinuteTick(){
   const now=new Date();
   const delay=60000-now.getSeconds()*1000-now.getMilliseconds()+20;
@@ -5699,7 +5771,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='21.7';
+const LP_APP_VERSION='21.8';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
