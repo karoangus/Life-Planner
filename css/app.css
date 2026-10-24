@@ -2006,9 +2006,13 @@ html[data-lang="en"] .ev-traits{right:auto;left:3px}
    No global scroll-behavior:smooth: it turned every per-frame scrollBy() of the
    drag auto-scroll into competing animated jumps, which is what made dragging
    near the screen edges feel stuck. Smooth scrolling is driven explicitly by
-   lpSmoothScrollToY() in js/core.js instead. */
-.lp-drag-clone{will-change:transform,opacity;transition:transform .16s ease,opacity .16s ease}
+   lpSmoothScrollToY() in js/core.js instead.
+   v21.9: the active clone has NO transform transition on purpose — easing the
+   1:1 finger follow made cross-day drags lag and feel stuck. Only the landing
+   glide animates. */
+.lp-drag-clone{will-change:transform,opacity}
 .lp-drag-clone.lp-drag-landing{transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s ease}
-.ev-ghost{transition:top .12s cubic-bezier(.2,.8,.2,1),height .12s ease,background .12s ease,border-color .12s ease}
+.ev-ghost{transition:top .12s cubic-bezier(.2,.8,.2,1),height .12s ease,background .12s ease,border-color .12s ease,opacity .12s ease}
+.ev-ghost.lp-ghost-off{opacity:0}
 .ev-resize-tip{left:0;top:0;will-change:transform}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}.lp-drag-clone,.ev-ghost{transition:none!important}}

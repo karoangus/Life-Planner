@@ -20,8 +20,8 @@
    • a new worker takes over immediately (skipWaiting + claim).
    ============================================================ */
 
-const VERSION = '21.8';
-const CACHE_NAME = 'life-planner-cache-v89';
+const VERSION = '21.9';
+const CACHE_NAME = 'life-planner-cache-v90';
 const OFFLINE_URL = './index.html';
 
 self.addEventListener('message', e => {
