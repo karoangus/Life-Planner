@@ -2220,7 +2220,9 @@ if (!useFallback) {
   check('v21.2 an edge press is judged before it becomes a resize or a move',
     coreJs.includes('function lpBeginEdgeGrab') && coreJs.includes('function lpEdgeGrabToResize') &&
     coreJs.includes('function lpEdgeGrabToMove') && coreJs.includes('function lpDragBindPointer') &&
-    coreJs.includes('const CAL_EDGE_ARM_MS=300, CAL_EDGE_MOVE_PX=10, CAL_EDGE_SIDE_PX=6') &&
+    /* v21.8: touch gestures arm faster and with less travel (see CAL_HOLD_ARM_MS) */
+    coreJs.includes('const CAL_EDGE_ARM_MS=200, CAL_EDGE_MOVE_PX=6, CAL_EDGE_SIDE_PX=6') &&
+    coreJs.includes('const CAL_HOLD_ARM_MS=170, CAL_DRAG_START_PX=6') &&
     coreJs.includes('lpDragState={ drag:null, resize:null, edgeGrab:null,') &&
     coreJs.includes('// the edge runs its own gesture (lpBeginEdgeGrab)') &&
     coreJs.includes('if(lpGestureBusy()) return;') &&
