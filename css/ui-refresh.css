@@ -1,0 +1,149 @@
+/* Life Planner 23 — editorial workspace refresh.
+   A denser desktop workspace, calmer surfaces and a tactile, restrained glass skin.
+   No extra scripts, observers or continuously animated layers: the refresh is CSS-only. */
+:root{
+  --refresh-radius:20px;
+  --refresh-glass:rgba(14,22,43,.68);
+  --refresh-line:rgba(166,195,255,.12);
+  --refresh-soft:rgba(255,255,255,.035);
+}
+html[data-theme="light"]{
+  --refresh-glass:rgba(255,255,255,.88);
+  --refresh-line:rgba(60,83,130,.12);
+  --refresh-soft:rgba(25,45,86,.035);
+}
+body{background-color:var(--bg);}
+body::before{opacity:.82;}
+
+/* Consistent controls: strong focus, comfortable hit targets, no layout shift. */
+:where(button,.btn,.icon-btn,.guide-btn,.bnav-item,.bnav-more,.sheet-nav-item,.chip-opt):focus-visible{
+  outline:2px solid var(--neon); outline-offset:3px;
+}
+button,.btn,.icon-btn,.bnav-item,.bnav-more,.sheet-nav-item{-webkit-tap-highlight-color:transparent;}
+.btn{border-radius:13px; min-height:40px; box-shadow:0 7px 20px color-mix(in srgb,var(--neon) 18%,transparent);}
+.btn.ghost,.icon-btn{background:var(--refresh-soft); border-color:var(--refresh-line);}
+.icon-btn{position:relative; border-radius:13px;}
+.topbar{margin-bottom:22px;}
+.topbar h1{letter-spacing:-.035em; font-size:clamp(21px,2vw,29px);}
+.topbar .sub{font-size:12px; letter-spacing:.01em;}
+.card,.stat-card,.note-card,.settings-card,.settings-version-card,.motivation-card{
+  border-radius:var(--refresh-radius);
+}
+.card{padding:clamp(15px,1.7vw,22px);}
+.card-head{margin-bottom:16px;}
+.chip-opt{border-radius:999px;}
+input,textarea,select{accent-color:var(--neon);}
+::selection{background:color-mix(in srgb,var(--neon) 30%,transparent); color:var(--txt);}
+
+/* Dashboard: a calm, asymmetric workbench rather than one long stack. */
+#view-dashboard .dash-hero{
+  min-height:126px; padding:22px 24px; border-radius:24px;
+  background:
+    radial-gradient(ellipse at 92% 8%,color-mix(in srgb,var(--neon) 14%,transparent),transparent 42%),
+    linear-gradient(130deg,var(--refresh-glass),color-mix(in srgb,var(--panel2) 84%,transparent));
+  border-color:var(--refresh-line); box-shadow:inset 0 1px rgba(255,255,255,.08),0 18px 48px -34px rgba(0,0,0,.75);
+}
+#view-dashboard .dash-hero h1{font-size:clamp(25px,3vw,36px); letter-spacing:-.045em;}
+#view-dashboard .dash-hero .sub{font-size:13px; margin-top:7px;}
+#view-dashboard .dash-hero .topbar{margin:0;}
+#view-dashboard .dash-motivation{margin-bottom:16px; border-color:var(--refresh-line);}
+#view-dashboard .dash-grid{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr); gap:16px; align-items:start;}
+#view-dashboard .dash-grid > section{min-width:0; grid-column:auto!important; grid-row:auto!important;}
+#view-dashboard .dash-tile{border-radius:var(--refresh-radius); border:1px solid var(--refresh-line); padding:18px; background:var(--refresh-glass); box-shadow:inset 0 1px rgba(255,255,255,.06),0 18px 42px -36px rgba(0,0,0,.72);}
+#view-dashboard .dash-tile-tasks{grid-column:1!important; grid-row:1!important;}
+#view-dashboard .dash-tile-quest{grid-column:2!important; grid-row:1!important;}
+#view-dashboard .dash-tile .card-head h3{font-size:15px;}
+#view-dashboard .dash-tile .task-row{border-radius:13px; margin-top:8px;}
+#view-dashboard .motivation-row{gap:14px;}
+#view-dashboard .motivation-ic{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:color-mix(in srgb,var(--neon) 12%,transparent);}
+
+/* Floating navigation rail + persistent section list for wide workspaces.
+   The very same controls remain a thumb-friendly bottom bar and sheet on mobile. */
+@media (min-width:1080px){
+  .bottom-nav{
+    inset:0 0 0 auto; width:78px; height:auto; box-sizing:border-box;
+    flex-direction:column; flex-wrap:nowrap; justify-content:flex-start; gap:7px;
+    padding:20px 9px max(18px,env(safe-area-inset-bottom));
+    background:color-mix(in srgb,var(--refresh-glass) 90%,transparent);
+    border:0; border-left:1px solid var(--refresh-line); box-shadow:8px 0 36px rgba(0,0,0,.12);
+    -webkit-backdrop-filter:blur(16px) saturate(1.3); backdrop-filter:blur(16px) saturate(1.3);
+  }
+  .bottom-nav .bnav-item,.bottom-nav .bnav-more{
+    flex:0 0 58px; width:100%; min-width:0; padding:7px 2px; gap:5px;
+    border-radius:16px; color:var(--txt-dim2); transition:background-color .16s,color .16s,transform .16s;
+  }
+  .bottom-nav .bnav-item .bic,.bottom-nav .bnav-more .bic{font-size:21px;}
+  .bottom-nav .bnav-item span,.bottom-nav .bnav-more span{font-size:9px;max-width:68px;}
+  .bottom-nav .bnav-item.active{background:color-mix(in srgb,var(--neon) 13%,transparent); color:var(--neon); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--neon) 20%,transparent);}
+  /* All sections are already listed in the persistent sidebar on desktop. */
+  .bottom-nav .bnav-more{display:none;}
+  .bottom-nav.extended{height:auto;min-height:0;}
+  .bottom-nav.extended .bnav-extras-row{display:flex; flex:0 1 auto; width:100%; flex-direction:column; gap:7px; overflow:auto; scrollbar-width:none;}
+  .bottom-nav.extended .bnav-extras-row .bnav-item{flex:0 0 55px; min-width:0; max-width:none; padding:7px 2px;}
+  .bottom-nav.extended ~ .main{padding-bottom:30px;}
+  .sheet-overlay{display:none!important;}
+  .sheet-drawer{
+    inset:0 78px 0 auto; width:244px; max-height:none; border:0; border-left:1px solid var(--refresh-line);
+    border-radius:0; transform:none!important; transition:none; visibility:visible;
+    background:color-mix(in srgb,var(--bg2) 76%,transparent);
+    -webkit-backdrop-filter:blur(18px) saturate(1.25); backdrop-filter:blur(18px) saturate(1.25);
+    box-shadow:8px 0 32px rgba(0,0,0,.11);
+  }
+  .sheet-handle-row,.sheet-header .sheet-close{display:none;}
+  .sheet-header{padding:22px 19px 15px;}
+  .sheet-brand-mark{width:40px;height:40px;border-radius:14px;}
+  .sheet-xp{margin:8px 14px 14px;padding:13px;border-radius:16px;}
+  .sheet-body{padding:0 12px 22px;}
+  .sheet-section-label{padding:10px 8px 8px;}
+  .sheet-nav-item{padding:10px 11px; border-radius:13px; font-size:12px; margin:3px 0;}
+  .sheet-nav-item.active{background:color-mix(in srgb,var(--neon) 12%,transparent); border-color:color-mix(in srgb,var(--neon) 23%,transparent); color:var(--neon);}
+  .main{margin-right:322px; padding:28px clamp(24px,3.2vw,56px) 50px;}
+  .main > .view{max-width:1500px; margin:0 auto;}
+  .topbar{margin-bottom:24px;}
+  .sheet-drawer.open{transform:none;}
+}
+@media (min-width:1500px){
+  .main{margin-right:348px; padding-left:64px; padding-right:64px;}
+  .sheet-drawer{width:270px;}
+  #view-dashboard .dash-grid{grid-template-columns:minmax(0,1.65fr) minmax(330px,1fr);}
+}
+
+/* At tablet/mobile sizes, keep the existing drawer model but refresh its finish. */
+@media (max-width:1079px){
+  .main{padding-top:18px;}
+  .bottom-nav{
+    background:color-mix(in srgb,var(--bg2) 78%,transparent);
+    border-top:1px solid var(--refresh-line);
+    -webkit-backdrop-filter:blur(13px) saturate(1.3); backdrop-filter:blur(13px) saturate(1.3);
+    padding-left:max(7px,env(safe-area-inset-left)); padding-right:max(7px,env(safe-area-inset-right));
+  }
+  .bnav-item.active{background:color-mix(in srgb,var(--neon) 10%,transparent);}
+  .sheet-drawer{background:color-mix(in srgb,var(--bg2) 82%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.25);backdrop-filter:blur(18px) saturate(1.25);}
+  .sheet-nav-item.active{background:color-mix(in srgb,var(--neon) 12%,transparent);}
+  #view-dashboard .dash-grid{grid-template-columns:minmax(0,1fr)!important;}
+  #view-dashboard .dash-tile-quest,#view-dashboard .dash-tile-tasks{grid-column:1!important;grid-row:auto!important;}
+}
+@media (max-width:600px){
+  #view-dashboard .dash-hero{padding:17px 16px; min-height:108px; border-radius:20px;}
+  #view-dashboard .dash-hero h1{font-size:25px;}
+  #view-dashboard .dash-motivation{padding:14px;}
+  #view-dashboard .dash-tile{padding:14px;}
+  .topbar{gap:10px;margin-bottom:17px;}
+  .top-actions{gap:7px;}
+  .topbar h1{font-size:21px;}
+  .card{padding:14px;}
+}
+
+/* Performance is explicit and reliable: only keep translucent color, never blur. */
+html.lp-perf .bottom-nav,html.lp-perf .sheet-drawer,html.lp-perf .card,
+html.lp-perf .stat-card,html.lp-perf .note-card,html.lp-perf .dash-tile,
+html.lp-perf .motivation-card,html.lp-perf .settings-card{
+  -webkit-backdrop-filter:none!important; backdrop-filter:none!important;
+}
+html.lp-perf .bottom-nav{background:var(--bg2);}
+html.lp-perf .sheet-drawer{background:var(--bg2);}
+html.lp-perf .view.active{animation:none!important;}
+html.lp-perf *,html.lp-perf *::before,html.lp-perf *::after{scroll-behavior:auto!important;}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}
+}
