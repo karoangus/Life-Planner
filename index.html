@@ -8,12 +8,12 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=23.0">
-<link rel="stylesheet" href="css/design-system.css?v=23.0">
-<link rel="stylesheet" href="css/v20.css?v=23.0">
-<link rel="stylesheet" href="css/v213.css?v=23.0">
-<link rel="stylesheet" href="css/v22.css?v=23.0">
-<link rel="stylesheet" href="css/ui-refresh.css?v=23.0">
+<link rel="stylesheet" href="css/app.css?v=23.1">
+<link rel="stylesheet" href="css/design-system.css?v=23.1">
+<link rel="stylesheet" href="css/v20.css?v=23.1">
+<link rel="stylesheet" href="css/v213.css?v=23.1">
+<link rel="stylesheet" href="css/v22.css?v=23.1">
+<link rel="stylesheet" href="css/ui-refresh.css?v=23.1">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -995,7 +995,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">23.0</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">23.1</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1106,27 +1106,18 @@ try{
   <div class="field"><label>دسته‌بندی (اختیاری) — با انتخاب دسته، رنگ پیش‌فرض همان دسته می‌شود</label>
     <div class="chip-group" id="eCats"></div>
   </div>
-  <div class="field"><label>رنگ رویداد (اختیاری)</label>
-    <div class="chip-group lp-color-row" id="eColorRow"></div>
-  </div>
-  <div class="field lp-event-traits">
-    <label>انرژی موردنیاز (اختیاری)</label>
-    <div class="chip-group lp-trait-group" id="eEnergy" role="radiogroup" aria-label="انرژی موردنیاز">
-      <button type="button" class="chip-opt sel" data-v="" aria-pressed="true">بدون انتخاب</button>
-      <button type="button" class="chip-opt" data-v="high" aria-pressed="false">🔋 پرانرژی</button>
-      <button type="button" class="chip-opt" data-v="medium" aria-pressed="false">🔋 معمولی</button>
-      <button type="button" class="chip-opt" data-v="low" aria-pressed="false">🪫 کم‌انرژی</button>
-    </div>
-  </div>
   <div class="field lp-event-traits">
     <label>اندازهٔ لقمه (اختیاری)</label>
-    <div class="chip-group lp-trait-group" id="eBite" role="radiogroup" aria-label="اندازه لقمه">
+    <div class="chip-group lp-trait-group lp-bite-group" id="eBite" role="group" aria-label="اندازه لقمه" aria-describedby="eBiteHint">
       <button type="button" class="chip-opt sel" data-v="" aria-pressed="true">بدون انتخاب</button>
       <button type="button" class="chip-opt" data-v="baklava" aria-pressed="false">🧆 لقمه باقلوا</button>
       <button type="button" class="chip-opt" data-v="normal" aria-pressed="false">🍽️ لقمه معمولی</button>
       <button type="button" class="chip-opt" data-v="heavy" aria-pressed="false">🍲 لقمه سنگین</button>
     </div>
-    <div class="lp-trait-hint">پیشنهاد: لقمه سنگین برای پرانرژی، معمولی برای معمولی و باقلوا برای کم‌انرژی.</div>
+    <div class="lp-trait-hint" id="eBiteHint">رنگ رویداد با لقمهٔ انتخاب‌شده هماهنگ می‌شود.</div>
+  </div>
+  <div class="field" id="eColorField"><label>رنگ رویداد (اختیاری)</label>
+    <div class="chip-group lp-color-row" id="eColorRow"></div>
   </div>
   <div class="field"><label>روزهای هفته (می‌تونی چندتا انتخاب کنی)</label>
     <div class="chip-group" id="eDays">
@@ -1453,20 +1444,20 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=23.0"></script>
-<script src="js/enhancements.js?v=23.0"></script>
-<script src="js/sw-register.js?v=23.0"></script>
+<script src="js/core.js?v=23.1"></script>
+<script src="js/enhancements.js?v=23.1"></script>
+<script src="js/sw-register.js?v=23.1"></script>
 
-<script src="js/pomodoro.js?v=23.0"></script>
+<script src="js/pomodoro.js?v=23.1"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=23.0"></script>
-<script src="js/v16.js?v=23.0"></script>
-<script src="js/v162.js?v=23.0"></script>
-<script src="js/v21.js?v=23.0"></script>
+<script src="js/lang.js?v=23.1"></script>
+<script src="js/v16.js?v=23.1"></script>
+<script src="js/v162.js?v=23.1"></script>
+<script src="js/v21.js?v=23.1"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=23.0"></script>
+<script src="js/v213.js?v=23.1"></script>
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
-<script src="js/v22.js?v=23.0"></script>
+<script src="js/v22.js?v=23.1"></script>
 
 </body>
 </html>

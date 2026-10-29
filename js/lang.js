@@ -1366,6 +1366,21 @@
   };
   for(var _k215 in EXTRA_V215){ if(Object.prototype.hasOwnProperty.call(EXTRA_V215, _k215)) EXACT[_k215] = EXTRA_V215[_k215]; }
 
+  /* v23.1: the calendar's bite-only picker and its shared color hint. */
+  var EXTRA_V231 = {
+    "اندازهٔ لقمه (اختیاری)": "Bite size (optional)",
+    "اندازه لقمه": "Bite size",
+    "بدون انتخاب": "No selection",
+    "لقمه سنگین": "Heavy bite",
+    "لقمه معمولی": "Normal bite",
+    "لقمه باقلوا": "Baklava bite",
+    "🍲 لقمه سنگین": "🍲 Heavy bite",
+    "🍽️ لقمه معمولی": "🍽️ Normal bite",
+    "🧆 لقمه باقلوا": "🧆 Baklava bite",
+    "رنگ رویداد با لقمهٔ انتخاب‌شده هماهنگ می‌شود.": "The event color matches the selected bite."
+  };
+  for(var _k231 in EXTRA_V231){ if(Object.prototype.hasOwnProperty.call(EXTRA_V231, _k231)) EXACT[_k231] = EXTRA_V231[_k231]; }
+
   /* v22: «🌌 شفق منشوری» (the 2,000 XP theme) and the «💧 لیکویید گلس»
      switch. Icon-prefixed cores are handled by compose(), so plain cores
      are listed; whole sentences that start with an icon are listed whole. */
