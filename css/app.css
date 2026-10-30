@@ -2011,14 +2011,14 @@ body.dplan-dragging{cursor:grabbing; user-select:none;}
 }
 
 /* Calendar bite markers. --bite-color / --bite-soft come from LP_EVENT_BITES
-   so the options and event blocks cannot drift apart. Text stays on theme
-   colors for readability, including the yellow normal-bite option. */
+   so the options and the event frame cannot drift apart. The block body keeps
+   its own color. Text stays on theme colors for readability. */
 .lp-event-traits .lp-trait-group{gap:6px}
 .lp-event-traits .chip-opt{font-family:inherit;cursor:pointer}
 .lp-bite-group .chip-opt:not([data-v=""]){border-color:var(--bite-color)}
 .lp-bite-group .chip-opt.sel:not([data-v=""]){border-color:var(--bite-color)!important;color:var(--txt);background:var(--bite-soft);box-shadow:0 0 0 1px var(--bite-color)}
 .lp-trait-hint{margin-top:7px;color:var(--txt-dim2);font-size:10.5px;line-height:1.7}
-.ev-block.ev-bite-heavy,.ev-block.ev-bite-normal,.ev-block.ev-bite-baklava{border-width:2px}
+.ev-block.ev-bite-heavy,.ev-block.ev-bite-normal,.ev-block.ev-bite-baklava{border-width:3px;border-style:solid}
 .lp-bite-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px;vertical-align:middle}
 .ev-traits{position:absolute;top:2px;right:3px;display:flex;gap:1px;line-height:1;font-size:9px;z-index:8;pointer-events:none}
 .ev-trait{filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))}
