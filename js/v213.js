@@ -64,10 +64,11 @@
   /* Sections that own a guide. The Calendar has one too, it just never shows
      a first-visit hint (its intro line already sits above the grid). */
   var SECTIONS = ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes',
-                  'pomodoro', 'shop', 'skills', 'boss'];
+                  'pomodoro', 'shop', 'skills', 'boss', 'yvy', 'city', 'profile', 'settings'];
   var HINTED = {
     dashboard: true, tasks: true, habits: true, goals: true, notes: true,
-    /* v21.7 */ pomodoro: true, shop: true, skills: true, boss: true
+    /* v21.7 */ pomodoro: true, shop: true, skills: true, boss: true,
+    yvy: true, city: true, profile: true, settings: true
   };
 
   var TITLES = {
@@ -81,7 +82,9 @@
     pomodoro: '📖 راهنمای پومودورو',
     shop: '📖 راهنمای XP Shop',
     skills: '📖 راهنمای درخت مهارت',
-    boss: '📖 راهنمای باس هفتگی'
+    boss: '📖 راهنمای باس هفتگی',
+    yvy: '📖 راهنمای رقابت با خود', city: '📖 راهنمای شهر',
+    profile: '📖 راهنمای پروفایل', settings: '📖 راهنمای تنظیمات'
   };
 
   /* One button per guide that lands the user in the section's main action —
@@ -101,6 +104,10 @@
     skills: { label: '🛍️ برو به XP Shop', local: function () {
       if (typeof window.showView === 'function') window.showView('shop');
     } },
+    yvy: { label: '🏅 دیدن رکوردها', local: function () { window.showView('yvy'); document.getElementById('yvyRecordsList').scrollIntoView({behavior: 'smooth', block: 'center'}); } },
+    city: { label: '🧱 دیدن مراحل شهر', local: function () { window.showView('city'); document.getElementById('cityStageList').scrollIntoView({behavior: 'smooth', block: 'center'}); } },
+    profile: { label: '🌟 دیدن روز کامل', local: function () { window.showView('profile'); if (document.getElementById('perfectDayGuide').style.display !== 'block') call('togglePerfectDayGuide'); document.getElementById('perfectDayCard').scrollIntoView({behavior: 'smooth', block: 'center'}); } },
+    settings: { label: '📱 تنظیم نوار پایین', local: function () { window.showView('settings'); call('openSettingsNav'); } },
     boss: {
       /* A running fight must never be answered with a blank setup sheet — that
          would throw its HP away — so both the label and the action follow the
@@ -118,6 +125,10 @@
   };
 
   var HINTS = {
+    yvy: { ic: '🪞', txt: 'رکوردهایت و آمار این هفته را با گذشته مقایسه کن.' },
+    city: { ic: '🏙️', txt: 'با بالا رفتن سطح، شهرت رشد می‌کند.' },
+    profile: { ic: '👤', txt: 'سطح، آمار و شرط‌های روز کامل را اینجا ببین.' },
+    settings: { ic: '⚙️', txt: 'ظاهر، زبان و پشتیبان برنامه را اینجا تنظیم کن.' },
     /* v21.7: one line each for the last four sections */
     pomodoro: {
       ic: '🍅',

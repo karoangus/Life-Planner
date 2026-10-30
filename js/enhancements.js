@@ -81,10 +81,6 @@ function openSettingsImport(){
   const input=document.getElementById('importFile');
   if(input) input.click();
 }
-function sendSettingsCloud(){
-  if(typeof shareBackup==='function') shareBackup();
-  else toast('⚠️ قابلیت ارسال پشتیبان در دسترس نیست');
-}
 function openSettingsNav(){
   if(typeof openPinnedNavSettings==='function') openPinnedNavSettings();
   else toast('⚠️ شخصی‌سازی نوار پایین در دسترس نیست');

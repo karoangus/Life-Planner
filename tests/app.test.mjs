@@ -1154,8 +1154,8 @@ if (!useFallback) {
   });
   check('v21.3 every simplified section has its own ❓ and one guide modal explains them all',
     v213.helpButtons === 10 && v213.slotAnchors === 9 &&
-    v213.panels === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss' &&
-    v213.rowsPerPanel === '4,4,4,4,4,4,4,4,4,4', JSON.stringify(v213));
+    v213.panels === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
+    v213.rowsPerPanel === '4,4,4,4,4,4,4,4,4,4,4,4,4,4', JSON.stringify(v213));
   check('v21.3 the calendar intro is one quiet line and the guide kept the full gestures',
     v213.introChars < 90 && v213.guideKeepsGestures, JSON.stringify(v213));
   check('v21.3 opening the guide shows exactly one panel with the right action',
@@ -1290,7 +1290,7 @@ if (!useFallback) {
     const out = {};
     out.slot = document.getElementById('guideSlot-dashboard').innerHTML;
     out.settingsCard = [...document.querySelectorAll('#view-settings .settings-card')]
-      .some(c => c.textContent.includes('راهنمای بخش‌ها') && c.querySelectorAll('[onclick^="openGuide("]').length === 10);
+      .some(c => c.textContent.includes('راهنمای بخش‌ها') && c.querySelectorAll('[onclick^="openGuide("]').length === 14);
     /* «نمایش دوباره» brings the automatic guides back */
     window.lpResetGuides();
     out.resetState = JSON.parse(localStorage.getItem('lifePlannerGuides_v213'));
@@ -1349,7 +1349,7 @@ if (!useFallback) {
     v214.goals === 'goals|📖 راهنمای اهداف|➕ هدف جدید' &&
     v214.notes === 'notes|📖 راهنمای یادداشت‌ها|➕ یادداشت جدید', JSON.stringify(v214));
   check('v21.4 six tabs, one visible panel, and the action opens that section’s sheet',
-    v214.tabs === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss' && v214.visiblePanels === 1 &&
+    v214.tabs === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' && v214.visiblePanels === 1 &&
     v214.ctaClosedGuide && v214.ctaOpenedSheet, JSON.stringify(v214));
   check('v21.4 switching tab follows panel, title and action together, and reading marks it seen',
     v214.afterTab === 'notes|📖 راهنمای یادداشت‌ها|➕ یادداشت جدید' && v214.readingMarksSeen,
@@ -1554,8 +1554,8 @@ if (!useFallback) {
     v215.skills === 'skills|📖 راهنمای درخت مهارت|🛍️ برو به XP Shop' &&
     v215.bossIdle === 'boss|📖 راهنمای باس هفتگی|⚔️ ساخت باس', JSON.stringify(v215));
   check('v21.7 ten tabs, four rows each, and only one panel on screen',
-    v215.tabs === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss' &&
-    v215.rowsPerPanel === '4,4,4,4,4,4,4,4,4,4' && v215.visiblePanels === 1, JSON.stringify(v215));
+    v215.tabs === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
+    v215.rowsPerPanel === '4,4,4,4,4,4,4,4,4,4,4,4,4,4' && v215.visiblePanels === 1, JSON.stringify(v215));
   check('v21.7 each action lands in the real thing, and the shop one spends nothing',
     v215.pomoCtaStarted && v215.pomoCtaClosedGuide && v215.shopCtaOpenedOdds && v215.shopCtaSpentNothing &&
     v215.oddsListed && v215.skillsCtaWentToShop && v215.skillsCtaClosedGuide, JSON.stringify(v215));
@@ -1960,6 +1960,38 @@ if (!useFallback) {
   });
   check('v22 Liquid Glass survives a reload and turns off cleanly', v22kept);
   check('no fatal JS errors after the v22 flow', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
+
+  // v23.3: guides and removals work together without changing stored progress.
+  const v233 = await page.evaluate(async () => {
+    const wait = () => new Promise(r => setTimeout(r, 150));
+    const out = {};
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    for (const section of ['yvy', 'city', 'profile', 'settings']) {
+      window.showView('dashboard'); await wait(); window.lpGuide.reset();
+      window.showView(section); await wait();
+      const slot = document.getElementById('guideSlot-' + section);
+      const hint = !!slot.querySelector('.guide-hint');
+      window.openGuide(section);
+      const panel = document.querySelector('#guideModalBg .guide-panel.sel');
+      const opened = panel.dataset.g === section && panel.querySelectorAll('.guide-row').length === 4;
+      const retired = !slot.querySelector('.guide-hint');
+      document.getElementById('guideCta').click(); await wait();
+      out[section] = hint && opened && retired && document.getElementById('view-' + section).classList.contains('active');
+      if (section === 'profile') out.profileAction = document.getElementById('perfectDayGuide').style.display === 'block';
+      if (section === 'settings') out.settingsAction = document.getElementById('pinnedNavModalBg').classList.contains('open');
+      document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    }
+    window.showView('yvy'); await wait();
+    out.records = document.querySelectorAll('#yvyRecordsList .yvy-record-row').length === 5 && !document.getElementById('yvyRecordsList').textContent.includes('استریک');
+    window.showView('profile'); await wait();
+    out.profileKept = !!document.getElementById('pfBestStreak') && !document.getElementById('cityEntryIcon');
+    window.showView('city'); await wait();
+    out.cityKept = document.querySelectorAll('#cityStageList .milestone-row').length === 7 && !document.querySelector(`#view-city [onclick="showView('profile')"]`);
+    out.backup = !!document.querySelector('#view-settings [onclick="openSettingsBackup()"]') && !!document.querySelector('#view-settings [onclick="openSettingsImport()"]') && !document.querySelector('#view-settings [onclick="sendSettingsCloud()"]');
+    return out;
+  });
+  check('v23.3 new hints, guides, actions and requested removals work',
+    Object.values(v233).every(Boolean), JSON.stringify(v233));
 
   await browser.close();
 } else {
@@ -2492,9 +2524,9 @@ if (!useFallback) {
   check('v21.3 one guide modal holds one panel per section, four short rows each',
     ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes']
       .every(g => indexHtml.includes(`data-g="${g}" role="tabpanel"`)) &&
-    (indexHtml.match(/class="guide-row"/g) || []).length === 40 &&
-    (indexHtml.match(/class="guide-lead"/g) || []).length === 10 &&
-    /var SECTIONS = \['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes',[\s\S]{0,80}?'pomodoro', 'shop', 'skills', 'boss'\];/.test(v213Js));
+    (indexHtml.match(/class="guide-row"/g) || []).length === 56 &&
+    (indexHtml.match(/class="guide-lead"/g) || []).length === 14 &&
+    /var SECTIONS = \['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes',[\s\S]{0,80}?'pomodoro', 'shop', 'skills', 'boss', 'yvy', 'city', 'profile', 'settings'\];/.test(v213Js));
 
   check('v21.3 each guide ends in the action it explains, not in more reading',
     ['openInboxQuickAdd', 'openTaskModal', 'openEventModal', 'openHabitModal', 'openGoalModal', 'openNoteModal']
@@ -2552,8 +2584,8 @@ if (!useFallback) {
   check('v21.4 habits, goals and notes carry the same single ❓, slot and panel',
     v214Sections.every(v => indexHtml.includes(`onclick="openGuide('${v}')"`) &&
       indexHtml.includes(`id="guideSlot-${v}"`) && indexHtml.includes(`data-g="${v}" role="tab"`)) &&
-    (indexHtml.match(/class="guide-btn"/g) || []).length === 9 &&
-    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 20 &&
+    (indexHtml.match(/class="guide-btn"/g) || []).length === 13 &&
+    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 28 &&
     v213Js.includes("habits: { label: '➕ عادت جدید', fn: 'openHabitModal' }") &&
     v213Js.includes("goals: { label: '➕ هدف جدید', fn: 'openGoalModal' }") &&
     v213Js.includes("notes: { label: '➕ یادداشت جدید', fn: 'openNoteModal' }"));
@@ -2570,8 +2602,8 @@ if (!useFallback) {
 
   check('v21.4 the guides in Settings grew with the sections',
     /* v21.7: the sentence no longer lists the sections one by one — there are ten */
-    indexHtml.includes('راهنمای کوتاهِ هر ده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.') &&
-    langJs.includes('"راهنمای کوتاهِ هر ده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود."'));
+    indexHtml.includes('راهنمای کوتاهِ هر چهارده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.') &&
+    langJs.includes('"راهنمای کوتاهِ هر چهارده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود."'));
 
   check('v21.4 every new string has an English translation',
     ['راهنمای عادت‌ها', 'راهنمای اهداف', 'راهنمای یادداشت‌ها', 'عادت جدید', 'هدف جدید', 'یادداشت جدید',
@@ -2642,9 +2674,9 @@ if (!useFallback) {
     v215Sections.every(v => indexHtml.includes(`onclick="openGuide('${v}')"`) &&
       indexHtml.includes(`id="guideSlot-${v}"`) && indexHtml.includes(`data-g="${v}" role="tab"`) &&
       indexHtml.includes(`data-g="${v}" role="tabpanel"`)) &&
-    (indexHtml.match(/class="guide-btn"/g) || []).length === 9 &&
-    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 20 &&
-    (indexHtml.match(/data-g="/g) || []).length === 20 &&
+    (indexHtml.match(/class="guide-btn"/g) || []).length === 13 &&
+    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 28 &&
+    (indexHtml.match(/data-g="/g) || []).length === 28 &&
     v213Js.includes("pomodoro: '📖 راهنمای پومودورو'") && v213Js.includes("shop: '📖 راهنمای XP Shop'") &&
     v213Js.includes("skills: '📖 راهنمای درخت مهارت'") && v213Js.includes("boss: '📖 راهنمای باس هفتگی'"));
 
@@ -2780,8 +2812,8 @@ if (!useFallback) {
     readme.includes('نسخه 21.7') && readme.includes('راهنمای ده بخش') &&
     !readmePomo.includes('اعلان‌های معکوس زنده') &&
     readmePomo.includes('اعلان‌ها فقط سه‌جا می‌آیند') && readmePomo.includes('کلید روشن/خاموش اعلان‌ها') &&
-    readmeGuides.includes('پومودورو، XP Shop، درخت مهارت و باس هفتگی') &&
-    readmeGuides.includes('هر ده راهنما') &&
+    readmeGuides.includes('پومودورو، XP Shop، درخت مهارت، باس هفتگی') &&
+    readmeGuides.includes('هر چهارده راهنما') &&
     readme.includes('ساختِ تسک داخل صفحه‌ی باس') && readme.includes('life-planner-cache-v88'));
 
   const v213CssCode = v213Css.replace(/\/\*[\s\S]*?\*\//g, '');   /* comments may talk about blur */
@@ -2860,6 +2892,19 @@ if (!useFallback) {
     readme.includes('شفق منشوری (Aurora Prism) — ۲۰۰۰ XP') && readme.includes('لیکویید گلس') &&
     readme.includes('### ✨ نسخه 22.0') && readme.includes('css/v22.css') &&
     readme.includes("life-planner-cache-v91"));
+
+  // v23.3: finish section guides without deleting stored progress or file backups.
+  const lastGuides = ['yvy', 'city', 'profile', 'settings'];
+  check('v23.3 all four sections have a button, hint slot, tab and guide panel',
+    lastGuides.every(v => indexHtml.includes(`onclick="openGuide('${v}')"`) &&
+      indexHtml.includes(`id="guideSlot-${v}"`) && indexHtml.includes(`data-g="${v}" role="tab"`) &&
+      indexHtml.includes(`data-g="${v}" role="tabpanel"`) && v213Js.includes(`${v}: true`)));
+  check('v23.3 requested controls removed while streak, city and backups remain',
+    !coreJs.includes('const streakRow =') &&
+    !indexHtml.includes('city-entry-card') && !indexHtml.includes(`onclick="showView('profile')"`) &&
+    !indexHtml.includes('sendSettingsCloud()') && indexHtml.includes('onclick="openSettingsBackup()"') &&
+    indexHtml.includes('onclick="openSettingsImport()"') && coreJs.includes('DB.stats.bestStreak') &&
+    indexHtml.includes('id="view-city"'));
 
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];

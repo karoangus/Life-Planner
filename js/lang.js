@@ -1505,6 +1505,62 @@
      whitespace split as a fallback. */
   var SEP_STRONG = /([·•—–|:،؛,\/()\[\]«»]|\s-\s)/;
 
+  var EXTRA_V233 = {
+  "راهنمای رقابت با خود": "Your progress guide",
+  "راهنمای شهر": "City guide",
+  "راهنمای پروفایل": "Profile guide",
+  "راهنمای تنظیمات": "Settings guide",
+  "راهنمای کوتاهِ هر چهارده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.": "A short guide to all fourteen sections. Open each one with the ❓ button in its section.",
+  "رکوردها و عملکرد امروزت را با گذشته مقایسه کن.": "Compare your records and today’s performance with the past.",
+  "امروز و رکورد": "Today and your record",
+  "پیشرفت امروزت را نسبت به بهترین رکورد قبلی ببین.": "See today’s progress against your previous best.",
+  "رکوردهای شخصی": "Personal records",
+  "بهترین رکورد روزانه‌ی XP، تسک، مطالعه، پومودورو و کوئست را ببین.": "See your daily records for XP, tasks, study, Pomodoros and quests.",
+  "مقایسه‌ی هفتگی": "Weekly comparison",
+  "آمار این هفته و هفته‌ی قبل کنار هم هستند.": "See this week’s stats alongside last week’s.",
+  "رکورد جدید": "New record",
+  "وقتی رکوردی را بشکنی پیام تبریک می‌بینی.": "A message celebrates a new record.",
+  "شهر با بالا رفتن سطح تو رشد می‌کند.": "Your city grows as you level up.",
+  "مرحله‌های شهر": "City stages",
+  "از چادر تا شهر آینده، با افزایش سطح مرحله‌های تازه باز می‌شوند.": "Unlock stages from a tent to a future city as you level up.",
+  "باران و صدا": "Rain and sound",
+  "باران و صدای محیط را از بالای صفحه روشن یا خاموش کن.": "Toggle rain and ambient sound at the top of the page.",
+  "شب و روز": "Day and night",
+  "آسمان و صدای محیط با زمان روز تغییر می‌کنند.": "The sky and ambient sounds change with the time of day.",
+  "دستاوردها و آیتم‌ها": "Achievements and items",
+  "با پیشرفت دستاوردهای شهر را باز کن؛ جعبه‌ی شانسی هم آیتم شهر دارد.": "Unlock city achievements as you progress; mystery boxes also contain city items.",
+  "پیشرفت کلی و دستاوردهایت را یک‌جا ببین.": "See your overall progress and achievements in one place.",
+  "سطح و XP": "Level and XP",
+  "عنوان، سطح و پیشرفت تا سطح بعد را ببین.": "See your title, level and progress to the next level.",
+  "آمار کلی": "Overall stats",
+  "تعداد تسک‌ها، عادت‌ها، کوئست‌ها و بیشترین استریک اینجا هستند.": "See your task, habit and quest counts and longest streak.",
+  "روی کارت بزن تا شرط‌های امروز و تعداد روزهای کامل را ببینی.": "Tap the card to see today’s requirements and your perfect day count.",
+  "مسیر ترقی": "Progress path",
+  "عنوان‌های بازشده و سطح لازم برای عنوان‌های بعدی را ببین.": "See unlocked titles and the levels needed for the next ones.",
+  "ظاهر و تنظیمات برنامه را به سلیقه‌ی خودت تغییر بده.": "Personalize the app’s appearance and settings.",
+  "زبان و اندازه": "Language and size",
+  "زبان، اندازه‌ی فونت و اندازه‌ی رابط را جداگانه تنظیم کن.": "Set language, font size and interface scale independently.",
+  "ظاهر و سرعت": "Appearance and performance",
+  "تم، لیکویید گلس و حالت پرفورمنس را انتخاب کن.": "Choose your theme, Liquid Glass and performance mode.",
+  "نوار پایین": "Bottom bar",
+  "میان‌برهای نوار پایین را انتخاب و مرتب کن.": "Choose and arrange bottom bar shortcuts.",
+  "پشتیبان و راهنما": "Backup and guides",
+  "پشتیبان را خروجی بگیر یا بازیابی کن؛ راهنماها را هم اینجا پیدا می‌کنی.": "Export or restore a backup and find the section guides here.",
+  "رکوردهایت و آمار این هفته را با گذشته مقایسه کن.": "Compare your records and this week’s stats with the past.",
+  "با بالا رفتن سطح، شهرت رشد می‌کند.": "Your city grows as you level up.",
+  "سطح، آمار و شرط‌های روز کامل را اینجا ببین.": "See your level, stats and perfect day requirements here.",
+  "ظاهر، زبان و پشتیبان برنامه را اینجا تنظیم کن.": "Configure appearance, language and backups here.",
+  "🏅 دیدن رکوردها": "🏅 See records",
+  "🧱 دیدن مراحل شهر": "🧱 See city stages",
+  "🌟 دیدن روز کامل": "🌟 See perfect day",
+  "📱 تنظیم نوار پایین": "📱 Customize bottom bar",
+  "🪞 You VS You": "🪞 You VS You",
+  "🏙️ Life City": "🏙️ Life City",
+  "👤 پروفایل": "👤 Profile",
+  "⚙️ تنظیمات": "⚙️ Settings"
+};
+  for (var k233 in EXTRA_V233) if (Object.prototype.hasOwnProperty.call(EXTRA_V233, k233)) EXACT[k233] = EXTRA_V233[k233];
+
   function compose(s, depth){
     if(depth > 3) return null;
 

@@ -790,9 +790,6 @@ function renderProfile(){
   const guideEl = document.getElementById('perfectDayGuide');
   if(guideEl && guideEl.style.display==='block') renderPerfectDayGuide();
 
-  const stage = getCityStage(DB.level);
-  document.getElementById('cityEntryIcon').textContent = stage.icon;
-  document.getElementById('cityEntryName').textContent = `شهرت رو ببین — الان ${stage.name} داری`;
 }
 
 /* ============ PERFECT DAY ============ */
@@ -2241,8 +2238,7 @@ function renderYVYRecords(){
     const best = yvyBestEver(m, null);
     return `<div class="yvy-record-row"><div class="yvy-record-name">${m.icon} ${m.label}</div><div class="yvy-record-val">${best} ${m.unit}</div></div>`;
   }).join('');
-  const streakRow = `<div class="yvy-record-row"><div class="yvy-record-name">🔥 طولانی‌ترین استریک</div><div class="yvy-record-val">${DB.stats.bestStreak||0} روز</div></div>`;
-  document.getElementById('yvyRecordsList').innerHTML = rows + streakRow;
+  document.getElementById('yvyRecordsList').innerHTML = rows;
 }
 function renderYVYWeekCompare(){
   const [thisStart, thisEnd] = yvyWeekRange(0);
@@ -5882,7 +5878,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='23.2';
+const LP_APP_VERSION='23.3';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
