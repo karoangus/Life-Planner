@@ -8,12 +8,12 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=23.2">
-<link rel="stylesheet" href="css/design-system.css?v=23.2">
-<link rel="stylesheet" href="css/v20.css?v=23.2">
-<link rel="stylesheet" href="css/v213.css?v=23.2">
-<link rel="stylesheet" href="css/v22.css?v=23.2">
-<link rel="stylesheet" href="css/ui-refresh.css?v=23.2">
+<link rel="stylesheet" href="css/app.css?v=23.3">
+<link rel="stylesheet" href="css/design-system.css?v=23.3">
+<link rel="stylesheet" href="css/v20.css?v=23.3">
+<link rel="stylesheet" href="css/v213.css?v=23.3">
+<link rel="stylesheet" href="css/v22.css?v=23.3">
+<link rel="stylesheet" href="css/ui-refresh.css?v=23.3">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -410,7 +410,8 @@ try{
 
 
     <div class="view" id="view-profile">
-      <div class="topbar"><div><h1>پروفایل</h1><div class="sub">پیشرفت کلی و دستاوردهات</div></div></div>
+      <div class="topbar"><div><h1>پروفایل</h1><div class="sub">پیشرفت کلی و دستاوردهات</div></div><button class="guide-btn" type="button" onclick="openGuide('profile')" title="راهنمای پروفایل" aria-label="راهنمای پروفایل">❓</button></div>
+      <div class="guide-slot" id="guideSlot-profile"></div>
 
       <div class="profile-hero">
         <div class="level-badge num" id="pfLevelBadge">1</div>
@@ -427,17 +428,6 @@ try{
         <div class="stat-card"><div class="glow" style="background:#ff5470"></div><div class="ic">🔥</div><div class="val num" id="pfBestStreak">0</div><div class="lbl">بیشترین استریک</div></div>
         <div class="stat-card"><div class="glow" style="background:#8b6bff"></div><div class="ic">📌</div><div class="val num" id="pfHabits">0</div><div class="lbl">عادت‌ها</div></div>
         <div class="stat-card"><div class="glow" style="background:#ffcc33"></div><div class="ic">🎯</div><div class="val num" id="pfQuests">0</div><div class="lbl">Quests</div></div>
-      </div>
-
-      <div class="card city-entry-card" style="margin-top:16px; cursor:pointer;" onclick="showView('city')">
-        <div class="city-entry-row">
-          <div class="city-entry-ic" id="cityEntryIcon">🏕️</div>
-          <div style="flex:1; min-width:0;">
-            <div class="card-head" style="margin-bottom:4px;"><h3>🏙 Life City</h3></div>
-            <div class="muted" id="cityEntryName" style="font-size:12.5px;">شهرت رو ببین — الان چادر توی جنگل داری</div>
-          </div>
-          <div style="font-size:20px; color:var(--txt-dim2);">←</div>
-        </div>
       </div>
 
       <div class="card" id="perfectDayCard" style="margin-top:16px; cursor:pointer;" onclick="togglePerfectDayGuide()">
@@ -465,10 +455,11 @@ try{
         <div class="top-actions">
           <div class="icon-btn" onclick="toggleCityRain()" id="cityRainBtn" title="باران">🌦️</div>
           <div class="icon-btn" onclick="toggleCitySound()" id="citySoundBtn" title="صدای شهر" aria-label="صدای شهر">🔇</div>
-          <div class="icon-btn" onclick="showView('profile')" title="بازگشت">↩️</div>
+          <button class="guide-btn" type="button" onclick="openGuide('city')" title="راهنمای شهر" aria-label="راهنمای شهر">❓</button>
         </div>
       </div>
 
+      <div class="guide-slot" id="guideSlot-city"></div>
       <div class="city-frame" id="cityFrame">
         <svg id="citySvg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -872,7 +863,9 @@ try{
     <div class="view" id="view-yvy">
       <div class="topbar">
         <div><h1>🪞 You VS You</h1><div class="sub">رقابت با نسخه‌ی قبلی خودت</div></div>
+        <button class="guide-btn" type="button" onclick="openGuide('yvy')" title="راهنمای رقابت با خود" aria-label="راهنمای رقابت با خود">❓</button>
       </div>
+      <div class="guide-slot" id="guideSlot-yvy"></div>
 
       <div class="yvy-hero">
         <div class="yvy-quote">رقیب تو دیروزت بود.</div>
@@ -899,7 +892,9 @@ try{
     <div class="view" id="view-settings">
       <div class="topbar">
         <div><h1>⚙️ تنظیمات</h1><div class="sub">شخصی‌سازی Life Planner بدون دست‌زدن به داده‌های قبلی</div></div>
+        <button class="guide-btn" type="button" onclick="openGuide('settings')" title="راهنمای تنظیمات" aria-label="راهنمای تنظیمات">❓</button>
       </div>
+      <div class="guide-slot" id="guideSlot-settings"></div>
 
       <div class="card settings-card">
         <div class="card-head"><h3>🌐 زبان برنامه</h3></div>
@@ -968,7 +963,6 @@ try{
         <div class="card-head"><h3>☁️ پشتیبان و بازیابی</h3></div>
         <p class="muted settings-help">پشتیبان شامل داده‌های اصلی برنامه مثل تسک‌ها، عادت‌ها، اهداف، XP، پومودورو، تم‌ها و تنظیمات ذخیره‌شده است.</p>
         <div class="settings-actions settings-actions-stack">
-          <button class="btn" onclick="sendSettingsCloud()">☁️ ارسال پشتیبان به فضای ابری</button>
           <button class="btn ghost" onclick="openSettingsBackup()">⬇️ Export Backup</button>
           <button class="btn ghost" onclick="openSettingsImport()">⬆️ Import / Restore Backup</button>
         </div>
@@ -978,7 +972,7 @@ try{
            without hunting for a ❓ in each section (v21.7: all ten of them). -->
       <div class="card settings-card">
         <div class="card-head"><h3>❓ راهنمای بخش‌ها</h3></div>
-        <p class="muted settings-help">راهنمای کوتاهِ هر ده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.</p>
+        <p class="muted settings-help">راهنمای کوتاهِ هر چهارده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.</p>
         <div class="settings-actions">
           <button class="btn ghost" type="button" onclick="openGuide('dashboard')">🏠 داشبورد</button>
           <button class="btn ghost" type="button" onclick="openGuide('tasks')">✅ تسک‌ها</button>
@@ -990,12 +984,16 @@ try{
           <button class="btn ghost" type="button" onclick="openGuide('shop')">🛍️ XP Shop</button>
           <button class="btn ghost" type="button" onclick="openGuide('skills')">🌳 درخت مهارت</button>
           <button class="btn ghost" type="button" onclick="openGuide('boss')">⚔️ باس هفتگی</button>
+          <button class="btn ghost" type="button" onclick="openGuide('yvy')">🪞 You VS You</button>
+          <button class="btn ghost" type="button" onclick="openGuide('city')">🏙️ Life City</button>
+          <button class="btn ghost" type="button" onclick="openGuide('profile')">👤 پروفایل</button>
+          <button class="btn ghost" type="button" onclick="openGuide('settings')">⚙️ تنظیمات</button>
         </div>
         <button class="btn ghost sm" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="lpResetGuides()">↩️ نمایش دوباره‌ی راهنمای خودکار</button>
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">23.2</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">23.3</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1302,6 +1300,10 @@ try{
     <div class="chip-opt" data-g="shop" role="tab" tabindex="0" aria-selected="false">🛍️ XP Shop</div>
     <div class="chip-opt" data-g="skills" role="tab" tabindex="0" aria-selected="false">🌳 درخت مهارت</div>
     <div class="chip-opt" data-g="boss" role="tab" tabindex="0" aria-selected="false">⚔️ باس هفتگی</div>
+    <div class="chip-opt" data-g="yvy" role="tab" tabindex="0" aria-selected="false">🪞 You VS You</div>
+    <div class="chip-opt" data-g="city" role="tab" tabindex="0" aria-selected="false">🏙️ Life City</div>
+    <div class="chip-opt" data-g="profile" role="tab" tabindex="0" aria-selected="false">👤 پروفایل</div>
+    <div class="chip-opt" data-g="settings" role="tab" tabindex="0" aria-selected="false">⚙️ تنظیمات</div>
   </div>
 
   <section class="guide-panel sel" data-g="dashboard" role="tabpanel">
@@ -1412,6 +1414,46 @@ try{
     </div>
   </section>
 
+  <section class="guide-panel" data-g="yvy" role="tabpanel">
+    <p class="guide-lead">رکوردها و عملکرد امروزت را با گذشته مقایسه کن.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">🎯</span><div class="guide-row-txt"><b>امروز و رکورد</b><span>پیشرفت امروزت را نسبت به بهترین رکورد قبلی ببین.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🏅</span><div class="guide-row-txt"><b>رکوردهای شخصی</b><span>بهترین رکورد روزانه‌ی XP، تسک، مطالعه، پومودورو و کوئست را ببین.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📊</span><div class="guide-row-txt"><b>مقایسه‌ی هفتگی</b><span>آمار این هفته و هفته‌ی قبل کنار هم هستند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🏆</span><div class="guide-row-txt"><b>رکورد جدید</b><span>وقتی رکوردی را بشکنی پیام تبریک می‌بینی.</span></div></div>
+    </div>
+  </section>
+
+  <section class="guide-panel" data-g="city" role="tabpanel">
+    <p class="guide-lead">شهر با بالا رفتن سطح تو رشد می‌کند.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">🧱</span><div class="guide-row-txt"><b>مرحله‌های شهر</b><span>از چادر تا شهر آینده، با افزایش سطح مرحله‌های تازه باز می‌شوند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🌦️</span><div class="guide-row-txt"><b>باران و صدا</b><span>باران و صدای محیط را از بالای صفحه روشن یا خاموش کن.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🌙</span><div class="guide-row-txt"><b>شب و روز</b><span>آسمان و صدای محیط با زمان روز تغییر می‌کنند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🏆</span><div class="guide-row-txt"><b>دستاوردها و آیتم‌ها</b><span>با پیشرفت دستاوردهای شهر را باز کن؛ جعبه‌ی شانسی هم آیتم شهر دارد.</span></div></div>
+    </div>
+  </section>
+
+  <section class="guide-panel" data-g="profile" role="tabpanel">
+    <p class="guide-lead">پیشرفت کلی و دستاوردهایت را یک‌جا ببین.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">🌱</span><div class="guide-row-txt"><b>سطح و XP</b><span>عنوان، سطح و پیشرفت تا سطح بعد را ببین.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📊</span><div class="guide-row-txt"><b>آمار کلی</b><span>تعداد تسک‌ها، عادت‌ها، کوئست‌ها و بیشترین استریک اینجا هستند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🌟</span><div class="guide-row-txt"><b>Perfect Day</b><span>روی کارت بزن تا شرط‌های امروز و تعداد روزهای کامل را ببینی.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🗺️</span><div class="guide-row-txt"><b>مسیر ترقی</b><span>عنوان‌های بازشده و سطح لازم برای عنوان‌های بعدی را ببین.</span></div></div>
+    </div>
+  </section>
+
+  <section class="guide-panel" data-g="settings" role="tabpanel">
+    <p class="guide-lead">ظاهر و تنظیمات برنامه را به سلیقه‌ی خودت تغییر بده.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">🌐</span><div class="guide-row-txt"><b>زبان و اندازه</b><span>زبان، اندازه‌ی فونت و اندازه‌ی رابط را جداگانه تنظیم کن.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🎨</span><div class="guide-row-txt"><b>ظاهر و سرعت</b><span>تم، لیکویید گلس و حالت پرفورمنس را انتخاب کن.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📱</span><div class="guide-row-txt"><b>نوار پایین</b><span>میان‌برهای نوار پایین را انتخاب و مرتب کن.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">💾</span><div class="guide-row-txt"><b>پشتیبان و راهنما</b><span>پشتیبان را خروجی بگیر یا بازیابی کن؛ راهنماها را هم اینجا پیدا می‌کنی.</span></div></div>
+    </div>
+  </section>
+
   <div class="guide-foot">
     <button class="btn" type="button" id="guideCta" onclick="guidePrimaryAction()">📥 اینباکس سریع</button>
     <button class="btn ghost" type="button" onclick="closeGuide()">بستن</button>
@@ -1444,20 +1486,20 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=23.2"></script>
-<script src="js/enhancements.js?v=23.2"></script>
-<script src="js/sw-register.js?v=23.2"></script>
+<script src="js/core.js?v=23.3"></script>
+<script src="js/enhancements.js?v=23.3"></script>
+<script src="js/sw-register.js?v=23.3"></script>
 
-<script src="js/pomodoro.js?v=23.2"></script>
+<script src="js/pomodoro.js?v=23.3"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=23.2"></script>
-<script src="js/v16.js?v=23.2"></script>
-<script src="js/v162.js?v=23.2"></script>
-<script src="js/v21.js?v=23.2"></script>
+<script src="js/lang.js?v=23.3"></script>
+<script src="js/v16.js?v=23.3"></script>
+<script src="js/v162.js?v=23.3"></script>
+<script src="js/v21.js?v=23.3"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=23.2"></script>
+<script src="js/v213.js?v=23.3"></script>
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
-<script src="js/v22.js?v=23.2"></script>
+<script src="js/v22.js?v=23.3"></script>
 
 </body>
 </html>
