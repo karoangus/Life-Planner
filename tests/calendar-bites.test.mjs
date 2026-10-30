@@ -1,5 +1,5 @@
 /**
- * Calendar regression tests: bite-only events and their shared colors.
+ * Calendar regression tests: bite frames with independent event body colors.
  * Run independently with `npm run test:calendar` (also part of `npm test`).
  * Uses the repository's bundled Chromium; no browser download is required.
  */
@@ -83,13 +83,13 @@ try{
     value:lpGetEventBite(),
     selected:document.querySelectorAll('#eBite .sel').length,
     pressed:[...document.querySelectorAll('#eBite [aria-pressed="true"]')].map(b=>b.dataset.v),
-    colorHidden:document.getElementById('eColorField').hidden
+    colorVisible:!document.getElementById('eColorField').hidden
   }));
-  assert.deepEqual(selection,{value:'normal',selected:1,pressed:['normal'],colorHidden:true});
+  assert.deepEqual(selection,{value:'normal',selected:1,pressed:['normal'],colorVisible:true});
   await page.click('#eBite [data-v=""]');
-  selection = await page.evaluate(()=>({value:lpGetEventBite(),colorHidden:document.getElementById('eColorField').hidden}));
-  assert.deepEqual(selection,{value:null,colorHidden:false});
-  ok('bite selection stays single-choice, accessible, and hides the competing color picker');
+  selection = await page.evaluate(()=>({value:lpGetEventBite(),colorVisible:!document.getElementById('eColorField').hidden}));
+  assert.deepEqual(selection,{value:null,colorVisible:true});
+  ok('bite selection stays single-choice and accessible; the body color picker remains available');
 
   const palette = {heavy:'#16a34a',normal:'#eab308',baklava:'#f4633a'};
   const rgb = hex => `rgb(${parseInt(hex.slice(1,3),16)}, ${parseInt(hex.slice(3,5),16)}, ${parseInt(hex.slice(5,7),16)})`;
@@ -112,7 +112,7 @@ try{
     assert.equal(event.bite,bite);
     assert.equal(Object.hasOwn(event,'energy'),false);
     assert.equal(event.cat,'bite-test-category');
-    assert.equal(event.color,'#8b6bff'); // retained for clearing the bite later
+    assert.equal(event.color,'#8b6bff'); // the body keeps the user's chosen color
     const view = await page.evaluate(id=>{
       const block=[...document.querySelectorAll('.ev-block')].find(b=>b.getAttribute('aria-label')?.startsWith(DB.events.find(e=>e.id===id).title));
       const chip=document.querySelector(`#eBite [data-v="${DB.events.find(e=>e.id===id).bite}"]`);
@@ -121,16 +121,19 @@ try{
       const summary=document.getElementById('eventActionDetails').textContent;
       const dot=getComputedStyle(document.querySelector('#eventActionDetails .lp-bite-dot')).backgroundColor;
       closeModal('eventActionModalBg');
-      return {border:style.borderTopColor,background:style.backgroundImage,chip:getComputedStyle(chip).borderTopColor,
+      return {border:style.borderTopColor,borderWidth:style.borderTopWidth,background:style.backgroundImage,chip:getComputedStyle(chip).borderTopColor,
         summary,dot};
     },event.id);
     assert.equal(view.border,rgb(color));
+    assert.equal(view.borderWidth,'3px');
     assert.equal(view.chip,rgb(color));
     assert.equal(view.dot,rgb(color));
-    assert.ok(view.background.includes(rgb(color).replace('rgb(', 'rgba(').replace(')', ', 0.5)')));
+    // The frame is the bite color, but the body stays the user's purple.
+    assert.ok(view.background.includes('rgba(139, 107, 255, 0.5)'));
+    assert.ok(!view.background.includes(rgb(color).replace('rgb(', 'rgba(').replace(')', ', 0.5)')));
     assert.ok(view.summary.includes(`لقمه ${ {heavy:'سنگین',normal:'معمولی',baklava:'باقلوا'}[bite] }`));
     assert.ok(!view.summary.includes('انرژی'));
-    ok(`${bite}: stored without energy; picker, block, and details share ${color}`);
+    ok(`${bite}: frame uses ${color}, while the block body keeps the user's color`);
   }
   const markers = await page.evaluate(()=>({
     badges:document.querySelectorAll('.ev-block[aria-label^="آزمون"] .ev-trait').length,
@@ -138,6 +141,31 @@ try{
   }));
   assert.deepEqual(markers,{badges:3,groups:3});
   ok('each event has exactly one bite marker, never an extra energy badge');
+
+  const categoryBody = await createEvent({title:'آزمون رنگ دسته',bite:'normal',days:[4],start:'16:00',end:'17:00',custom:false});
+  const categoryView = await page.evaluate(id=>{
+    const block=[...document.querySelectorAll('.ev-block')].find(b=>b.getAttribute('aria-label')?.startsWith(DB.events.find(e=>e.id===id).title));
+    const style=getComputedStyle(block);
+    return {background:style.backgroundImage,border:style.borderTopColor};
+  },categoryBody.id);
+  assert.ok(categoryView.background.includes('rgba(0, 229, 255, 0.5)'));
+  assert.equal(categoryView.border,rgb(palette.normal));
+  ok('a bite event without a custom color keeps the category color in its body');
+
+  const recolor = await page.evaluate(async ()=>{
+    const ev=DB.events.find(e=>e.title==='آزمون heavy');
+    onEventBlockClick(ev.id,0); startEditEvent();
+    const pickerVisible=!document.getElementById('eColorField').hidden;
+    document.querySelector('#eColorRow [data-c="#60a5fa"]').click();
+    await saveEvent();
+    const block=[...document.querySelectorAll('.ev-block')].find(b=>b.getAttribute('aria-label')?.startsWith('آزمون heavy'));
+    const style=getComputedStyle(block);
+    return {pickerVisible,background:style.backgroundImage,border:style.borderTopColor};
+  });
+  assert.equal(recolor.pickerVisible,true);
+  assert.ok(recolor.background.includes('rgba(96, 165, 250, 0.5)'));
+  assert.equal(recolor.border,rgb(palette.heavy));
+  ok('the user can recolor the block body while the bite frame stays unchanged');
 
   const legacy = await page.evaluate(async ()=>{
     DB.events.push({id:'legacy-energy',title:'قدیمی بدون لقمه',days:[3],startMin:480,endMin:540,energy:'high',color:'#60a5fa',reminder:false});
@@ -184,22 +212,23 @@ try{
     const split=DB.events.find(e=>e.title==='سری جابه‌جایی' && e.id!==id);
     return {bite:split.bite,color:eventColor(split),energy:Object.hasOwn(split,'energy')};
   },moved.id);
-  assert.deepEqual(drag,{bite:'baklava',color:palette.baklava,energy:false});
+  assert.deepEqual(drag,{bite:'baklava',color:'#8b6bff',energy:false});
   const resized = await createEvent({title:'سری تغییر مدت',bite:'normal',days:[1,2],start:'14:00',end:'15:00'});
   const resize = await page.evaluate(id=>{
     lpApplyEventResize(DB.events.find(e=>e.id===id),1,0,14*60,15*60+15,'end');
     const split=DB.events.find(e=>e.title==='سری تغییر مدت' && e.id!==id);
     return {bite:split.bite,color:eventColor(split),energy:Object.hasOwn(split,'energy'),duration:eventEndMinutes(split)-eventStartMinutes(split)};
   },resized.id);
-  assert.deepEqual(resize,{bite:'normal',color:palette.normal,energy:false,duration:75});
-  ok('dragging and resizing preserve the bite and never recreate energy');
+  assert.deepEqual(resize,{bite:'normal',color:'#8b6bff',energy:false,duration:75});
+  ok('dragging and resizing preserve the bite frame and body color, and never recreate energy');
 
   const fallback = await page.evaluate(()=>{
     DB.events.push({id:'untouched-legacy',title:'داده قدیمی دست‌نخورده',days:[0],startMin:14*60,endMin:15*60,energy:'low',bite:null,color:null,reminder:false});
     save(); renderCalendar();
-    return {unknown:eventColor({bite:'unknown',color:'#60a5fa'}),category:eventColor({cat:'bite-test-category'}),theme:eventColor({})};
+    return {unknown:eventColor({bite:'unknown',color:'#60a5fa'}),category:eventColor({cat:'bite-test-category'}),theme:eventColor({}),
+      biteCustom:eventColor({bite:'heavy',color:'#8b6bff'}),biteCategory:eventColor({bite:'normal',cat:'bite-test-category'}),biteTheme:eventColor({bite:'baklava'})};
   });
-  assert.deepEqual(fallback,{unknown:'#60a5fa',category:'#00e5ff',theme:null});
+  assert.deepEqual(fallback,{unknown:'#60a5fa',category:'#00e5ff',theme:null,biteCustom:'#8b6bff',biteCategory:'#00e5ff',biteTheme:null});
   await page.reload({waitUntil:'load'});
   const persisted = await page.evaluate(()=>({
     events:DB.events.map(e=>({id:e.id,bite:e.bite,energy:e.energy})),
@@ -228,7 +257,7 @@ try{
       choices:[...document.querySelectorAll('#eBite .chip-opt')].map(b=>b.textContent.trim()),summary};
   });
   assert.equal(english.label,'Bite size (optional)');
-  assert.equal(english.hint,'The event color matches the selected bite.');
+  assert.equal(english.hint,'The bite only colors the event frame; choose the block color separately.');
   assert.deepEqual(english.choices,['No selection','🧆 Baklava bite','🍽️ Normal bite','🍲 Heavy bite']);
   assert.ok(english.summary.includes('Heavy bite'),JSON.stringify(english));
   ok('bite labels, color hint, and event details translate to English');

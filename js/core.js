@@ -3177,9 +3177,7 @@ function categoryByName(name){
   return (DB.categories||[]).find(c=>String(c.name||'').trim()===k)||null;
 }
 function eventColor(ev){
-  const bite=lpEventBite(ev);
-  if(bite) return bite.color;                                // a bite owns the event's color
-  if(ev&&ev.color) return ev.color;                          // custom color, when no bite is selected
+  if(ev&&ev.color) return ev.color;                          // color chosen for this event
   if(ev&&ev.cat){ const c=categoryById(ev.cat); if(c&&c.color) return c.color; } // category default
   return null;                                               // theme default
 }
@@ -3960,9 +3958,9 @@ function renderNotes(){
 const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
 window.__editingEventId = null;
 window.__eventActionCtx = null; // {eventId, dayIdx}
-/* One source of truth for bite labels, icons and colors. The picker and the
-   calendar both use these colors; only baklava's orange is warmer/redder.
-   Events without a bite keep their existing custom/category/theme color. */
+/* One source of truth for bite labels, icons and frame colors. The picker and
+   the calendar frame use these colors; the block body keeps the user's own
+   custom/category/theme color. Only baklava's orange is warmer/redder. */
 const LP_EVENT_BITES={
   heavy:{icon:'🍲',label:'لقمه سنگین',color:'#16a34a'},
   normal:{icon:'🍽️',label:'لقمه معمولی',color:'#eab308'},
@@ -4356,10 +4354,9 @@ function wireColorRow(boxId, onPick){
 }
 function renderEventColorRow(){
   const box=document.getElementById('eColorRow'); if(!box) return;
-  // No competing color control while a bite supplies the color. Clearing the
-  // bite brings the previous custom/category choice back without discarding it.
+  // The bite only colors the frame, so the body color picker stays available.
   const field=document.getElementById('eColorField');
-  if(field) field.hidden=!!lpEventBite({bite:lpGetEventBite()});
+  if(field) field.hidden=false;
   box.innerHTML=lpColorRowHtml(window.__eventColorPicked,'پیش‌فرض (رنگ دسته)');
   wireColorRow('eColorRow', hex=>{ window.__eventColorPicked=hex; renderEventColorRow(); });
 }
@@ -4389,7 +4386,7 @@ function refreshEventCatChips(){
         // selecting a category makes the event follow that category's default color
         window.__eventColorPicked=null;
         const cat=categoryById(window.__eventCategoryId);
-        if(cat && !lpGetEventBite()) toast(`🎨 رنگ دسته «${cat.name}» برای این رویداد استفاده می‌شود`);
+        if(cat) toast(`🎨 رنگ دسته «${cat.name}» برای این رویداد استفاده می‌شود`);
       }
       refreshEventCatChips();
       renderEventColorRow();
@@ -5527,8 +5524,13 @@ function renderCalendar(){
       const ecol=eventColor(e);
       if(ecol){
         el.style.background=`linear-gradient(160deg,${lpHexToRgba(ecol,.5)},${lpHexToRgba(ecol,.26)})`;
-        el.style.borderColor=bite?ecol:lpHexToRgba(ecol,.7);
+        el.style.borderColor=lpHexToRgba(ecol,.7);
         el.style.boxShadow=`inset 0 0 0 1px ${lpHexToRgba(ecol,.28)}, 0 2px 10px ${lpHexToRgba(ecol,.22)}`;
+      }
+      if(bite){
+        // A simple, slightly stronger frame; never repaint the block body.
+        el.style.borderColor=bite.color;
+        if(!ecol) el.style.boxShadow='none';
       }
       attachEventDrag(el,e,d,shift);
       attachEventResize(el,e,d,shift,from,to);
@@ -5880,7 +5882,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='23.1';
+const LP_APP_VERSION='23.2';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

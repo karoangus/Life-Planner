@@ -1377,7 +1377,7 @@
     "🍲 لقمه سنگین": "🍲 Heavy bite",
     "🍽️ لقمه معمولی": "🍽️ Normal bite",
     "🧆 لقمه باقلوا": "🧆 Baklava bite",
-    "رنگ رویداد با لقمهٔ انتخاب‌شده هماهنگ می‌شود.": "The event color matches the selected bite."
+    "لقمه فقط کادر رویداد را رنگی می‌کند؛ رنگ خود بلوک را جدا انتخاب کن.": "The bite only colors the event frame; choose the block color separately."
   };
   for(var _k231 in EXTRA_V231){ if(Object.prototype.hasOwnProperty.call(EXTRA_V231, _k231)) EXACT[_k231] = EXTRA_V231[_k231]; }
 
