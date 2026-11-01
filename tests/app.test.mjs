@@ -2037,6 +2037,83 @@ if (!useFallback) {
   check('v23.3 new hints, guides, actions and requested removals work',
     Object.values(v233).every(Boolean), JSON.stringify(v233));
 
+  /* v23.4: a note keeps the line breaks the user typed in the editor. */
+  const v234 = await page.evaluate(async () => {
+    const wait = () => new Promise(r => setTimeout(r, 120));
+    const out = {};
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    window.showView('notes'); await wait();
+    /* a filter left over from an earlier check must not hide the new note */
+    if (typeof window.resetNoteFilters === 'function') { window.resetNoteFilters(); await wait(); }
+    const before = { notes: JSON.stringify(DB.notes), order: window.__lpNoteSort, tag: window.__lpNoteTag };
+
+    /* write a two-line note through the real editor and save it */
+    window.openNoteModal();
+    document.getElementById('nTitle').value = 'یادداشت چندخطی';
+    document.getElementById('nBody').value = 'خط اول\nخط دوم';
+    window.saveNote(); await wait();
+    const saved = DB.notes.find(n => n.title === 'یادداشت چندخطی');
+    out.storedNewline = !!saved && saved.body.includes('\n');
+
+    const cardOf = (id) => document.querySelector('#noteGrid [data-note-id="' + id + '"]');
+    let card = cardOf(saved.id);
+    let body = card && card.querySelector('p.note-body');
+    out.oneBreak = !!body && body.querySelectorAll('br').length === 1;
+    out.bothLines = !!body && body.textContent.includes('خط اول') && body.textContent.includes('خط دوم');
+
+    /* a blank line stays a blank line; three blank lines collapse to one */
+    saved.body = 'سر\n\nدم';
+    window.renderNotes(); await wait();
+    body = cardOf(saved.id).querySelector('p.note-body');
+    out.blankLineKept = body.querySelectorAll('br').length === 2;
+    saved.body = 'سر\n\n\n\nدم';
+    window.renderNotes(); await wait();
+    body = cardOf(saved.id).querySelector('p.note-body');
+    out.blankRunCollapsed = body.querySelectorAll('br').length === 2 && body.textContent.startsWith('سر');
+
+    /* editing keeps the text exactly as typed (indentation, no trimming mid-note) */
+    window.openNoteModal(saved.id);
+    out.editorRoundTrip = document.getElementById('nBody').value === 'سر\n\n\n\nدم';
+    document.getElementById('nBody').value = 'یک\nدو\nسه';
+    window.saveNote(); await wait();
+    const edited = DB.notes.find(n => n.id === saved.id);
+    out.editKeptBreaks = edited.body.split('\n').length === 3;
+    body = cardOf(saved.id).querySelector('p.note-body');
+    out.editRenders = body.querySelectorAll('br').length === 2;
+
+    /* a single-line note renders as one run — no stray breaks */
+    const plain = DB.notes.filter(n => n.id !== saved.id && n.body && !n.body.includes('\n'))[0];
+    if (plain) out.plainNoBreak = cardOf(plain.id).querySelector('p.note-body').querySelectorAll('br').length === 0;
+
+    /* the type really is bigger and the card no longer clips to a fixed box */
+    const cs = getComputedStyle(body);
+    out.bodyFont = parseFloat(cs.fontSize) >= 13.4 && cs.lineHeight !== 'normal';
+    out.cardSizesToContent = getComputedStyle(cardOf(saved.id)).height !== '150px';
+    out.editorFont = parseFloat(getComputedStyle(document.getElementById('nBody')).fontSize) >= 14;
+
+    /* escaping still wins over line breaks */
+    saved.body = '<b>x</b>\n<script>y</script>';
+    window.renderNotes(); await wait();
+    const raw = cardOf(saved.id).querySelector('p.note-body');
+    out.escaping = !raw.querySelector('b') && !raw.querySelector('script') && raw.querySelectorAll('br').length === 1;
+
+    /* leave the store the way we found it */
+    DB.notes = DB.notes.filter(n => n.id !== saved.id);
+    if (before.order) window.__lpNoteSort = before.order;
+    if (before.tag) window.__lpNoteTag = before.tag;
+    if (typeof save === 'function') save();
+    window.renderNotes(); await wait();
+    out.cleaned = !DB.notes.find(n => n.title === 'یادداشت چندخطی');
+    return out;
+  });
+  check('v23.4 a note keeps every line break the editor was given (blank lines included)',
+    v234.storedNewline && v234.oneBreak && v234.bothLines && v234.blankLineKept &&
+    v234.blankRunCollapsed && v234.editorRoundTrip && v234.editKeptBreaks && v234.editRenders &&
+    (v234.plainNoBreak !== false), JSON.stringify(v234));
+  check('v23.4 notes read bigger, size to their content and still escape markup',
+    v234.bodyFont && v234.cardSizesToContent && v234.editorFont && v234.escaping && v234.cleaned,
+    JSON.stringify(v234));
+
   await browser.close();
 } else {
   // FALLBACK: no browser available (restricted sandbox). Verify core logic via file inspection.
@@ -2151,7 +2228,10 @@ if (!useFallback) {
 
   check('v16.2 note cards carry colour, meta and highlighted search hits',
     coreJs.includes('--note-accent') && coreJs.includes('note-meta') &&
-    coreJs.includes('noteHighlight(n.body,q)') && coreJs.includes('note-tag'));
+    /* v23.4: the body is highlighted line by line (noteBodyHtml), so the plain
+       one-shot call is no longer what renders a card */
+    coreJs.includes('noteBodyHtml(n.body,q)') && coreJs.includes('noteHighlight(t,q)') &&
+    coreJs.includes('note-tag'));
 
   // ---------- v16.2: performance mode ----------
   check('v16.2 performance switch present in Settings',
@@ -2949,6 +3029,19 @@ if (!useFallback) {
     !indexHtml.includes('sendSettingsCloud()') && indexHtml.includes('onclick="openSettingsBackup()"') &&
     indexHtml.includes('onclick="openSettingsImport()"') && coreJs.includes('DB.stats.bestStreak') &&
     indexHtml.includes('id="view-city"'));
+
+  // v23.4: notes keep the line breaks typed into the editor and read bigger.
+  check('v23.4 note bodies are rendered line by line instead of run together',
+    coreJs.includes('function noteBodyHtml(body,q)') &&
+    coreJs.includes("replace(/\\r\\n?/g,'\\n')") &&
+    coreJs.includes(".join('<br>')") &&
+    coreJs.includes('noteBodyHtml(n.body,q)') &&
+    !coreJs.includes('noteHighlight(n.body,q)'));
+  check('v23.4 note typography and the editor surface are one comfortable step bigger',
+    appCss.includes('.note-card p.note-body{') && appCss.includes('font-size:13.5px') &&
+    appCss.includes('#noteGrid .note-card{') && appCss.includes('min-height:172px') &&
+    appCss.includes('#nBody{') && appCss.includes('min-height:190px') &&
+    appCss.includes('.note-card .note-action{') && readme.includes('### ✨ نسخه 23.4'));
 
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];
