@@ -1825,6 +1825,50 @@ if (!useFallback) {
     v215boss.hpText === '۱۰۰ / ۱۰۰ HP' && /۱۳ روز و ۲۳ ساعت|۱۴ روز و ۰ ساعت/.test(v215boss.deadline) &&
     /۷ روز و ۰ ساعت|۶ روز و ۲۳ ساعت/.test(v215boss.countdown), JSON.stringify(v215boss));
 
+  const unlimitedBoss = await page.evaluate(() => {
+    const originalBoss = JSON.parse(JSON.stringify(DB.boss));
+    const out = {};
+    window.openBossSetup();
+    const checkbox = document.getElementById('bossNoTimeLimitInput');
+    out.defaultTimed = !checkbox.checked;
+    document.getElementById('bossNameInput').value = 'هدف بلندمدت';
+    bossSetupSelected = [DB.tasks[0].id];
+    checkbox.checked = true;
+    window.confirmBossSetup();
+    out.createdUnlimited = DB.boss.active.noTimeLimit === true && DB.boss.active.deadlineAt === null;
+    window.checkBossDeadline();
+    out.noAutoDeadline = DB.boss.active.deadlineAt === null;
+    DB.boss.active.deadlineAt = Date.now() - 30 * 86400000;
+    window.renderBossContent();
+    out.survivesExpiredDate = !!DB.boss.active && document.querySelector('.boss-deadline').textContent.includes('بدون لیمیت زمانی');
+    DB.boss.active.deadlineAt = null;
+    window.save();
+    out.persisted = JSON.stringify(DB.boss).includes('"noTimeLimit":true');
+    window.startEditBoss();
+    out.editRestores = checkbox.checked;
+    checkbox.checked = false;
+    const before = Date.now();
+    window.confirmBossSetup();
+    const deadline = DB.boss.active.deadlineAt;
+    out.timedAgain = !DB.boss.active.noTimeLimit && deadline >= before + 14 * 86400000 && deadline <= Date.now() + 14 * 86400000;
+    window.startEditBoss();
+    window.confirmBossSetup();
+    out.editKeepsDeadline = DB.boss.active.deadlineAt === deadline;
+    delete DB.boss.active.noTimeLimit;
+    DB.boss.active.deadlineAt = Date.now() - 1;
+    window.checkBossDeadline();
+    out.legacyExpires = DB.boss.active === null;
+    window.openBossSetup();
+    out.reset = !checkbox.checked;
+    window.closeModal('bossSetupModalBg');
+    DB.boss = originalBoss;
+    window.save();
+    return out;
+  });
+  for (const [name, passed] of Object.entries(unlimitedBoss)) {
+    check('Boss time limit: ' + name, passed, JSON.stringify(unlimitedBoss));
+  }
+
   /* the XP Shop kept everything and only reads better */
   const v215shop = await page.evaluate(() => {
     const clean = () => document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
