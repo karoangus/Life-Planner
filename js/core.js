@@ -2284,7 +2284,7 @@ const BOSS_WEEK_MS = 7*24*60*60*1000;
 const BOSS_DEADLINE_MS = 14*24*60*60*1000;
 function checkBossDeadline(){
   const b = DB.boss.active;
-  if(!b) return;
+  if(!b || b.noTimeLimit === true) return;
   if(!b.deadlineAt){ b.deadlineAt = Date.now() + BOSS_DEADLINE_MS; return; }
   if(Date.now() > b.deadlineAt){
     DB.boss.active = null;
@@ -2314,6 +2314,7 @@ function openBossSetup(){
   bossEditMode = false;
   document.getElementById('bossSetupTitle').textContent = '⚔️ باس این هفته رو بساز';
   document.getElementById('bossNameInput').value = '';
+  document.getElementById('bossNoTimeLimitInput').checked = false;
   const nt = document.getElementById('bossNewTaskInput'); if(nt) nt.value = '';
   renderBossTaskPicker();
   openModal('bossSetupModalBg');
@@ -2324,6 +2325,7 @@ function startEditBoss(){
   bossEditMode = true;
   document.getElementById('bossSetupTitle').textContent = '✏️ ویرایش باس';
   document.getElementById('bossNameInput').value = b.name;
+  document.getElementById('bossNoTimeLimitInput').checked = b.noTimeLimit === true;
   const nt = document.getElementById('bossNewTaskInput'); if(nt) nt.value = '';
   renderBossTaskPicker();
   openModal('bossSetupModalBg');
@@ -2373,6 +2375,7 @@ function addBossTaskInline(){
   toast(`✅ تسک «${title}» ساخته و برای باس انتخاب شد`);
 }
 function confirmBossSetup(){
+  const noTimeLimit = document.getElementById('bossNoTimeLimitInput').checked;
   const name = document.getElementById('bossNameInput').value.trim();
   if(!name){ toast('⚠️ اول اسم باس رو بنویس'); return; }
   if(bossSetupSelected.length<1){ toast('⚠️ حداقل یک تسک انتخاب کن'); return; }
@@ -2382,10 +2385,11 @@ function confirmBossSetup(){
     b.taskIds = [...bossSetupSelected];
     b.hitTaskIds = b.hitTaskIds.filter(id=>b.taskIds.includes(id));
     b.hp = Math.max(0, Math.round(b.maxHp * (1 - b.hitTaskIds.length/b.taskIds.length)));
-    if(!b.deadlineAt) b.deadlineAt = Date.now() + BOSS_DEADLINE_MS;
+    b.noTimeLimit = noTimeLimit;
+    b.deadlineAt = noTimeLimit ? null : (b.deadlineAt || Date.now() + BOSS_DEADLINE_MS);
     toast('✏️ باس ویرایش شد');
   } else {
-    DB.boss.active = { name, hp:100, maxHp:100, taskIds:[...bossSetupSelected], hitTaskIds:[], deadlineAt: Date.now() + BOSS_DEADLINE_MS };
+    DB.boss.active = { name, hp:100, maxHp:100, taskIds:[...bossSetupSelected], hitTaskIds:[], noTimeLimit, deadlineAt: noTimeLimit ? null : Date.now() + BOSS_DEADLINE_MS };
     toast(`⚔️ نبرد با «${name}» شروع شد!`);
   }
   bossEditMode = false;
@@ -2440,7 +2444,9 @@ function renderBossContent(){
   if(b){
     const pct = Math.round((b.hp/b.maxHp)*100);
     const deadlineLeft = b.deadlineAt ? Math.max(0, b.deadlineAt - Date.now()) : 0;
-    const deadlineHtml = b.deadlineAt
+    const deadlineHtml = b.noTimeLimit === true
+      ? `<div class="boss-deadline">♾️ بدون لیمیت زمانی</div>`
+      : b.deadlineAt
       ? `<div class="boss-deadline">⏰ مهلت ۱۴ روزه: <b class="num">${fmtBossCountdown(deadlineLeft)}</b></div>`
       : '';
     el.innerHTML = `<div class="boss-card">
