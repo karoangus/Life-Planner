@@ -2040,3 +2040,70 @@ html[data-lang="en"] .ev-traits{right:auto;left:3px}
 .ev-ghost.lp-ghost-off{opacity:0}
 .ev-resize-tip{left:0;top:0;will-change:transform}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}.lp-drag-clone,.ev-ghost{transition:none!important}}
+
+/* ============================================================
+   v23.4 — NOTES READ LIKE THE EDITOR
+   Additive only: the same classes, the same handlers, the same
+   theme variables. Two things change:
+     1. typography — the note body was 12px and cramped; title,
+        body, meta and action rows all move up one comfortable
+        step so a note can actually be read without squinting;
+     2. shape — a card was pinned to a 150px box, so even a short
+        note had its body sliced in half. Cards now size to their
+        own content (rows in a grid still line up), and the body
+        keeps every line break the user typed (js/core.js builds
+        the <br>s, so nothing here has to fight white-space).
+   ============================================================ */
+
+/* ---------- the card: room to breathe, no sliced paragraphs ---------- */
+#noteGrid .note-card{
+  height:auto;                 /* was a fixed 150px */
+  min-height:172px;
+  contain-intrinsic-size:auto 176px;   /* matches the new floor, so the
+                                          off-screen scroll estimate stays honest */
+  padding:15px 15px 13px 18px;
+  padding-inline-start:20px;   /* clear of the 4px colour stripe */
+  gap:0;
+}
+.note-card h4{
+  font-size:15px; line-height:1.6; font-weight:800; letter-spacing:-.005em;
+  margin-bottom:8px; overflow-wrap:anywhere;
+}
+.note-card p.note-body{
+  font-size:13.5px; line-height:1.95; letter-spacing:.002em;
+  color:var(--txt-dim);
+  overflow-wrap:anywhere; word-break:break-word;
+  -webkit-line-clamp:4;
+}
+.note-card p.note-empty{font-size:12.5px; font-style:italic; color:var(--txt-dim2);}
+.note-card.open p.note-body,
+#noteGrid.notes-list .note-card.open p.note-body{-webkit-line-clamp:unset; overflow:visible;}
+
+/* ---------- pills / meta / actions: same sizes, tidier rhythm ---------- */
+.note-pills{margin-bottom:8px; gap:6px;}
+.note-pills .pill{font-size:10.5px; padding:3px 9px;}
+.note-meta{
+  font-size:11px; line-height:1.6; gap:12px; margin-top:10px;
+  color:var(--txt-dim2);
+}
+.note-card .note-actions{gap:6px; flex-wrap:wrap; padding-top:11px;}
+.note-card .note-action{
+  font-size:11px; font-weight:700; line-height:1.4;
+  padding:6px 9px; border-radius:9px;
+  min-height:30px; display:inline-flex; align-items:center; gap:4px;
+}
+
+/* ---------- the editor: a comfortable writing surface ---------- */
+#nBody{
+  min-height:190px;
+  font-size:14.5px; line-height:2; letter-spacing:.002em;
+  padding:12px 14px; border-radius:12px;
+  caret-color:var(--neon);
+}
+#nBody::placeholder{color:var(--txt-dim2); opacity:1;}
+#nTitle{font-size:15px; padding:11px 14px; border-radius:12px;}
+.notes-counter{font-size:11px; line-height:1.8; margin-top:7px; color:var(--txt-dim2);}
+
+/* light theme: the dim body colour needs one step more contrast at 13.5px */
+html[data-theme="light"] .note-card p.note-body{color:#3d465c;}
+html[data-theme="light"] .note-meta{color:#6b7488;}

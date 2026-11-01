@@ -3735,6 +3735,30 @@ function noteHighlight(text,q){
   try{ return safe.replace(new RegExp(needle,'gi'), m=>'<mark class="note-hl">'+m+'</mark>'); }
   catch(_){ return safe; }
 }
+/* v23.4 — a note keeps the line breaks the user typed.
+   The editor is a <textarea>, so every Enter is stored as "\n" in the body.
+   HTML throws plain newlines away, which is why three tidy lines used to come
+   back as one long run-on sentence. Every line is escaped + highlighted on its
+   own and the lines are joined with <br>, so the card reads exactly like the
+   editor — paragraphs stay paragraphs, and a blank line stays one blank line
+   (any longer run of empty lines collapses to a single one). */
+function noteBodyHtml(body,q){
+  const raw=String(body==null?'':body).replace(/\r\n?/g,'\n');
+  const out=[];
+  let gap=false;
+  raw.split('\n').forEach(line=>{
+    const t=line.replace(/[ \t]+$/,'');
+    if(!t.trim()){
+      /* keep at most one empty line, never at the top of the note */
+      if(out.length && !gap){ out.push(''); gap=true; }
+      return;
+    }
+    gap=false;
+    out.push(noteHighlight(t,q));
+  });
+  while(out.length && out[out.length-1]==='') out.pop();
+  return out.join('<br>');
+}
 function noteMetaHtml(n){
   const d=isoToJalaliText(n.updatedAt||n.date||'');
   const w=noteWordCount(n);
@@ -3942,7 +3966,7 @@ function renderNotes(){
     <span class="note-stripe" aria-hidden="true"></span>
     ${pills?`<div class="note-pills">${pills}</div>`:''}
     <h4>${noteHighlight(n.title,q)}</h4>
-    ${n.body?`<p class="note-body">${noteHighlight(n.body,q)}</p>`:'<p class="note-empty">بدون محتوا</p>'}
+    ${n.body?`<p class="note-body">${noteBodyHtml(n.body,q)}</p>`:'<p class="note-empty">بدون محتوا</p>'}
     <div class="note-meta">${noteMetaHtml(n)}</div>
     <div class="note-actions">
       <button class="note-action" onclick="openNoteModal('${esc(n.id)}')">✏️ ویرایش</button>
@@ -5884,7 +5908,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='23.3';
+const LP_APP_VERSION='23.4';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
