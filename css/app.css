@@ -2107,3 +2107,204 @@ html[data-lang="en"] .ev-traits{right:auto;left:3px}
 /* light theme: the dim body colour needs one step more contrast at 13.5px */
 html[data-theme="light"] .note-card p.note-body{color:#3d465c;}
 html[data-theme="light"] .note-meta{color:#6b7488;}
+
+/* ============================================================
+   v23.5 — «تبِ باس» + «یادداشت در یک باکس»
+
+   Additive only: no existing rule is redefined in place, no ID,
+   class or handler changes. Two independent additions:
+
+     1. BOSS TAB — the tasks a weekly fight is built from get a
+        tab of their own in the tasks section (chip in
+        #taskFilters, rows in #allTasks), so a fight never mixes
+        with the everyday list. The chip counts the roster and
+        fades away while no fight is on.
+
+     2. NOTE POPUP — tapping a note card no longer stretches the
+        card inside the grid; it opens #notePopModalBg, which
+        stays on top of the page, scrolls inside itself and keeps
+        every action of the card.
+   ============================================================ */
+
+/* ---------- 1. the boss tab ---------- */
+/* the fight's mark on a task row: red once the hit landed, quiet before */
+.task-meta .pill.boss-pill{
+  background:rgba(255,84,112,.14); color:#ff8098; border:1px solid rgba(255,84,112,.3);
+}
+.boss-tab-task.is-hit .task-meta .pill.boss-pill{
+  background:#ff4d5e; color:#fff; border-color:#ff4d5e;
+}
+html[data-theme="light"] .task-meta .pill.boss-pill{color:#c81e3c;}
+html[data-theme="light"] .boss-tab-task.is-hit .task-meta .pill.boss-pill{color:#fff;}
+
+.chip-count-boss{
+  background:rgba(255,84,112,.16) !important;
+  color:#ff8098 !important;
+  border-color:rgba(255,84,112,.42) !important;
+}
+#taskFilters .chip-opt[data-f="boss"]{
+  transition:opacity .18s ease, border-color .18s ease, color .18s ease, background .18s ease;
+}
+/* No fight on? The chip is not worth a tap and stays out of the way — it is
+   still there (and still selectable) the moment a fight starts. */
+#taskFilters .chip-opt.boss-tab-idle{
+  opacity:.5;
+  border-style:dashed;
+}
+@media (hover:hover){
+  /* Selecting it while idle is how a user without a fight finds the way in. */
+  #taskFilters .chip-opt.boss-tab-idle:hover{opacity:1;}
+}
+#taskFilters .chip-opt[data-f="boss"].sel{
+  border-color:rgba(255,84,112,.75);
+  color:#ff8fa3;
+  background:rgba(255,84,112,.10);
+}
+/* A running fight is worth a real count: the selected chip goes solid red.
+   With no fight on it stays quiet, so a “۰” never looks like an alert. */
+#taskFilters .chip-opt[data-f="boss"].sel.boss-tab-has-tasks .chip-count-boss{
+  background:#ff4d5e !important; color:#fff !important; border-color:#ff4d5e !important;
+}
+#taskFilters .chip-opt[data-f="boss"].sel:not(.boss-tab-has-tasks) .chip-count-boss{
+  background:var(--track) !important; color:var(--txt-dim2) !important; border-color:var(--line) !important;
+}
+
+.boss-tab-head{
+  border:1px solid rgba(255,84,112,.3);
+  background:linear-gradient(150deg, rgba(255,84,112,.09), var(--bg2) 62%);
+  border-radius:14px;
+  padding:14px 16px 12px;
+  margin-bottom:12px;
+}
+.boss-tab-title{font-size:15.5px; font-weight:900; line-height:1.6; overflow-wrap:anywhere;}
+.boss-tab-sub{font-size:11.5px; line-height:1.8; margin-top:5px;}
+.boss-tab-hp{
+  position:relative; height:18px; border-radius:10px; margin-top:11px;
+  background:var(--track); overflow:hidden;
+}
+.boss-tab-hp-fill{
+  height:100%; border-radius:10px;
+  background:linear-gradient(90deg,#ff5470,#ff8098);
+  transition:width .45s ease;
+}
+.boss-tab-hp-text{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:10.5px; font-weight:900; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.55);
+}
+.boss-tab-meta{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  flex-wrap:wrap; margin-top:10px; font-size:11.5px; font-weight:700; color:var(--txt-dim2);
+}
+.boss-tab-meta .btn{flex:0 0 auto;}
+/* the roster row is the ordinary task row; the pill inside it carries the
+   fight's mark, so nothing is doubled up on the left edge */
+.boss-tab-task .task-row{border-radius:12px;}
+.boss-tab-task.is-hit .task-row{opacity:.86;}
+.boss-tab-empty .empty-cta{display:flex; gap:8px; flex-wrap:wrap; justify-content:center;}
+html[data-theme="light"] .boss-tab-head{background:linear-gradient(150deg, rgba(255,84,112,.10), #fff 62%);}
+
+/* ---------- 2. the note popup ---------- */
+.note-pop-bg{z-index:260;}          /* above the page, below the toast */
+.modal.note-pop{
+  position:relative;
+  max-width:520px;
+  max-height:82vh;
+  padding:18px 20px 16px 22px;
+  padding-inline-start:23px;        /* clear of the colour stripe */
+  overflow:hidden;                  /* body scrolls, not the sheet */
+  display:flex; flex-direction:column;
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--note-accent, var(--neon)) 12%, transparent), transparent 62%),
+    var(--panel2);
+  border-color:color-mix(in srgb, var(--note-accent, var(--neon)) 30%, var(--line2));
+  box-shadow:0 26px 70px -30px rgba(0,0,0,.75), 0 0 0 1px color-mix(in srgb, var(--note-accent, var(--neon)) 12%, transparent);
+  animation:notePopIn .22s cubic-bezier(.2,.85,.25,1);
+}
+.note-pop-stripe{
+  position:absolute; inset-block:0; inset-inline-start:0; width:5px;
+  background:var(--note-accent, var(--neon));
+  opacity:.9;
+}
+.note-pop.is-pinned{border-color:color-mix(in srgb, var(--note-accent, var(--neon)) 48%, var(--line2));}
+.note-pop-head{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+  margin-bottom:4px;
+}
+.note-pop-pills{display:flex; gap:6px; flex-wrap:wrap; min-height:1px;}
+.note-pop-pills:empty{display:none;}
+.note-pop-x{
+  flex:0 0 auto; width:32px; height:32px; border-radius:10px;
+  border:1px solid var(--line2); background:var(--bg2); color:var(--txt);
+  font-size:14px; font-weight:800; line-height:1; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:.15s;
+}
+.note-pop-x:hover{border-color:var(--neon); color:var(--neon);}
+.note-pop-title{
+  font-size:17px; font-weight:900; line-height:1.65; letter-spacing:-.005em;
+  margin:2px 0 10px; overflow-wrap:anywhere;
+}
+.note-pop-body{
+  flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  font-size:14px; line-height:2; color:var(--txt-dim);
+  overflow-wrap:anywhere; word-break:break-word;
+  padding:2px 0 4px; outline:none;
+}
+.note-pop-body:focus-visible{box-shadow:0 0 0 2px var(--neon-35) inset; border-radius:10px;}
+.note-pop-empty{font-size:13px; font-style:italic; color:var(--txt-dim2);}
+.note-pop-meta{
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  margin-top:10px; padding-top:10px;
+  border-top:1px solid var(--line);
+  font-size:11.5px; font-weight:700; color:var(--txt-dim2);
+}
+.note-pop-actions{
+  display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;
+  /* five actions: four on the first line, the destructive one alone below */
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.note-pop-actions .note-action.danger{grid-column:1/-1;}
+.note-pop-actions .note-action{
+  justify-content:center; min-width:0; white-space:nowrap;
+  font-size:11.5px; font-weight:700; line-height:1.4;
+  padding:8px 10px; border-radius:10px; min-height:34px;
+  border:1px solid var(--line); background:var(--bg2); color:var(--txt);
+  cursor:pointer; transition:.15s;
+  display:inline-flex; align-items:center; gap:5px;
+}
+.note-pop-actions .note-action:hover{border-color:var(--neon);}
+.note-pop-actions .note-action.danger:hover{border-color:var(--danger); color:var(--danger);}
+@keyframes notePopIn{
+  from{opacity:0; transform:translateY(14px) scale(.97);}
+  to{opacity:1; transform:none;}
+}
+/* a phone gets the whole width, a sheet-sized height and slightly tighter type */
+@media (max-width:540px){
+  .modal.note-pop{max-height:86vh; padding:16px 16px 14px 18px; padding-inline-start:19px;}
+  .note-pop-title{font-size:16px;}
+  .note-pop-body{font-size:13.5px; line-height:1.95;}
+}
+/* light theme: the dim body needs one more step of contrast at 14px */
+html[data-theme="light"] .note-pop-body{color:#3d465c;}
+html[data-theme="light"] .note-pop-meta{color:#6b7488;}
+
+
+/* The toast lives at the bottom of the screen, so a «یادداشت ذخیره شد» could
+   land on the popup's last button. While the note popup is open the toast goes
+   soft instead: it keeps its place and simply stops hiding the box. (The
+   popup's own actions confirm themselves — a toast is only for what happened
+   *behind* the box.) */
+body:has(#notePopModalBg.open) .toast{opacity:.55;}
+body:has(#notePopModalBg.open) .toast.show{opacity:1;}
+@media (max-height:640px){
+  .modal.note-pop{max-height:90vh;}
+  .note-pop-body{font-size:13.5px; line-height:1.9;}
+}
+
+/* Performance Mode and reduced motion: no entrance animation, no easing. */
+html.lp-perf .modal.note-pop{animation:none;}
+html.lp-perf .boss-tab-hp-fill{transition:none;}
+@media (prefers-reduced-motion:reduce){
+  .modal.note-pop{animation:none;}
+  .boss-tab-hp-fill{transition:none;}
+}

@@ -68,11 +68,11 @@
     "📥 اینباکس سریع": "📥 Quick Inbox",
     "دکمه‌ی 📥 بالا برای فکرهای یکهویی است: فقط بنویس، بعداً در بخش تسک‌ها مرتبش کن.": "The 📥 button above is for sudden thoughts: just write it down and sort it out later in Tasks.",
     /* the guide itself: tasks */
-    "یک لیست از همه‌ی کارها با چهار تب. هیچ گزینه‌ی اجباری‌ای وجود ندارد.": "One list of everything you have to do, with four tabs. Nothing here is mandatory.",
+    "یک لیست از همه‌ی کارها با پنج تب. هیچ گزینه‌ی اجباری‌ای وجود ندارد.": "One list of everything you have to do, with five tabs. Nothing here is mandatory.",
     "تسک جدید": "New task",
     "فقط عنوان را بنویس و «ذخیره» را بزن؛ دسته، ددلاین، اولویت و بقیه همه اختیاری‌اند.": "Just write the title and tap “Save”; the category, the deadline, the priority and everything else are optional.",
-    "چهار تب": "Four tabs",
-    "همه، شروع نشده، Inbox و تکمیل‌شده. شمارنده‌ی قرمز یعنی چند کار در Inbox منتظر مرتب شدن است.": "All, Not started, Inbox and Completed. The red counter is how many Inbox items are still waiting to be sorted.",
+    "پنج تب": "Five tabs",
+    "همه، شروع نشده، Inbox، تکمیل‌شده و ⚔️ باس. شمارنده‌ی قرمز یعنی چند کار در Inbox منتظر مرتب شدن است.": "All, Not started, Inbox, Completed and ⚔️ Boss. The red counter is how many Inbox items are still waiting to be sorted.",
     "تیک یعنی XP": "Ticking means XP",
     "با تیک زدن، تسک به تب «تکمیل‌شده» می‌رود و XP می‌گیری؛ از همان‌جا هم برمی‌گردد.": "Tick a task and it moves to the “Completed” tab and pays XP; untick it there to bring it back.",
     "جزئیات بیشتر": "More details",
@@ -1265,7 +1265,7 @@
     "سنجاق و ترتیب": "Pins and order",
     "سنجاق‌شده‌ها همیشه اول می‌آیند، هر ترتیبی که انتخاب کرده باشی. ترتیب هم چهار حالت دارد: جدیدترین، قدیمی‌ترین، عنوان، طولانی‌ترین.": "Pinned notes always come first, whatever order you pick. The order itself has four modes: newest, oldest, title, longest.",
     "کارت‌ها": "The cards",
-    "روی کارت بزن تا کامل باز شود. ▦ نمای شبکه‌ای/لیستی را عوض می‌کند و پنج دکمه‌ی پایین کارت کارهای سریع‌اند: ویرایش، سنجاق، کپی، گرفتن متن و حذف.": "Tap a card to open it in full. ▦ switches between the grid and the list view, and the five buttons at the bottom are shortcuts: edit, pin, duplicate, copy the text and delete.",
+    "روی کارت بزن تا یادداشت توی یک باکس خوش‌ساخت روی صفحه باز شود؛ همان‌جا می‌ماند تا کارت را ببندی و متن‌های بلند توی خودش اسکرول می‌شوند. با ✕، کلیک روی پس‌زمینه یا Escape بسته می‌شود. ▦ نمای شبکه‌ای/لیستی را عوض می‌کند و پنج دکمه‌ی پایین باکس همان کارهای سریع‌اند: ویرایش، سنجاق، کپی، گرفتن متن و حذف.": "Tap a card and the note opens in a tidy box on top of the page; it stays there until you close it and long notes scroll inside it. Close it with ✕, a tap on the backdrop or Escape. ▦ switches between the grid and the list view, and the five buttons under the box are the same shortcuts: edit, pin, duplicate, copy the text and delete.",
     "🧹 «پاک کردن فیلتر» فقط وقتی جست‌وجو یا برچسب فعال باشد ظاهر می‌شود؛ حذف یادداشت هم تأیید می‌خواهد.": "🧹 “Clear the filter” only appears while a search or a tag is active; deleting a note asks for confirmation too.",
     /* the one-time hints of the three new sections */
     "فقط خانه‌ی امروز را تیک بزن؛ استریک و XP خودش می‌آید.": "Just tick today’s box; the streak and the XP take care of themselves.",
@@ -1560,6 +1560,31 @@
   "⚙️ تنظیمات": "⚙️ Settings"
 };
   for (var k233 in EXTRA_V233) if (Object.prototype.hasOwnProperty.call(EXTRA_V233, k233)) EXACT[k233] = EXTRA_V233[k233];
+
+  /* v23.5 — «تبِ باس» in the tasks section and the note popup. Icon-prefixed
+     chips and buttons are handled by compose(), so only the cores are listed
+     here; whole sentences are listed whole. */
+  var EXTRA_V235 = {
+    "باس": "Boss",
+    "تسک‌های باس": "Boss tasks",
+    "بستن یادداشت": "Close the note",
+    "بدون عنوان": "Untitled",
+    "این یادداشت هنوز متنی ندارد — با «✏️ ویرایش» شروع کن.": "This note has no text yet — start with “✏️ Edit”.",
+    "الان هیچ باسی در جریان نیست": "No boss fight is running right now",
+    "شروع باس فایت": "Start boss fight",
+    "دیدن بخش باس": "Open the boss section",
+    "هر تسک فقط یک ضربه می‌زند — تیک بزن تا HP باس کم شود. این تسک‌ها توی تب‌های دیگر نمی‌آیند.": "Every task lands one hit — tick it to take HP off the boss. These tasks never show up in the other tabs.",
+    "ضربه خورده": "Hit landed",
+    "هنوز ضربه نزده": "Hit not landed yet",
+    "تسکی برای این باس پیدا نشد": "No tasks were found for this boss",
+    "⚠️ یادداشت پیدا نشد": "⚠️ Note not found",
+    "📍 برداشتن": "📍 Unpin",
+    "📌 سنجاق": "📌 Pin",
+    "تعداد تسک‌های باس": "Number of boss tasks",
+    "تسک‌هایی که برای باس هفتگی انتخاب کرده‌ای فقط همین‌جا هستند و توی تب‌های دیگر قاطی کارهای روزمره نمی‌شوند. شمارنده‌ی تب تعدادشان را می‌گوید؛ تیک زدن هر کدام همان ضربه به باس است.": "The tasks you picked for the weekly boss live only here and never mix with your everyday tasks in the other tabs. The counter on the tab shows how many there are, and ticking one is the hit on the boss.",
+    "تسک‌های همین نبرد یک تب جدا در بخش تسک‌ها دارند (⚔️ باس)؛ آن‌جا با همان شمارنده و همان تیک‌ها، بدون این‌که با کارهای روزمره قاطی شوند. با تمام شدن نبرد، تب خالی می‌شود.": "The tasks of this fight have a tab of their own in the tasks section (⚔️ Boss), with the same counter and the same ticks, and they never mix with everyday tasks. When the fight ends the tab becomes empty."
+  };
+  for(var _k235 in EXTRA_V235){ if(Object.prototype.hasOwnProperty.call(EXTRA_V235, _k235)) EXACT[_k235] = EXTRA_V235[_k235]; }
 
   function compose(s, depth){
     if(depth > 3) return null;
