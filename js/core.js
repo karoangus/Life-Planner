@@ -2297,7 +2297,12 @@ function checkBossTrigger(){
   checkBossDeadline();
   if(DB.boss.active) return;
   if(Date.now() >= DB.boss.nextAvailableAt){
-    openModal('bossTriggerModalBg');
+    /* v23.5: the daily question is answered better in the tasks section now
+       that the fight has a tab of its own — its empty state carries the two
+       buttons («شروع باس فایت» / «دیدن بخش باس») without covering the page.
+       Only a user who is *already* in the tasks section gets the popup, so
+       «الان هیچ باسی در جریان نیست» is never hidden behind a dialog. */
+    if(viewActive('tasks')) openModal('bossTriggerModalBg');
   }
 }
 function declineBossFight(){
@@ -2305,6 +2310,7 @@ function declineBossFight(){
   DB.boss.nextAvailableAt = Date.now() + BOSS_WEEK_MS;
   save();
   renderBossContent();
+  if(currentStatusFilter==='boss') renderTasks('boss');
   toast('باشه، هفته‌ی بعد دوباره می‌پرسیم ⏳');
 }
 let bossSetupSelected = [];
@@ -2396,6 +2402,8 @@ function confirmBossSetup(){
   closeModal('bossSetupModalBg');
   save();
   renderBossContent();
+  /* the fight's roster just changed, so the boss tab follows immediately */
+  if(currentStatusFilter==='boss') renderTasks('boss');
 }
 function removeBossTaskRef(taskId){
   const b = DB.boss.active;
@@ -2437,6 +2445,9 @@ function fmtBossCountdown(ms){
   return `${toFaDigits(days)} روز و ${toFaDigits(hours)} ساعت`;
 }
 function renderBossContent(){
+  /* v23.5: the count on the «⚔️ باس» tab of the tasks section is the same
+     roster this card draws, so the two are always repainted together. */
+  if(typeof renderBossTaskTabBadge==='function') renderBossTaskTabBadge();
   const el = document.getElementById('bossContent');
   if(!el) return;
   checkBossDeadline();
@@ -2477,6 +2488,9 @@ function renderBossContent(){
       <button class="btn" style="margin-top:14px;" onclick="openBossSetup()">شروع باس فایت</button>
     </div>`;
   }
+  /* the boss tab of the tasks section is a view of this very fight: when the
+     fight starts, changes or ends, an open tab follows along */
+  if(viewActive('tasks') && currentStatusFilter==='boss') renderTasks('boss');
 }
 setInterval(()=>{ if(document.getElementById('view-boss')?.classList.contains('active')) renderBossContent(); }, 60000);
 
@@ -3218,7 +3232,10 @@ function subtaskProgressHtml(t){
 function taskRow(t){
   const c = taskColor(t);
   const isInbox = !!t.inbox;
-  const inboxPill = isInbox ? `<span class="pill inbox-pill">📥 Inbox</span>` : '';
+  /* v23.5: the row itself says when a task belongs to the weekly boss, so the
+     boss roster also reads correctly in the dashboard's «برنامه‌ی امروز». */
+  const inboxPill = isInbox ? `<span class="pill inbox-pill">📥 Inbox</span>`
+    : (isBossTask(t) ? `<span class="pill boss-pill">⚔️ باس</span>` : '');
   const statusPill = !t.done && !isInbox ? `<span class="pill st-${esc(t.status||'notstarted')}">${statusIcon(t.status)} ${statusLabel(t.status)}</span>` : '';
   const statusRowClass = (!t.done && !isInbox) ? `st-row-${esc(t.status||'notstarted')}` : '';
   const subHtml = subtaskProgressHtml(t);
@@ -3397,6 +3414,80 @@ document.getElementById('categoryFilters').addEventListener('click', e=>{
   renderTasks(currentStatusFilter);
 });
 
+/* ------------------------------------------------------------
+   v23.5 — «تبِ باس»: the weekly boss owns its tasks.
+
+   The tasks a fight is built from are ordinary tasks (they live in DB.tasks,
+   they pay XP, they stay in the list after the fight), but they used to sit in
+   the middle of the everyday list, mixed with everything else. They now carry
+   no extra flag: the one source of truth is `DB.boss.active.taskIds`, so a
+   task leaves this tab the moment the fight ends or the task is removed from
+   it — nothing to keep in sync, nothing to migrate. The boss tab shows them
+   and only them; every other tab keeps them out of the way.
+   ------------------------------------------------------------ */
+function bossTaskIdSet(){
+  const b = DB.boss && DB.boss.active;
+  return new Set(Array.isArray(b&&b.taskIds) ? b.taskIds.map(String) : []);
+}
+function isBossTask(t){
+  if(!t) return false;
+  return bossTaskIdSet().has(String(t.id));
+}
+/* The count on the tab: every task of the running fight, hit or not, because
+   the tab is its full roster — the ⚔️/🛡️ marks inside say which ones already
+   landed their hit. */
+function renderBossTaskTabBadge(){
+  const n = bossTaskIdSet().size;
+  const el = document.getElementById('bossTaskTabCount');
+  if(el){
+    el.textContent = n>99 ? '۹۹+' : toFaDigits(String(n));
+    el.title = `${toFaDigits(String(n))} تسک در باس`;
+  }
+  /* The boss chip is pointless when no fight is on — unless the user is
+     standing on it, in which case it has to stay (the empty state explains
+     how to start a fight). */
+  const chip = document.querySelector('#taskFilters .chip-opt[data-f="boss"]');
+  if(chip){
+    chip.classList.toggle('boss-tab-idle', n===0 && currentStatusFilter!=='boss');
+    chip.classList.toggle('boss-tab-has-tasks', n>0);
+  }
+}
+
+/* The boss tab itself: the fight's header (name, HP, how many hits landed)
+   above the same task rows the rest of the section uses, so ticking one works
+   exactly like ticking any other task — it pays XP and it hits the boss. */
+function bossTaskTabHtml(list){
+  const b = DB.boss && DB.boss.active;
+  if(!b){
+    return `<div class="empty boss-tab-empty"><div class="ic">⚔️</div>الان هیچ باسی در جریان نیست`+
+      `<div class="empty-cta"><button class="btn" onclick="closeModal('bossTriggerModalBg'); openBossSetup()">⚔️ شروع باس فایت</button>`+
+      `<button class="btn ghost" onclick="closeModal('bossTriggerModalBg'); showView('boss')">دیدن بخش باس</button></div></div>`;
+  }
+  const hits = new Set((b.hitTaskIds||[]).map(String));
+  const hitCount = list.filter(t=>hits.has(String(t.id))).length;
+  const pct = b.maxHp ? Math.max(0, Math.round((b.hp/b.maxHp)*100)) : 0;
+  const head = `<div class="boss-tab-head">
+      <div class="boss-tab-title">☠️ ${esc(b.name)}</div>
+      <div class="boss-tab-sub muted">هر تسک فقط یک ضربه می‌زند — تیک بزن تا HP باس کم شود. این تسک‌ها توی تب‌های دیگر نمی‌آیند.</div>
+      <div class="boss-tab-hp"><div class="boss-tab-hp-fill" style="width:${pct}%"></div><span class="boss-tab-hp-text num">${faNum(b.hp)} / ${faNum(b.maxHp)} HP</span></div>
+      <div class="boss-tab-meta">
+        <span class="num">⚔️ ${toFaDigits(String(hitCount))} از ${toFaDigits(String(list.length))} ضربه</span>
+        <button class="btn ghost sm" type="button" onclick="startEditBoss()">✏️ ویرایش باس</button>
+      </div>
+    </div>`;
+  if(!list.length){
+    return head + `<div class="empty"><div class="ic">🛡️</div>تسکی برای این باس پیدا نشد</div>`;
+  }
+  /* Each row already wears the fight's mark: ⚔️ once its hit has landed, ⚔️ in
+     the neutral tone until then (the pill in taskRow), so the roster needs no
+     second icon in front of it. */
+  const rows = list.map(t=>{
+    const hit = hits.has(String(t.id));
+    return `<div class="boss-tab-task ${hit?'is-hit':''}">${taskRow(t)}</div>`;
+  }).join('');
+  return head + rows;
+}
+
 const PRIORITY_ORDER = {critical:0, high:1, medium:2, low:3};
 const STATUS_ORDER = {inprogress:0, paused:1, queued:2, notstarted:3};
 function sortTasks(list){
@@ -3416,6 +3507,11 @@ function sortTasks(list){
 }
 function renderTasks(filter='all'){
   currentStatusFilter = filter;
+  /* v23.5: the chip and the list are one state. A repaint (save() -> renderAll)
+     reads the selected chip, so if the two ever disagreed the list would fall
+     back to the wrong tab — for instance straight after a boss fight ended. */
+  const tabChips = document.querySelectorAll('#taskFilters .chip-opt[data-f]');
+  tabChips.forEach(chip=>chip.classList.toggle('sel', chip.dataset.f===filter));
   renderCategoryFolders();
 
   // v16: the completed counter now lives on the "✅ تکمیل‌شده" tab itself.
@@ -3425,16 +3521,31 @@ function renderTasks(filter='all'){
   renderInboxBadges();
 
   const el = document.getElementById('allTasks');
+  /* v23.5 — the boss roster. Every other tab drops the fight's tasks so they
+     never mix with the everyday list; the boss tab shows nothing else. */
+  const bossIds = bossTaskIdSet();
+  const notBoss = t=>!bossIds.has(String(t.id));
   let list;
   if(filter==='inbox'){
     list = sortTasks(DB.tasks).filter(t=>t.inbox);
   } else if(filter==='done'){
     /* v16: "Completed" used to be a permanently open block above the list;
        it is a tab now, so its rows render into the same list container. */
-    list = sortTasks(DB.tasks).filter(t=>!t.inbox && t.done);
+    list = sortTasks(DB.tasks).filter(t=>!t.inbox && t.done && notBoss(t));
+  } else if(filter==='boss'){
+    /* the whole roster of the running fight, hit or not, in the same order as
+       the boss card itself so the two never disagree */
+    list = (DB.boss?.active?.taskIds||[])
+      .map(id=>DB.tasks.find(x=>String(x.id)===String(id)))
+      .filter(t=>!!t);
+    if(currentCatFilter) list = list.filter(t=>(t.cat||'').trim()===currentCatFilter);
+    el.innerHTML = bossTaskTabHtml(list);
+    renderBossTaskTabBadge();
+    if(viewActive('dashboard')) renderTodayWidget();
+    return;
   } else {
     // default views exclude inbox tasks and show only active (not done) tasks
-    list = sortTasks(DB.tasks).filter(t=>!t.inbox && !t.done);
+    list = sortTasks(DB.tasks).filter(t=>!t.inbox && !t.done && notBoss(t));
     if(filter==='inprogress') list = list.filter(t=>!t.done && (t.status||'notstarted')==='inprogress');
     else if(filter==='queued') list = list.filter(t=>!t.done && (t.status||'notstarted')==='queued');
     else if(filter==='paused') list = list.filter(t=>!t.done && (t.status||'notstarted')==='paused');
@@ -3446,6 +3557,7 @@ function renderTasks(filter='all'){
   }
   if(currentCatFilter && filter!=='inbox') list = list.filter(t=>(t.cat||'').trim()===currentCatFilter);
   el.innerHTML = list.length ? list.map(taskRow).join('') : `<div class="empty"><div class="ic">${filter==='done'?'✅':'📭'}</div>${filter==='done'?'هنوز تسکی کامل نکردی':'تسکی پیدا نشد'}</div>`;
+  renderBossTaskTabBadge();
 
   /* PERF (v16): #todayTasks / #todayCount belong to the Dashboard, which is
      display:none while the Tasks view is open, so rebuilding them here wrote
@@ -3825,13 +3937,108 @@ function resetNoteFilters(){
   const s=document.getElementById('noteSearch'); if(s) s.value='';
   renderNotes();
 }
-/* Expanding a card is a pure view toggle: no save and no re-render, so the
-   list cannot jump or flicker under the finger. */
+/* v23.5: a tap on a card used to stretch it inside the grid (the old `.open`
+   class). It now opens the note popup instead — the card keeps its size, the
+   list never jumps, and nothing on the page has to be re-rendered. */
 function toggleNoteExpand(id,ev){
   if(ev&&ev.target&&ev.target.closest&&ev.target.closest('.note-actions')) return;
-  const card=document.querySelector('#noteGrid [data-note-id="'+String(id).replace(/["\\]/g,'')+'"]');
-  if(card) card.classList.toggle('open');
+  openNotePop(id);
 }
+/* ------------------------------------------------------------
+   v23.5 — «یادداشت در یک باکس»: tapping a card opens a popup.
+
+   Until now a tap merely stretched the card in the grid, which pushed every
+   other card around and still left the note boxed in by the grid column
+   (long notes stayed cramped and half of the screen scrolled away under the
+   finger). The card no longer expands at all: it opens this popup, which sits
+   above the page, stays put while the note is read, scrolls inside itself when
+   the note is long, and carries the very same five actions. A tap on the dark
+   backdrop, the ✕ or Escape closes it — the card underneath is untouched.
+   ------------------------------------------------------------ */
+window.__notePopId = null;
+function notePopEl(id){ return document.getElementById(id); }
+function openNotePop(id){
+  const n = (DB.notes||[]).find(x=>x.id===id);
+  if(!n){ toast('⚠️ یادداشت پیدا نشد'); return; }
+  window.__notePopId = n.id;
+  const q = (document.getElementById('noteSearch')?.value||'').trim().toLowerCase();
+
+  const pop = document.querySelector('#notePopModalBg .note-pop');
+  if(pop){
+    /* the stripe and the glow take the note's own colour (or the theme's) */
+    if(n.color) pop.style.setProperty('--note-accent', n.color);
+    else pop.style.removeProperty('--note-accent');
+    pop.classList.toggle('is-pinned', !!n.pinned);
+  }
+
+  const pills = notePopEl('notePopPills');
+  if(pills){
+    pills.innerHTML = (n.pinned?'<span class="pill cat tag">📌 سنجاق‌شده</span>':'') +
+      (n.tag?`<span class="pill cat tag note-tag">🏷️ ${noteHighlight(n.tag,q)}</span>`:'');
+  }
+  const title = notePopEl('notePopTitle');
+  if(title) title.innerHTML = (n.title? noteHighlight(n.title,q) : 'بدون عنوان');
+  const body = notePopEl('notePopBody');
+  if(body){
+    body.innerHTML = String(n.body||'').trim()
+      ? noteBodyHtml(n.body,q)
+      : '<span class="note-pop-empty">این یادداشت هنوز متنی ندارد — با «✏️ ویرایش» شروع کن.</span>';
+    /* a long note is read from the top, whatever the grid was scrolled to */
+    body.scrollTop = 0;
+  }
+  const meta = notePopEl('notePopMeta');
+  if(meta) meta.innerHTML = noteMetaHtml(n);
+
+  const wire = (btnId, handler)=>{
+    const el = notePopEl(btnId);
+    if(!el) return;
+    el.onclick = handler;
+  };
+  /* Editing happens in the note sheet, which closes this popup for a moment.
+     The id is remembered, so saving brings the note straight back on screen
+     with the new text — and cancelling brings nothing back at all. */
+  wire('notePopEdit', ()=>{ closeNotePop(); openNoteModal(n.id); window.__notePopReopen = n.id; });
+  wire('notePopPin', ()=>{ toggleNotePin(n.id); openNotePop(n.id); });
+  wire('notePopDup', ()=>{ duplicateNote(n.id); });
+  wire('notePopCopy', ()=>{ copyNoteText(n.id); });
+  wire('notePopDelete', ()=>{ deleteNote(n.id); });
+  /* short labels: the popup has five actions on one line of a phone */
+  const pinBtn = notePopEl('notePopPin');
+  if(pinBtn) pinBtn.textContent = n.pinned ? '📍 برداشتن' : '📌 سنجاق';
+
+  if(typeof openModal === 'function') openModal('notePopModalBg');
+  else document.getElementById('notePopModalBg')?.classList.add('open');
+}
+function closeNotePop(){
+  window.__notePopId = null;
+  window.__notePopReopen = null;
+  const bg = document.getElementById('notePopModalBg');
+  if(bg) bg.classList.remove('open');
+}
+/* Leaving the note sheet without saving is a plain cancel: nothing reopens. */
+function cancelNoteModal(){
+  window.__notePopReopen = null;
+  closeModal('noteModalBg');
+}
+/* The popup follows the data: editing, pinning or re-colouring a note from
+   anywhere re-paints the open popup instead of leaving a stale copy on screen.
+   The note itself may have been deleted meanwhile — then the popup closes. */
+function refreshNotePop(){
+  const id = window.__notePopId || window.__notePopReopen;
+  if(!id) return;
+  const shown = document.getElementById('notePopModalBg')?.classList.contains('open');
+  if(!shown && window.__notePopReopen !== id) return;
+  if(!(DB.notes||[]).some(n=>n.id===id)){ closeNotePop(); return; }
+  openNotePop(id);
+}
+(function wireNotePop(){
+  const bg = document.getElementById('notePopModalBg');
+  if(bg) bg.addEventListener('click', e=>{ if(e.target===bg) closeNotePop(); });
+  document.addEventListener('keydown', e=>{
+    if(e.key!=='Escape') return;
+    if(document.getElementById('notePopModalBg')?.classList.contains('open')) closeNotePop();
+  });
+})();
 function duplicateNote(id){
   const n=DB.notes.find(x=>x.id===id); if(!n) return;
   DB.notes.unshift({
@@ -3868,6 +4075,7 @@ function lpCopyNoteFallback(text,done){
 
 function openNoteModal(id=null){
   editingNoteId=id;
+  window.__notePopReopen = null;
   const titleEl=document.getElementById('noteModalTitle');
   const ev=id?DB.notes.find(x=>x.id===id):null;
   if(ev){
@@ -3913,18 +4121,24 @@ function saveNote(){
   editingNoteId=null;
   closeModal('noteModalBg');
   save();
+  /* v23.5: an edit made from the popup lands back in the popup, so the note
+     the user is reading never disagrees with the note that was just saved. */
+  if(typeof refreshNotePop==='function') refreshNotePop();
+  window.__notePopReopen = null;
 }
 function deleteNote(id){
   if(!DB.notes.find(x=>x.id===id))return;
   if(!confirm('این یادداشت حذف بشه؟'))return;
   DB.notes=DB.notes.filter(x=>x.id!==id);
   save();renderNotes();toast('🗑️ یادداشت حذف شد');
+  if(typeof refreshNotePop==='function') refreshNotePop();
 }
 function toggleNotePin(id){
   const n=DB.notes.find(x=>x.id===id);if(!n)return;
   n.pinned=!n.pinned;
   save();renderNotes();
   toast(n.pinned?'📌 یادداشت سنجاق شد':'📍 یادداشت از حالت سنجاق خارج شد');
+  if(typeof refreshNotePop==='function') refreshNotePop();
 }
 function renderNotes(){
   const el=document.getElementById('noteGrid');if(!el)return;
@@ -5908,7 +6122,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='23.4';
+const LP_APP_VERSION='23.5';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

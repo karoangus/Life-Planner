@@ -8,12 +8,12 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=23.4">
-<link rel="stylesheet" href="css/design-system.css?v=23.4">
-<link rel="stylesheet" href="css/v20.css?v=23.4">
-<link rel="stylesheet" href="css/v213.css?v=23.4">
-<link rel="stylesheet" href="css/v22.css?v=23.4">
-<link rel="stylesheet" href="css/ui-refresh.css?v=23.4">
+<link rel="stylesheet" href="css/app.css?v=23.5">
+<link rel="stylesheet" href="css/design-system.css?v=23.5">
+<link rel="stylesheet" href="css/v20.css?v=23.5">
+<link rel="stylesheet" href="css/v213.css?v=23.5">
+<link rel="stylesheet" href="css/v22.css?v=23.5">
+<link rel="stylesheet" href="css/ui-refresh.css?v=23.5">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -171,6 +171,9 @@ try{
             📥 Inbox <span class="chip-count chip-count-red num" id="inboxCount" aria-live="polite" aria-atomic="true" title="تعداد تسک‌های Inbox">۰</span>
           </div>
           <div class="chip-opt" data-f="done">✅ تکمیل‌شده <span class="chip-count num" id="completedCount">۰ تسک</span></div>
+          <!-- v23.5: the tasks the weekly boss is built from get a tab of their
+               own, so a fight never mixes with the everyday list. -->
+          <div class="chip-opt" data-f="boss" aria-label="تسک‌های باس">⚔️ باس <span class="chip-count chip-count-boss num" id="bossTaskTabCount" aria-live="polite" aria-atomic="true" title="تعداد تسک‌های باس">۰</span></div>
         </div>
         <div class="chip-group" style="margin-bottom:16px;" id="categoryFilters"></div>
         <div id="allTasks"></div>
@@ -993,7 +996,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">23.4</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">23.5</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1093,7 +1096,27 @@ try{
   <div class="field"><label>برچسب</label><input type="text" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="nTag" placeholder="مثلاً: کار، ایده، درس"></div>
   <div class="field"><label>رنگ یادداشت (اختیاری)</label><div class="chip-group lp-color-row" id="nColorRow"></div></div>
   <label class="check-row" style="margin-top:4px;"><input type="checkbox" id="nPinned"><span>📌 سنجاق کردن یادداشت</span></label>
-  <div class="modal-actions"><button class="btn ghost" onclick="closeModal('noteModalBg')">انصراف</button><button class="btn" onclick="saveNote()">ذخیره</button></div>
+  <div class="modal-actions"><button class="btn ghost" onclick="cancelNoteModal()">انصراف</button><button class="btn" onclick="saveNote()">ذخیره</button></div>
+</div></div>
+
+<!-- v23.5: tapping a note card opens this popup instead of stretching the card.
+     It stays on screen, can be scrolled inside, and keeps all five actions. -->
+<div class="modal-bg note-pop-bg" id="notePopModalBg"><div class="modal note-pop" role="dialog" aria-modal="true" aria-labelledby="notePopTitle">
+  <span class="note-pop-stripe" aria-hidden="true"></span>
+  <div class="note-pop-head">
+    <div class="note-pop-pills" id="notePopPills"></div>
+    <button class="note-pop-x" type="button" onclick="closeNotePop()" title="بستن یادداشت" aria-label="بستن یادداشت">✕</button>
+  </div>
+  <h2 class="note-pop-title" id="notePopTitle"></h2>
+  <div class="note-pop-body" id="notePopBody" tabindex="0"></div>
+  <div class="note-pop-meta" id="notePopMeta"></div>
+  <div class="note-pop-actions" id="notePopActions">
+    <button class="note-action" type="button" id="notePopEdit">✏️ ویرایش</button>
+    <button class="note-action" type="button" id="notePopPin"></button>
+    <button class="note-action" type="button" id="notePopDup">📄 کپی</button>
+    <button class="note-action" type="button" id="notePopCopy">📋 متن</button>
+    <button class="note-action danger" type="button" id="notePopDelete">🗑️ حذف</button>
+  </div>
 </div></div>
 
 <div class="modal-bg" id="eventModalBg"><div class="modal">
@@ -1320,10 +1343,11 @@ try{
   </section>
 
   <section class="guide-panel" data-g="tasks" role="tabpanel">
-    <p class="guide-lead">یک لیست از همه‌ی کارها با چهار تب. هیچ گزینه‌ی اجباری‌ای وجود ندارد.</p>
+    <p class="guide-lead">یک لیست از همه‌ی کارها با پنج تب. هیچ گزینه‌ی اجباری‌ای وجود ندارد.</p>
     <div class="guide-rows">
       <div class="guide-row"><span class="guide-ic">➕</span><div class="guide-row-txt"><b>تسک جدید</b><span>فقط عنوان را بنویس و «ذخیره» را بزن؛ دسته، ددلاین، اولویت و بقیه همه اختیاری‌اند.</span></div></div>
-      <div class="guide-row"><span class="guide-ic">🗂️</span><div class="guide-row-txt"><b>چهار تب</b><span>همه، شروع نشده، Inbox و تکمیل‌شده. شمارنده‌ی قرمز یعنی چند کار در Inbox منتظر مرتب شدن است.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🗂️</span><div class="guide-row-txt"><b>پنج تب</b><span>همه، شروع نشده، Inbox، تکمیل‌شده و ⚔️ باس. شمارنده‌ی قرمز یعنی چند کار در Inbox منتظر مرتب شدن است.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">⚔️</span><div class="guide-row-txt"><b>تب باس</b><span>تسک‌هایی که برای باس هفتگی انتخاب کرده‌ای فقط همین‌جا هستند و توی تب‌های دیگر قاطی کارهای روزمره نمی‌شوند. شمارنده‌ی تب تعدادشان را می‌گوید؛ تیک زدن هر کدام همان ضربه به باس است.</span></div></div>
       <div class="guide-row"><span class="guide-ic">✅</span><div class="guide-row-txt"><b>تیک یعنی XP</b><span>با تیک زدن، تسک به تب «تکمیل‌شده» می‌رود و XP می‌گیری؛ از همان‌جا هم برمی‌گردد.</span></div></div>
       <div class="guide-row"><span class="guide-ic">⋯</span><div class="guide-row-txt"><b>جزئیات بیشتر</b><span>روی عنوان تسک بزن تا وضعیت، زیرتسک، ددلاین اضافه، ویرایش و حذف را یک‌جا ببینی.</span></div></div>
     </div>
@@ -1369,7 +1393,7 @@ try{
       <div class="guide-row"><span class="guide-ic">✍️</span><div class="guide-row-txt"><b>یادداشت جدید</b><span>فقط عنوان اجباری است؛ متن، برچسب، رنگ و سنجاق اختیاری‌اند. زیر متن هم تعداد کلمه و کاراکتر زنده نوشته می‌شود.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🔎</span><div class="guide-row-txt"><b>جست‌وجو و برچسب</b><span>جست‌وجو هم‌زمان در عنوان، متن و برچسب می‌گردد و هر جا پیدا کند هایلایت می‌کند. چیپسِ هر برچسب تعداد یادداشت‌هایش را هم نشان می‌دهد.</span></div></div>
       <div class="guide-row"><span class="guide-ic">📌</span><div class="guide-row-txt"><b>سنجاق و ترتیب</b><span>سنجاق‌شده‌ها همیشه اول می‌آیند، هر ترتیبی که انتخاب کرده باشی. ترتیب هم چهار حالت دارد: جدیدترین، قدیمی‌ترین، عنوان، طولانی‌ترین.</span></div></div>
-      <div class="guide-row"><span class="guide-ic">👆</span><div class="guide-row-txt"><b>کارت‌ها</b><span>روی کارت بزن تا کامل باز شود. ▦ نمای شبکه‌ای/لیستی را عوض می‌کند و پنج دکمه‌ی پایین کارت کارهای سریع‌اند: ویرایش، سنجاق، کپی، گرفتن متن و حذف.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">👆</span><div class="guide-row-txt"><b>کارت‌ها</b><span>روی کارت بزن تا یادداشت توی یک باکس خوش‌ساخت روی صفحه باز شود؛ همان‌جا می‌ماند تا کارت را ببندی و متن‌های بلند توی خودش اسکرول می‌شوند. با ✕، کلیک روی پس‌زمینه یا Escape بسته می‌شود. ▦ نمای شبکه‌ای/لیستی را عوض می‌کند و پنج دکمه‌ی پایین باکس همان کارهای سریع‌اند: ویرایش، سنجاق، کپی، گرفتن متن و حذف.</span></div></div>
     </div>
     <p class="muted guide-note">🧹 «پاک کردن فیلتر» فقط وقتی جست‌وجو یا برچسب فعال باشد ظاهر می‌شود؛ حذف یادداشت هم تأیید می‌خواهد.</p>
   </section>
@@ -1413,6 +1437,7 @@ try{
       <div class="guide-row"><span class="guide-ic">⚔️</span><div class="guide-row-txt"><b>ساختِ باس</b><span>یک اسم بنویس و چند تسکِ انجام‌نشده را انتخاب کن. اگر تسکِ مناسبی نداری، همان‌جا پایینِ لیست تسکِ جدید بساز — ساخته و خودش برای باس انتخاب می‌شود و بعداً در بخش تسک‌ها هم هست.</span></div></div>
       <div class="guide-row"><span class="guide-ic">❤️</span><div class="guide-row-txt"><b>HP و ضربه</b><span>باس همیشه ۱۰۰ HP دارد و بین تسک‌هایش تقسیم می‌شود: با ۴ تسک، هر تیک ۲۵ HP کم می‌کند. هر تسک فقط یک بار ضربه می‌زند و تسک‌های ضربه‌خورده با ⚔️ و خط‌خورده نشان داده می‌شوند.</span></div></div>
       <div class="guide-row"><span class="guide-ic">⏰</span><div class="guide-row-txt"><b>مهلتِ ۱۴ روزه</b><span>چهارده روز فرصت داری. اگر مهلت تمام شود باس از دست می‌رود و یک هفته صبر می‌کنی تا باس بعدی؛ «فعلاً باس مشخصی ندارم» هم همین یک هفته را عقب می‌اندازد. شکستِ باس ۱۰۰ XP می‌دهد.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🗂️</span><div class="guide-row-txt"><b>تب باس در بخش تسک‌ها</b><span>تسک‌های همین نبرد یک تب جدا در بخش تسک‌ها دارند (⚔️ باس)؛ آن‌جا با همان شمارنده و همان تیک‌ها، بدون این‌که با کارهای روزمره قاطی شوند. با تمام شدن نبرد، تب خالی می‌شود.</span></div></div>
       <div class="guide-row"><span class="guide-ic">✏️</span><div class="guide-row-txt"><b>ویرایش و حذفِ تسک</b><span>با «✏️ ویرایش» اسم و تسک‌ها عوض می‌شوند و HP بر اساسِ همان ضربه‌های خورده دوباره حساب می‌شود. اگر یکی از تسک‌های باس را پاک کنی HP به‌روز می‌شود و اگر همه‌شان پاک شوند، نبرد بدون انتظارِ هفتگی لغو می‌شود.</span></div></div>
     </div>
   </section>
@@ -1489,20 +1514,20 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=23.4"></script>
-<script src="js/enhancements.js?v=23.4"></script>
-<script src="js/sw-register.js?v=23.4"></script>
+<script src="js/core.js?v=23.5"></script>
+<script src="js/enhancements.js?v=23.5"></script>
+<script src="js/sw-register.js?v=23.5"></script>
 
-<script src="js/pomodoro.js?v=23.4"></script>
+<script src="js/pomodoro.js?v=23.5"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=23.4"></script>
-<script src="js/v16.js?v=23.4"></script>
-<script src="js/v162.js?v=23.4"></script>
-<script src="js/v21.js?v=23.4"></script>
+<script src="js/lang.js?v=23.5"></script>
+<script src="js/v16.js?v=23.5"></script>
+<script src="js/v162.js?v=23.5"></script>
+<script src="js/v21.js?v=23.5"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=23.4"></script>
+<script src="js/v213.js?v=23.5"></script>
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
-<script src="js/v22.js?v=23.4"></script>
+<script src="js/v22.js?v=23.5"></script>
 
 </body>
 </html>

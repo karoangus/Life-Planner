@@ -1155,7 +1155,8 @@ if (!useFallback) {
   check('v21.3 every simplified section has its own ❓ and one guide modal explains them all',
     v213.helpButtons === 10 && v213.slotAnchors === 9 &&
     v213.panels === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
-    v213.rowsPerPanel === '4,4,4,4,4,4,4,4,4,4,4,4,4,4', JSON.stringify(v213));
+    /* v23.5: the tasks guide explains the new boss tab and the boss guide points at it */
+    v213.rowsPerPanel === '4,5,4,4,4,4,4,4,4,5,4,4,4,4', JSON.stringify(v213));
   check('v21.3 the calendar intro is one quiet line and the guide kept the full gestures',
     v213.introChars < 90 && v213.guideKeepsGestures, JSON.stringify(v213));
   check('v21.3 opening the guide shows exactly one panel with the right action',
@@ -1555,7 +1556,8 @@ if (!useFallback) {
     v215.bossIdle === 'boss|📖 راهنمای باس هفتگی|⚔️ ساخت باس', JSON.stringify(v215));
   check('v21.7 ten tabs, four rows each, and only one panel on screen',
     v215.tabs === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
-    v215.rowsPerPanel === '4,4,4,4,4,4,4,4,4,4,4,4,4,4' && v215.visiblePanels === 1, JSON.stringify(v215));
+    /* v23.5: the tasks guide gained a row for the new boss tab, the boss guide one more */
+    v215.rowsPerPanel === '4,5,4,4,4,4,4,4,4,5,4,4,4,4' && v215.visiblePanels === 1, JSON.stringify(v215));
   check('v21.7 each action lands in the real thing, and the shop one spends nothing',
     v215.pomoCtaStarted && v215.pomoCtaClosedGuide && v215.shopCtaOpenedOdds && v215.shopCtaSpentNothing &&
     v215.oddsListed && v215.skillsCtaWentToShop && v215.skillsCtaClosedGuide, JSON.stringify(v215));
@@ -2114,6 +2116,224 @@ if (!useFallback) {
     v234.bodyFont && v234.cardSizesToContent && v234.editorFont && v234.escaping && v234.cleaned,
     JSON.stringify(v234));
 
+  /* v23.5: a note card opens a popup that stays on screen — no in-grid stretching. */
+  const v235pop = await page.evaluate(async () => {
+    const wait = () => new Promise(r => setTimeout(r, 120));
+    const out = {};
+    const bg = () => document.getElementById('notePopModalBg');
+    const isOpen = () => !!(bg() && bg().classList.contains('open'));
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    window.showView('notes'); await wait();
+    if (typeof window.resetNoteFilters === 'function') { window.resetNoteFilters(); await wait(); }
+
+    window.openNoteModal();
+    document.getElementById('nTitle').value = 'یادداشت پاپ‌آپ';
+    document.getElementById('nBody').value = 'خط اول\nخط دوم\n\nخط چهارم';
+    document.getElementById('nTag').value = 'آزمون';
+    window.saveNote(); await wait();
+    const note = DB.notes.find(n => n.title === 'یادداشت پاپ‌آپ');
+    out.saved = !!note;
+
+    const cardOf = () => document.querySelector('#noteGrid [data-note-id="' + note.id + '"]');
+    /* tapping the card opens the popup, and the card itself does NOT grow */
+    out.cardBefore = getComputedStyle(cardOf()).height;
+    cardOf().click(); await wait();
+    out.openedByTap = isOpen();
+    out.cardDidNotOpen = !cardOf().classList.contains('open');
+    out.cardHeightSame = Math.abs(parseFloat(getComputedStyle(cardOf()).height) - parseFloat(out.cardBefore)) < 1;
+
+    /* the popup shows the whole note: the same line breaks, the whole text */
+    const body = document.getElementById('notePopBody');
+    out.title = document.getElementById('notePopTitle').textContent;
+    out.breaks = body.querySelectorAll('br').length;
+    out.allLines = ['خط اول', 'خط دوم', 'خط چهارم'].every(l => body.textContent.includes(l));
+    out.meta = document.getElementById('notePopMeta').textContent.includes('کلمه');
+    out.tagShown = document.getElementById('notePopPills').textContent.includes('آزمون');
+    out.actions = ['notePopEdit', 'notePopPin', 'notePopDup', 'notePopCopy', 'notePopDelete']
+      .every(id => !!document.getElementById(id));
+    /* long notes scroll inside the box instead of pushing the page around */
+    note.body = Array.from({ length: 40 }, (_, i) => 'خط ' + (i + 1)).join('\n');
+    window.renderNotes(); await wait();
+    window.openNotePop(note.id); await wait();
+    out.scrollsInside = document.getElementById('notePopBody').scrollHeight >
+      document.getElementById('notePopBody').clientHeight + 40;
+
+    /* it stays on screen until the user is done with the card */
+    await wait(); out.staysOpen = isOpen();
+    note.body = 'سر\n\nدم'; window.renderNotes(); await wait();
+    window.openNotePop(note.id); await wait();
+    out.blankLineKept = document.getElementById('notePopBody').querySelectorAll('br').length === 2;
+
+    /* the five actions work from the popup, and the popup follows the data */
+    document.getElementById('notePopPin').click(); await wait();
+    out.pinned = DB.notes.find(n => n.id === note.id).pinned === true;
+    out.popupSurvivedPin = isOpen();
+    out.pinLabel = document.getElementById('notePopPin').textContent;
+
+    document.getElementById('notePopEdit').click(); await wait();
+    out.editOpensSheet = document.getElementById('noteModalBg').classList.contains('open');
+    out.popupClosedWhileEditing = !isOpen();
+    document.getElementById('nBody').value = 'متن تازه';
+    window.saveNote(); await wait();
+    out.backAfterSave = isOpen();
+    out.newTextShown = document.getElementById('notePopBody').textContent.trim() === 'متن تازه';
+
+    /* an edit started from the popup and cancelled must not reopen it */
+    document.getElementById('notePopEdit').click(); await wait();
+    window.cancelNoteModal(); await wait();
+    out.cancelStaysClosed = !isOpen();
+
+    /* Escape and the dark backdrop close it */
+    window.openNotePop(note.id); await wait();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await wait();
+    out.escapeCloses = !isOpen();
+    window.openNotePop(note.id); await wait();
+    bg().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await wait();
+    out.backdropCloses = !isOpen();
+
+    /* a note with its own colour tints the box, and deleting closes the popup */
+    note.color = '#ff8800';
+    window.renderNotes(); await wait();
+    window.openNotePop(note.id); await wait();
+    out.accent = getComputedStyle(document.querySelector('.note-pop'))
+      .getPropertyValue('--note-accent').trim();
+    out.paintHappens = /^#?ff8800$/i.test(out.accent);
+    window.confirm = () => true;   /* the delete asks first, as always */
+    window.deleteNote(note.id); await wait();
+    out.deleted = !DB.notes.find(n => n.id === note.id);
+    out.popupClosedOnDelete = !isOpen();
+
+    /* forget the test note and put the filter back */
+    DB.notes = DB.notes.filter(n => n.id !== note.id);
+    window.renderNotes(); await wait();
+    out.cleaned = !DB.notes.find(n => n.title === 'یادداشت پاپ‌آپ');
+    out.noErrors = true;
+    return out;
+  });
+  check('v23.5 a note card opens a popup that stays on screen instead of stretching the card',
+    v235pop.saved && v235pop.openedByTap && v235pop.cardDidNotOpen && v235pop.cardHeightSame &&
+    v235pop.title === 'یادداشت پاپ‌آپ', JSON.stringify(v235pop));
+  check('v23.5 the popup carries the whole note — line breaks, tag, meta and five actions',
+    v235pop.breaks === 3 && v235pop.allLines && v235pop.meta && v235pop.tagShown &&
+    v235pop.actions && v235pop.blankLineKept && v235pop.scrollsInside && v235pop.staysOpen,
+    JSON.stringify(v235pop));
+  check('v23.5 the popup follows the data (pin, edit-save, edit-cancel, Escape, backdrop, delete)',
+    v235pop.pinned && v235pop.popupSurvivedPin && /برداشتن|سنجاق/.test(v235pop.pinLabel) &&
+    v235pop.editOpensSheet && v235pop.popupClosedWhileEditing && v235pop.backAfterSave &&
+    v235pop.newTextShown && v235pop.cancelStaysClosed && v235pop.escapeCloses &&
+    v235pop.backdropCloses && v235pop.paintHappens && v235pop.deleted &&
+    v235pop.popupClosedOnDelete && v235pop.cleaned, JSON.stringify(v235pop));
+
+  /* v23.5: the boss fight's tasks live in a tab of their own. */
+  const v235boss = await page.evaluate(async () => {
+    const wait = () => new Promise(r => setTimeout(r, 120));
+    const out = {};
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    const chip = () => document.querySelector('#taskFilters .chip-opt[data-f="boss"]');
+    const box = () => document.getElementById('allTasks');
+    const mk = (id, title, pr) => ({ id, title, cat: '', date: '', priority: pr, status: 'notstarted',
+      est: '', note: '', extraDeadlines: [], subtasks: [], inbox: false, color: null, done: false, created: '2026-01-01' });
+
+    DB.boss.active = null; DB.boss.nextAvailableAt = 0;
+    const before = DB.tasks.length;
+    DB.tasks.push(mk('v235-a', 'تسک باس آلفا', 'high'), mk('v235-b', 'تسک باس بتا', 'low'),
+                  mk('v235-c', 'تسک روزمره', 'low'));
+    window.showView('tasks'); await wait();
+    out.chipExists = !!chip();
+    out.chipCount = document.getElementById('bossTaskTabCount').textContent;
+
+    /* (1) with no fight the tab is there, quiet, and says how to start one */
+    out.idleClass = chip().classList.contains('boss-tab-idle');
+    window.renderTasks('boss'); await wait();
+    out.idleMessage = box().textContent.includes('هیچ باسی');
+    out.idleNoRows = box().querySelectorAll('.task-row').length === 0;
+    /* the buttons of the empty state reach the two real destinations */
+    box().querySelector('.boss-tab-empty .btn').click(); await wait();
+    out.idleStartsFight = document.getElementById('bossSetupModalBg').classList.contains('open') &&
+      !document.getElementById('bossTriggerModalBg').classList.contains('open');
+    window.closeModal('bossSetupModalBg');
+
+    /* (2) the fight is built and its tasks leave every other tab */
+    DB.boss.active = { name: 'باس آزمون v23.5', hp: 100, maxHp: 100,
+      taskIds: ['v235-a', 'v235-b'], hitTaskIds: [], noTimeLimit: true, deadlineAt: null };
+    window.renderTasks('all'); await wait();
+    out.allHidesBoss = !box().textContent.includes('تسک باس آلفا') && !box().textContent.includes('تسک باس بتا');
+    out.allKeepsEveryday = box().textContent.includes('تسک روزمره');
+    out.notStartedHidesBoss = (window.renderTasks('notstarted'), await wait(), !box().textContent.includes('تسک باس آلفا'));
+    out.doneHidesBoss = (window.renderTasks('done'), await wait(), !box().textContent.includes('تسک باس آلفا'));
+    window.renderTasks('all'); await wait();
+    out.badge = document.getElementById('bossTaskTabCount').textContent;
+
+    /* (3) the boss tab shows exactly the roster, with the fight's header */
+    window.renderTasks('boss'); await wait();
+    out.bossTabHasBoss = box().textContent.includes('تسک باس آلفا') && box().textContent.includes('تسک باس بتا');
+    out.bossTabNoEveryday = !box().textContent.includes('تسک روزمره');
+    out.bossHead = box().textContent.includes('باس آزمون v23.5');
+    out.bossHp = (box().querySelector('.boss-tab-hp-text') || {}).textContent || '';
+    out.bossMeta = box().textContent.includes('از') && box().textContent.includes('ضربه');
+    out.activeNotIdle = !chip().classList.contains('boss-tab-idle');
+    out.rowOrder = [...box().querySelectorAll('.boss-tab-task .task-title')].map(e => e.textContent.trim()).join('|');
+
+    /* (4) ticking from the boss tab hits the boss, exactly like any other tick */
+    out.xpBefore = DB.xp;
+    box().querySelector('.boss-tab-task .chk').click(); await wait();
+    out.ticked = DB.tasks.find(t => t.id === 'v235-a').done === true;
+    out.hpDropped = DB.boss.active && DB.boss.active.hp === 50;
+    out.xpGrew = DB.xp > 0;
+    /* the row that took the hit says so in its own pill; the others stay quiet */
+    window.renderTasks('boss'); await wait();
+    const rowsNow = [...box().querySelectorAll('.boss-tab-task')];
+    out.markHit = rowsNow[0].classList.contains('is-hit') &&
+      rowsNow[0].querySelector('.pill.boss-pill').textContent.includes('باس') &&
+      !rowsNow[1].classList.contains('is-hit');
+    /* every row carries the boss pill, so a fight also reads right on the dashboard */
+    out.everyRowMarked = rowsNow.every(r => !!r.querySelector('.pill.boss-pill'));
+
+    /* (5) ending the fight empties the tab and puts the tasks back in the list */
+    DB.boss.active = null; DB.boss.nextAvailableAt = Date.now() + 7 * 86400000;
+    window.renderTasks('boss'); await wait();
+    out.afterFightEmpty = box().textContent.includes('هیچ باسی');
+    out.badgeAfter = document.getElementById('bossTaskTabCount').textContent;
+    window.renderTasks('all'); await wait();
+    out.everydayHasThemBack = box().textContent.includes('تسک باس بتا');
+
+    /* the daily «وقت باس فایته!» question can no longer sit on top of the tab's
+       own empty state, which carries the same two answers as buttons */
+    DB.boss.nextAvailableAt = 0;
+    window.closeModal('bossTriggerModalBg');
+    window.showView('dashboard');
+    window.checkBossTrigger(); await wait();
+    out.triggerWhileAway = !document.getElementById('bossTriggerModalBg').classList.contains('open');
+    window.showView('tasks');
+    window.renderTasks('boss'); await wait();
+    out.triggerNotOnTop = !document.getElementById('bossTriggerModalBg').classList.contains('open') &&
+      box().textContent.includes('هیچ باسی');
+
+    /* leave the store the way we found it */
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    DB.tasks = DB.tasks.filter(t => !t.id.startsWith('v235-'));
+    DB.boss.active = null; DB.boss.nextAvailableAt = 0;
+    DB.tasks.forEach(t => { if (t.id === 'v235-a') t.done = false; });
+    window.renderTasks('all'); await wait();
+    out.restored = DB.tasks.length === before;
+    return out;
+  });
+  check('v23.5 boss tasks get their own tab in the tasks section and never mix with the everyday list',
+    v235boss.chipExists && v235boss.allHidesBoss && v235boss.allKeepsEveryday &&
+    v235boss.notStartedHidesBoss && v235boss.doneHidesBoss && v235boss.bossTabHasBoss &&
+    v235boss.bossTabNoEveryday && v235boss.bossHead && v235boss.rowOrder === 'تسک باس آلفا|تسک باس بتا' &&
+    v235boss.restored, JSON.stringify(v235boss));
+  check('v23.5 the boss tab counts its roster, keeps the fight header and its ticks still hit the boss',
+    v235boss.badge === '۲' && v235boss.bossHp.includes('HP') && v235boss.bossMeta &&
+    v235boss.activeNotIdle && v235boss.ticked && v235boss.hpDropped && v235boss.xpGrew &&
+    v235boss.markHit && v235boss.everyRowMarked, JSON.stringify(v235boss));
+  check('v23.5 an idle boss tab explains itself, and ending a fight empties it again',
+    v235boss.idleClass && v235boss.idleMessage && v235boss.idleNoRows && v235boss.idleStartsFight &&
+    v235boss.afterFightEmpty && v235boss.badgeAfter === '۰' && v235boss.everydayHasThemBack &&
+    v235boss.triggerWhileAway && v235boss.triggerNotOnTop, JSON.stringify(v235boss));
+
   await browser.close();
 } else {
   // FALLBACK: no browser available (restricted sandbox). Verify core logic via file inspection.
@@ -2648,7 +2868,8 @@ if (!useFallback) {
   check('v21.3 one guide modal holds one panel per section, four short rows each',
     ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes']
       .every(g => indexHtml.includes(`data-g="${g}" role="tabpanel"`)) &&
-    (indexHtml.match(/class="guide-row"/g) || []).length === 56 &&
+    /* v23.5 added one row to the tasks guide and one to the boss guide */
+    (indexHtml.match(/class="guide-row"/g) || []).length === 58 &&
     (indexHtml.match(/class="guide-lead"/g) || []).length === 14 &&
     /var SECTIONS = \['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes',[\s\S]{0,80}?'pomodoro', 'shop', 'skills', 'boss', 'yvy', 'city', 'profile', 'settings'\];/.test(v213Js));
 
@@ -2948,7 +3169,7 @@ if (!useFallback) {
   check('v21.3 every new string translates to English',
     ['"راهنمای داشبورد"', '"راهنمای تسک‌ها"', '"❓ راهنمای بخش‌ها"', '"سه قدم اول"', '"یه کار بنویس"',
      '"تیکش بزن"', '"تو تقویم جاش بده"', '"✅ انجام شد"', '"مأموریت روزانه"', '"برنامه‌ی امروز"',
-     '"چهار تب"', '"جابه‌جایی و تغییر مدت"', '"📥 اینباکس سریع"']
+     '"جابه‌جایی و تغییر مدت"', '"📥 اینباکس سریع"']
       .every(k => langJs.includes(k)) &&
     ['Dashboard guide', 'Tasks guide', 'Section guides', 'the first three steps', 'Write down one task',
      'Tick it off', 'Give it a place in the calendar', 'Quick Inbox', 'Daily quest']
@@ -3042,6 +3263,49 @@ if (!useFallback) {
     appCss.includes('#noteGrid .note-card{') && appCss.includes('min-height:172px') &&
     appCss.includes('#nBody{') && appCss.includes('min-height:190px') &&
     appCss.includes('.note-card .note-action{') && readme.includes('### ✨ نسخه 23.4'));
+
+  // ---------- v23.5: boss tab in the tasks section + the note popup ----------
+  check('v23.5 the tasks section carries a fifth «⚔️ باس» tab with a live count',
+    indexHtml.includes('data-f="boss"') && indexHtml.includes('id="bossTaskTabCount"') &&
+    coreJs.includes('function bossTaskIdSet()') && coreJs.includes('function isBossTask(') &&
+    coreJs.includes('function renderBossTaskTabBadge()') && coreJs.includes('function bossTaskTabHtml(') &&
+    /renderTasks\([^)]*\)/.test(coreJs) && coreJs.includes("if(filter==='boss')"));
+  check('v23.5 a boss task wears its mark on the row itself, in the roster and in «برنامه‌ی امروز»',
+    coreJs.includes('boss-pill') && /taskRow\(t\)\{|const inboxPill = isInbox/.test(coreJs) &&
+    /isBossTask\(t\) \? `<span class="pill boss-pill">⚔️ باس<\/span>`/.test(coreJs) &&
+    appCss.includes('.task-meta .pill.boss-pill{') &&
+    appCss.includes('.boss-tab-task.is-hit .task-meta .pill.boss-pill{'));
+  check('v23.5 the boss tab is driven by the fight itself, not by a copy of its task list',
+    coreJs.includes('DB.boss.active.taskIds') &&
+    /const bossIds = bossTaskIdSet\(\);\s*\n\s*const notBoss = t=>!bossIds.has\(String\(t.id\)\)/.test(coreJs) &&
+    /* every ordinary tab drops the roster, so a fight never mixes with it */
+    /* the completed tab and the everyday tabs both drop the roster */
+    (coreJs.match(/notBoss\(t\)/g) || []).length >= 2 &&
+    coreJs.includes("if(viewActive('tasks') && currentStatusFilter==='boss') renderTasks('boss')"));
+  check('v23.5 the note card opens a popup instead of stretching in the grid',
+    indexHtml.includes('id="notePopModalBg"') && indexHtml.includes('id="notePopBody"') &&
+    indexHtml.includes('id="notePopActions"') && indexHtml.includes('onclick="closeNotePop()"') &&
+    coreJs.includes('function openNotePop(id)') && coreJs.includes('function closeNotePop()') &&
+    coreJs.includes('function refreshNotePop()') &&
+    /function toggleNoteExpand\(id,ev\)\{[\s\S]{0,240}openNotePop\(id\)/.test(coreJs) &&
+    !/function toggleNoteExpand\(id,ev\)\{[\s\S]{0,240}classList.toggle\('open'\)/.test(coreJs));
+  check('v23.5 the popup shows the whole note and keeps all five actions',
+    coreJs.includes('noteBodyHtml(n.body,q)') && coreJs.includes('noteMetaHtml(n)') &&
+    ['notePopEdit', 'notePopPin', 'notePopDup', 'notePopCopy', 'notePopDelete']
+      .every(id => coreJs.includes(`'${id}'`)) &&
+    coreJs.includes("e.key!=='Escape'") && coreJs.includes('if(e.target===bg) closeNotePop()') &&
+    coreJs.includes('window.__notePopReopen'));
+  check('v23.5 the popup and the boss tab are styled, animated once and quiet in performance mode',
+    appCss.includes('.modal.note-pop{') && appCss.includes('.note-pop-body{') &&
+    appCss.includes('@keyframes notePopIn{') && appCss.includes('.boss-tab-head{') &&
+    appCss.includes('.chip-count-boss{') &&
+    appCss.includes('html.lp-perf .modal.note-pop{animation:none;}') &&
+    appCss.includes('.boss-tab-hp-fill{transition:none;}'));
+  check('v23.5 strings and section guides explain the new tab and the popup',
+    langJs.includes('"تسک‌های باس"') && langJs.includes('"بستن یادداشت"') &&
+    langJs.includes('var EXTRA_V235') &&
+    indexHtml.includes('پنج تب') && indexHtml.includes('تب باس') &&
+    indexHtml.includes('توی یک باکس خوش‌ساخت') && langJs.includes('پنج تب'));
 
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];
