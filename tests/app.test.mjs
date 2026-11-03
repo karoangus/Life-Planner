@@ -2560,9 +2560,13 @@ if (!useFallback) {
     indexHtml.includes('id="eDesc"') && indexHtml.includes('id="eventActionDesc"') &&
     coreJs.includes('function eventDesc') && coreJs.includes('function lpReadEventDesc') &&
     appCss.includes('.lp-ev-desc') && appCss.includes('.ev-block.has-desc'));
+  /* v24: the three edit entry points now share lpFillEventForm(), so the
+     prefill call lives in one place instead of two; the browser checks in
+     tests/calendar-weeks.test.mjs still exercise descriptions end-to-end. */
   check('v16.6 description kept on save, edit and drag-split',
     (coreJs.match(/id:uid\(\),title,desc,/g) || []).length === 2 && coreJs.includes('ev.desc=desc') &&
-    coreJs.includes('desc:eventDesc(ev)') && (coreJs.match(/  lpFillEventDesc\(ev\);/g) || []).length === 2);
+    coreJs.includes('desc:eventDesc(ev)') && coreJs.includes('function lpFillEventForm') &&
+    coreJs.includes('lpFillEventDesc(ev);'));
   check('v16.6 description is user content (never translated) and labels are translated',
     langJs.includes('.lp-ev-desc') && langJs.includes('توضیحات (اختیاری) — با زدن روی بلوک در تقویم نمایش داده می‌شود'));
 

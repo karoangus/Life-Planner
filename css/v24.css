@@ -1,0 +1,111 @@
+/* ============================================================
+   v24 — «هر هفته برنامه‌ی خودش»
+   Week-scoped calendar: a dated week summary, recurrence chips in
+   the event sheet, the week picker, the even/odd anchor switch and
+   a quiet marker on repeating blocks.
+   ============================================================ */
+
+/* ---- the strip under «هفته قبل / هفته بعد» ------------------------------ */
+.cal-week-summary{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  padding:8px 10px; margin:0 0 10px;
+  border:1px solid var(--line); border-radius:12px;
+  background:rgba(0,229,255,.05);
+  font-size:11px; line-height:1.7; color:var(--txt-dim);
+}
+.cal-week-summary .cws-range{font-weight:800; color:var(--txt); white-space:nowrap;}
+.cal-week-summary .cws-parity{
+  padding:2px 8px; border-radius:999px; font-weight:800; white-space:nowrap;
+  border:1px solid var(--line2); background:rgba(255,255,255,.04);
+}
+.cal-week-summary .cws-parity.even{color:#4ade80; border-color:rgba(74,222,128,.45); background:rgba(74,222,128,.09);}
+.cal-week-summary .cws-parity.odd{color:#c4b5fd; border-color:rgba(196,181,253,.45); background:rgba(196,181,253,.09);}
+.cal-week-summary .cws-count{flex:1 1 150px; min-width:120px;}
+.cal-week-summary .cws-flip{
+  font:inherit; font-size:10.5px; font-weight:800; cursor:pointer;
+  color:var(--neon); background:transparent; border:1px solid var(--line2);
+  border-radius:9px; padding:4px 9px; white-space:nowrap;
+}
+.cal-week-summary .cws-flip:active{background:rgba(0,229,255,.12);}
+html[data-theme="light"] .cal-week-summary{background:rgba(8,145,178,.06);}
+html[data-theme="light"] .cal-week-summary .cws-parity.even{color:#15803d;}
+html[data-theme="light"] .cal-week-summary .cws-parity.odd{color:#6d28d9;}
+
+/* ---- recurrence field in the event sheet -------------------------------- */
+.lp-week-scope-field .lp-week-mode-group{gap:6px;}
+.lp-week-scope-field .lp-week-mode-group .chip-opt{
+  flex:1 1 auto; padding:7px 10px; font-size:11.5px; text-align:center;
+  line-height:1.5; border-radius:9px;
+}
+.lp-week-scope-field.is-locked .lp-week-mode-group{opacity:.55; pointer-events:none;}
+.lp-week-hint{
+  margin-top:9px; padding:8px 11px; border-radius:10px;
+  border:1px solid rgba(139,107,255,.32); background:rgba(139,107,255,.09);
+  font-size:11px; line-height:1.85; color:var(--txt-dim);
+}
+.lp-repeat-copy{display:block;}
+.lp-parity-choice{
+  display:flex; align-items:center; flex-wrap:wrap; gap:6px;
+  margin-top:9px; padding-top:8px; border-top:1px dashed var(--line2);
+  font-size:10.5px; line-height:1.7;
+}
+.lp-parity-choice .lp-parity-btn{
+  font:inherit; font-size:10.5px; font-weight:800; cursor:pointer;
+  padding:3px 10px; border-radius:999px;
+  border:1px solid var(--line2); background:transparent; color:var(--txt-dim);
+}
+.lp-parity-choice .lp-parity-btn.sel{
+  color:var(--neon); border-color:var(--neon); background:rgba(0,229,255,.10);
+}
+.lp-week-picker-box[hidden]{display:none!important;}
+.lp-week-picker{
+  display:grid; gap:5px; max-height:215px; overflow-y:auto;
+  margin-top:9px; padding:8px; border:1px solid var(--line); border-radius:11px;
+  background:rgba(0,0,0,.10);
+}
+html[data-theme="light"] .lp-week-picker{background:rgba(15,23,42,.03);}
+.lp-week-row{
+  display:flex; align-items:center; gap:8px; width:100%;
+  font:inherit; font-size:11px; text-align:right; cursor:pointer;
+  padding:6px 8px; border-radius:8px;
+  border:1px solid var(--line); background:transparent; color:var(--txt-dim);
+}
+.lp-week-row.sel{border-color:var(--neon); background:rgba(0,229,255,.09); color:var(--neon);}
+.lp-week-row .lp-week-check{font-size:13px; line-height:1; width:16px; flex:0 0 16px;}
+.lp-week-row .lp-week-range{font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.lp-week-row .lp-week-tag{
+  font-size:10px; font-weight:800; padding:1px 7px; border-radius:999px;
+  border:1px solid var(--line2); white-space:nowrap;
+}
+.lp-week-row .lp-week-flag{font-size:10px; opacity:.8; white-space:nowrap; margin-inline-start:auto;}
+.lp-week-more{justify-self:center; margin-top:4px;}
+html[data-lang="en"] .lp-week-row{text-align:left;}
+
+/* ---- action sheet: say why a block is in this week ---------------------- */
+.lp-event-week-summary{
+  margin-top:4px; font-size:11px; font-weight:800; line-height:1.7;
+  color:var(--neon);
+}
+
+/* ---- repeating blocks get a CSS-only marker (never real text) ----------- */
+.ev-block.ev-week-recurring::before{
+  content:attr(data-wk-icon);
+  position:absolute; bottom:2px; left:3px; z-index:8;
+  font-size:8px; font-weight:800; line-height:1;
+  padding:1px 3px; border-radius:5px;
+  color:var(--txt); background:rgba(6,10,22,.55);
+  opacity:.9; pointer-events:none; white-space:nowrap;
+}
+.ev-block.event-short.ev-week-recurring::before,
+.ev-block.event-tiny.ev-week-recurring::before{display:none;}
+html[data-lang="en"] .ev-block.ev-week-recurring::before{left:auto; right:3px;}
+html[data-theme="light"] .ev-block.ev-week-recurring::before{background:rgba(255,255,255,.72);}
+
+/* ---- small screens ------------------------------------------------------ */
+@media (max-width:380px){
+  .cal-week-summary{font-size:10px; gap:6px; padding:7px 8px;}
+  .cal-week-summary .cws-flip{font-size:9.5px; padding:3px 7px;}
+  .lp-week-scope-field .lp-week-mode-group .chip-opt{font-size:10.5px; padding:6px 8px;}
+  .lp-week-row{font-size:10px; gap:5px;}
+  .lp-week-row .lp-week-flag{display:none;}
+}
