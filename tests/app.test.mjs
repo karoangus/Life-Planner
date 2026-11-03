@@ -1400,20 +1400,20 @@ if (!useFallback) {
     const today = iso(new Date());
     const out = {};
 
-    /* (1) the habit week grid belongs to the habits, not to the calendar's week switch */
+    /* (1) v24.1: there is only ONE week now. The week switcher was removed,
+       so the habit grid and the calendar can never drift apart. */
     DB.habits = [{ id: 'v214-habit', name: 'آزمون v21.4', icon: '📚', log: {} }];
-    window.calWeekShift(0);                /* start from this week, whatever ran before */
-    window.calWeekStep(1);                 /* the calendar walks to next week… */
     window.showView('habits');
     const cells = () => [...document.querySelectorAll('#habitList .week-dots .wd')];
     out.cells = cells().length;
     out.days = cells().map(c => c.textContent).join('');
     out.todayMarked = cells().filter(c => c.classList.contains('today')).length;
     out.todayClickable = cells().filter(c => (c.getAttribute('onclick') || '').includes('toggleHabitDay')).length;
-    /* the calendar itself must still follow its own week switch */
-    out.calendarFollowsOffset = window.weekDates()[0] !== window.weekDates(0)[0];
-    window.calWeekStep(-1);                /* …and back */
-    out.calendarOffsetBack = window.weekDates()[0] !== window.weekDates(1)[0];
+    out.noWeekSwitcher = !document.querySelector('.cal-week-bar') &&
+      !document.getElementById('calWeekLabel') && !document.getElementById('calWeekTodayBtn') &&
+      typeof window.calWeekStep === 'undefined' && typeof window.calWeekToday === 'undefined';
+    out.singleWeek = window.weekDates().length === 7 &&
+      window.weekDates(3)[0] === window.weekDates()[0];
 
     /* (2) the 6 XP is earned once per habit per day, not on every re-tick.
        Measured on totalXPEarned, which a level-up cannot subtract from, and
@@ -1469,7 +1469,7 @@ if (!useFallback) {
   check('v21.4 the habit week grid stays on the current week and only today is clickable',
     v214fix.cells === 7 && v214fix.days === ['ش','ی','د','س','چ','پ','ج'].join('') &&
     v214fix.todayMarked === 1 && v214fix.todayClickable === 1 &&
-    v214fix.calendarFollowsOffset && v214fix.calendarOffsetBack, JSON.stringify(v214fix));
+    v214fix.noWeekSwitcher && v214fix.singleWeek, JSON.stringify(v214fix));
   check('v21.4 a habit pays 6 XP once a day, keeps its streak and stops writing a dead counter',
     v214fix.xpFirstTick === 6 && v214fix.xpReTick === 0 && v214fix.rewardFlag && v214fix.stillTicked &&
     v214fix.streakFaDigits && v214fix.streakText === '🔥 ۱ روز پیاپی' && v214fix.bestStreak >= 1 &&
@@ -2560,13 +2560,9 @@ if (!useFallback) {
     indexHtml.includes('id="eDesc"') && indexHtml.includes('id="eventActionDesc"') &&
     coreJs.includes('function eventDesc') && coreJs.includes('function lpReadEventDesc') &&
     appCss.includes('.lp-ev-desc') && appCss.includes('.ev-block.has-desc'));
-  /* v24: the three edit entry points now share lpFillEventForm(), so the
-     prefill call lives in one place instead of two; the browser checks in
-     tests/calendar-weeks.test.mjs still exercise descriptions end-to-end. */
   check('v16.6 description kept on save, edit and drag-split',
     (coreJs.match(/id:uid\(\),title,desc,/g) || []).length === 2 && coreJs.includes('ev.desc=desc') &&
-    coreJs.includes('desc:eventDesc(ev)') && coreJs.includes('function lpFillEventForm') &&
-    coreJs.includes('lpFillEventDesc(ev);'));
+    coreJs.includes('desc:eventDesc(ev)') && (coreJs.match(/  lpFillEventDesc\(ev\);/g) || []).length === 2);
   check('v16.6 description is user content (never translated) and labels are translated',
     langJs.includes('.lp-ev-desc') && langJs.includes('توضیحات (اختیاری) — با زدن روی بلوک در تقویم نمایش داده می‌شود'));
 
@@ -2674,14 +2670,12 @@ if (!useFallback) {
     coreJs.includes("if(!db.dayPlans || typeof db.dayPlans !== 'object' || Array.isArray(db.dayPlans)) db.dayPlans = {};") &&
     !coreJs.includes('dpStore()') && !coreJs.includes('__calOpenDayISO = iso'));
 
-  check('v20 calendar keeps one simple week switch and no agenda/templates',
-    indexHtml.includes('onclick="calWeekStep(-1)"') && indexHtml.includes('onclick="calWeekStep(1)"') &&
-    indexHtml.includes('onclick="calWeekToday()"') && indexHtml.includes('id="calWeekLabel"') &&
-    coreJs.includes('function calWeekStep(') && coreJs.includes('let CAL_WEEK_OFFSET = 0;') &&
-    /* v21.4: one week is still exactly 7 days of offset — the offset just became
-       a parameter, so the Habits grid can ask for the current week. */
-    coreJs.includes('function weekDates(offset=CAL_WEEK_OFFSET)') &&
-    coreJs.includes('(Number(offset)||0)*7') &&
+  check('v24.1 the week switcher is gone from the calendar (UI, CSS and JS)',
+    !indexHtml.includes('cal-week-bar') && !indexHtml.includes('calWeekStep(') &&
+    !indexHtml.includes('calWeekToday()') && !indexHtml.includes('id="calWeekLabel"') &&
+    !coreJs.includes('CAL_WEEK_OFFSET') && !coreJs.includes('function calWeekShift(') &&
+    !v20Css.includes('.cal-week-bar') && !v20Css.includes('.cal-week-btn') &&
+    coreJs.includes('function weekDates()') && coreJs.includes('const thisWeek = true;') &&
     !indexHtml.includes('v19AgendaToggle') && !indexHtml.includes('v19CalTemplates') &&
     !coreJs.includes('v19Agenda'));
 
@@ -2691,12 +2685,14 @@ if (!useFallback) {
 
   check('v20 the UI layer is simpler and still lightweight',
     indexHtml.includes('css/v20.css') && fs.existsSync(path.join(ROOT, 'css/v20.css')) &&
-    v20Css.includes('.cal-week-bar') && v20Css.includes('display:none;}      /* no decorative glow */') &&
+    !v20Css.includes('cal-week-') && v20Css.includes('display:none;}      /* no decorative glow */') &&
     v20Css.includes('#view-dashboard .dash-grid{grid-template-columns:minmax(0,1fr) !important;}'));
 
-  check('v20 week-switch labels are translated for English mode',
-    ['هفته قبل', 'هفته بعد', 'این هفته'].every(k => langJs.includes(`"${k}"`)) &&
-    langJs.includes('"این هفته": "This week"'));
+  check('v24.1 week-switch labels are gone; the rest of the translation layer stays',
+    !indexHtml.includes('هفته قبل') && !indexHtml.includes('هفته بعد') &&
+    !langJs.includes('"هفته قبل"') && !langJs.includes('"هفته بعد"') &&
+    langJs.includes('"این هفته": "This week"') &&
+    langJs.includes('"🕒 الان": "🕒 Now"'));
 
   // ---------- v18.2: drag an event's edge to resize it on the grid ----------
   check('v18.2 edge-resize handles, live preview and apply/undo are wired in',
@@ -2983,10 +2979,11 @@ if (!useFallback) {
     coreJs.includes('DB.history[d] = DB.history[d] || {tasks:0};') &&
     !coreJs.includes('{tasks:0, habits:0}'));
 
-  check('v21.4 the habit week grid belongs to the habits, not to the calendar’s week switch',
-    coreJs.includes('function weekDates(offset=CAL_WEEK_OFFSET)') &&
-    coreJs.includes('sat.setDate(now.getDate() - dayOfWeek + (Number(offset)||0)*7);') &&
-    /function renderHabits\(\)\{[\s\S]{0,200}?weekDates\(0\)/.test(coreJs) &&
+  check('v24.1 the habit grid and the calendar both read the one current week',
+    coreJs.includes('function weekDates()') &&
+    coreJs.includes('sat.setDate(now.getDate() - dayOfWeek);') &&
+    !coreJs.includes('CAL_WEEK_OFFSET') &&
+    /function renderHabits\(\)\{[\s\S]{0,200}?weekDates\(\)/.test(coreJs) &&
     /function renderCalendar\(\)[\s\S]{0,2000}?weekDates\(\)/.test(coreJs));
 
   check('v21.4 a habit pays its 6 XP once a day, not on every re-tick',

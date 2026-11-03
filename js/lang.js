@@ -82,8 +82,7 @@
     "رویداد جدید": "New event",
     "بالا «رویداد جدید» را بزن؛ عنوان، روز و ساعت کافی است.": "Tap “New event” above; a title, a day and a time are enough.",
     "جابه‌جایی و تغییر مدت": "Moving and changing the length",
-    "«الان» و «امروز»": "“Now” and “Today”",
-    "«🕒 الان» شبکه را به ساعت فعلی می‌برد و «امروز» به هفته‌ی جاری برمی‌گرداند.": "“🕒 Now” scrolls the grid to the current hour, and “Today” brings you back to the current week.",
+    "«🕒 الان» شبکه را به ساعت فعلی می‌برد؛ تقویم همیشه همان هفته‌ی جاری را نشان می‌دهد و دیگر دکمه‌ای برای رفتن به هفته‌ی قبل یا بعد ندارد.": "“🕒 Now” scrolls the grid to the current hour. The calendar always shows this week — there are no previous/next week buttons.",
     "دسته‌ها و رنگ‌ها": "Categories and colors",
     "با 🏷️ برای رویدادها دسته و رنگ بساز تا یک هفته‌ی شلوغ خوانا بماند.": "Use 🏷️ to give events a category and a color, so a busy week stays readable.",
     "🌙 ساعت‌های بعد از نیمه‌شب، پایینِ ستونِ همان شب می‌نشینند.": "🌙 The hours after midnight sit at the bottom of that same night's column.",
@@ -100,8 +99,6 @@
     "📤 خروجی لیست": "📤 Export list",
     "چیزی با این فیلتر پیدا نشد — فیلتر رو عوض کن": "Nothing matches this filter — change it",
     "رویداد را بکش تا جابه‌جا شود؛ روی خانه‌ی خالی بزن تا رویداد جدید بسازی.": "Drag an event to move it; tap an empty slot to create a new one.",
-    "هفته قبل": "Prev week",
-    "هفته بعد": "Next week",
     "این هفته": "This week",
     "امروز": "Today",
     "▦ گرید": "▦ Grid",
@@ -1585,52 +1582,6 @@
     "تسک‌های همین نبرد یک تب جدا در بخش تسک‌ها دارند (⚔️ باس)؛ آن‌جا با همان شمارنده و همان تیک‌ها، بدون این‌که با کارهای روزمره قاطی شوند. با تمام شدن نبرد، تب خالی می‌شود.": "The tasks of this fight have a tab of their own in the tasks section (⚔️ Boss), with the same counter and the same ticks, and they never mix with everyday tasks. When the fight ends the tab becomes empty."
   };
   for(var _k235 in EXTRA_V235){ if(Object.prototype.hasOwnProperty.call(EXTRA_V235, _k235)) EXACT[_k235] = EXTRA_V235[_k235]; }
-
-  /* v24 — week-scoped calendar. Persian stays the source of truth; these are
-     the English counterparts of the new labels, hints and messages. */
-  var EXTRA_V240 = {
-    "تکرار در هفته‌ها": "Week recurrence",
-    "تکرار در هفته‌ها — هر هفته برنامه‌ی جداگانه‌ی خودش را دارد": "Week recurrence — every week has its own separate plan",
-    "📌 فقط این هفته": "📌 This week only",
-    "🔁 ثابت (هر هفته)": "🔁 Fixed (every week)",
-    "2️⃣ هفته‌های زوج": "2️⃣ Even weeks",
-    "1️⃣ هفته‌های فرد": "1️⃣ Odd weeks",
-    "🗓️ هفته‌های انتخابی": "🗓️ Pick weeks",
-    "✏️ ویرایش فقط این هفته": "✏️ Edit only this week",
-    "🗑️ حذف فقط این هفته": "🗑️ Delete only this week",
-    "✏️ ویرایش کل سری (همه‌ی هفته‌ها)": "✏️ Edit the whole series (every week)",
-    "🗑️ حذف کل سری (همه‌ی هفته‌ها)": "🗑️ Delete the whole series (every week)",
-    "🗑️ حذف رویداد": "🗑️ Delete event",
-    "🔢 هفتهٔ زوج": "🔢 Even week",
-    "🔢 هفتهٔ فرد": "🔢 Odd week",
-    "🔄 جابهجایی زوج/فرد": "🔄 Swap even / odd",
-    "زوج و فرد را جابهجا کن": "Swap even and odd weeks",
-    "هنوز رویدادی ندارد — برنامه‌ی این هفته جداست": "No events yet — this week has its own plan",
-    "فقط همین هفته": "this week only",
-    "تکرارشونده": "repeating",
-    "🔁 ثابت — هر هفته": "🔁 Fixed — every week",
-    "🔁 هفته‌های زوج": "🔁 Even weeks",
-    "🔁 هفته‌های فرد": "🔁 Odd weeks",
-    "🔁 هفته‌های انتخابی": "🔁 Selected weeks",
-    "زوج": "even",
-    "فرد": "odd",
-    "هفته‌ی رویداد": "event week",
-    "➕ ۸ هفته‌ی دیگر": "➕ 8 more weeks",
-        "🔁 ثابت: همین رویداد در همه‌ی هفته‌ها میماند؛ هفته‌های دیگر کپی نمی‌شوند.": "🔁 Fixed: this event stays in every week; other weeks are not copied into.",
-    "2️⃣ فقط هفته‌های زوج (مثلاً مدرسه تا ساعت ۱۵). هفته‌های فرد خالی میمانند تا جدا برنامه بچینی.": "2️⃣ Even weeks only (e.g. school until 3 PM). Odd weeks stay free for a different plan.",
-    "1️⃣ فقط هفته‌های فرد (مثلاً مدرسه تا ساعت ۱۷). هفته‌های زوج خالی میمانند تا جدا برنامه بچینی.": "1️⃣ Odd weeks only (e.g. school until 5 PM). Even weeks stay free for a different plan.",
-    "🗓️ فقط هفته‌هایی که پایین تیک میزنی؛ بقیه‌ی هفته‌ها دستنخورده میمانند.": "🗓️ Only the weeks you tick below; every other week stays untouched.",
-    "⚠️ حداقل یک هفته رو انتخاب کن": "⚠️ Pick at least one week",
-    "📅 رویداد این هفته اضافه شد": "📅 Event added to this week",
-    "📅 رویداد تکرارشونده اضافه شد": "📅 Recurring event added",
-    "✏️ فقط این هفته ویرایش شد؛ بقیه‌ی هفته‌ها دستنخورده ماندند": "✏️ Only this week was edited; the other weeks stayed untouched",
-    "✏️ فقط این روزِ همین هفته ذخیره شد؛ هفته‌های دیگر دستنخورده ماندند": "✏️ Only this day of this week was saved; the other weeks stayed untouched",
-    "🗑️ فقط این هفته حذف شد؛ هفته‌های دیگر دستنخورده ماندند": "🗑️ Only this week was deleted; the other weeks stayed untouched",
-    "هر هفته برنامه‌ی خودش را دارد:": "🗓️ Every week has its own plan",
-    "مبنای زوج/فرد": "Even / odd anchor",
-  "رویدادی که این هفته می‌سازی فقط همین هفته است؛ هفته قبل و بعد جدا هستند. اگر می‌خواهی رویدادی در همه‌ی هفته‌ها بماند، توی فرم «🔁 ثابت (هر هفته)» را بزن. برای برنامه‌ی دو هفته‌ای «2️⃣ هفته‌های زوج» و «1️⃣ هفته‌های فرد» را انتخاب کن (مثلاً مدرسه‌ی هفته‌های زوج تا ۱۵ و هفته‌های فرد تا ۱۷)، یا با «🗓️ هفته‌های انتخابی» خودت هفته‌ها را تیک بزن. زوج/فرد بودن هفته‌ها را هم با دکمه‌ی «🔄 جابه‌جایی زوج/فرد» بالای جدول عوض می‌کنی؛ ثابت‌ها همچنان ادامه دارند. روی بلوک تکرارشونده بزن تا فقط همان هفته را جدا ویرایش یا حذف کنی.": "Every week has its own plan: an event you create this week stays in this week; earlier and later weeks are separate. Tap “🔁 Fixed (every week)” for an event that should appear in every week. For an alternating schedule choose “2️⃣ Even weeks” and “1️⃣ Odd weeks” (for example school until 3 PM on even weeks and 5 PM on odd weeks), or tick exactly the weeks you want with “🗓️ Pick weeks”. The “🔄 Swap even / odd” button above the grid changes which weeks count as even; fixed events keep going. Tap a repeating block to edit or delete just that week.",
-  };
-  for(var _k240 in EXTRA_V240){ if(Object.prototype.hasOwnProperty.call(EXTRA_V240, _k240)) EXACT[_k240] = EXTRA_V240[_k240]; }
 
   function compose(s, depth){
     if(depth > 3) return null;
