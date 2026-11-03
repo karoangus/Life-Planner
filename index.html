@@ -8,13 +8,12 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=24.0">
-<link rel="stylesheet" href="css/design-system.css?v=24.0">
-<link rel="stylesheet" href="css/v20.css?v=24.0">
-<link rel="stylesheet" href="css/v213.css?v=24.0">
-<link rel="stylesheet" href="css/v22.css?v=24.0">
-<link rel="stylesheet" href="css/ui-refresh.css?v=24.0">
-<link rel="stylesheet" href="css/v24.css?v=24.0">
+<link rel="stylesheet" href="css/app.css?v=24.1">
+<link rel="stylesheet" href="css/design-system.css?v=24.1">
+<link rel="stylesheet" href="css/v20.css?v=24.1">
+<link rel="stylesheet" href="css/v213.css?v=24.1">
+<link rel="stylesheet" href="css/v22.css?v=24.1">
+<link rel="stylesheet" href="css/ui-refresh.css?v=24.1">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -195,16 +194,8 @@ try{
         <div class="calendar-legend"><span><i class="legend-dot legend-dot-today"></i>امروز</span><span><i class="legend-dot legend-dot-now"></i>زمان فعلی</span><span><i class="legend-dot legend-dot-night"></i>بامداد</span></div>
       </div>
       <div class="card calendar-card">
-        <div class="cal-week-bar">
-          <button class="cal-week-btn" type="button" onclick="calWeekStep(-1)" aria-label="هفته قبل">› <span>هفته قبل</span></button>
-          <div class="cal-week-now">
-            <strong id="calWeekLabel">این هفته</strong>
-            <button class="cal-week-today" type="button" id="calWeekTodayBtn" onclick="calWeekToday()">امروز</button>
-          </div>
-          <button class="cal-week-btn" type="button" onclick="calWeekStep(1)" aria-label="هفته بعد"><span>هفته بعد</span> ‹</button>
-        </div>
-        <!-- v24: each week has its own dated plan, and the even/odd anchor is the user's call -->
-        <div class="cal-week-summary" id="calWeekSummary" aria-live="polite"></div>
+        <!-- v24.1: the week switcher (قبل/بعد/امروز) was removed. The grid is
+             always this week, so there is nothing to navigate back to. -->
         <div id="weekGrid"></div>
       </div>
       <!-- v20: calendar day plan UI removed (data remains for migration) -->
@@ -999,7 +990,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.0</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.1</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1154,18 +1145,6 @@ try{
       <div class="chip-opt" data-v="6">جمعه</div>
     </div>
   </div>
-  <div class="field lp-week-scope-field" id="eRepeatField">
-    <label>تکرار در هفته‌ها — هر هفته برنامه‌ی جداگانه‌ی خودش را دارد</label>
-    <div class="chip-group lp-week-mode-group" id="eRepeat" role="group" aria-label="تکرار در هفته‌ها">
-      <button type="button" class="chip-opt sel" data-v="once" aria-pressed="true">📌 فقط این هفته</button>
-      <button type="button" class="chip-opt" data-v="always" aria-pressed="false">🔁 ثابت (هر هفته)</button>
-      <button type="button" class="chip-opt" data-v="even" aria-pressed="false">2️⃣ هفته‌های زوج</button>
-      <button type="button" class="chip-opt" data-v="odd" aria-pressed="false">1️⃣ هفته‌های فرد</button>
-      <button type="button" class="chip-opt" data-v="weeks" aria-pressed="false">🗓️ هفته‌های انتخابی</button>
-    </div>
-    <div class="lp-week-hint" id="eRepeatHint"></div>
-    <div class="lp-week-picker-box" id="eWeekPicker" hidden></div>
-  </div>
   <div class="row2">
     <div class="field"><label>ساعت شروع</label><input type="time" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="eHourStart" value="09:00"></div>
     <div class="field"><label>ساعت پایان</label><input type="time" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" id="eHourEnd" value="12:00"></div>
@@ -1182,13 +1161,11 @@ try{
   <div class="modal-actions" style="flex-direction:column;">
     <div class="lp-act-group-lbl">✏️ ویرایش</div>
     <button class="btn" id="editThisDayBtn" style="width:100%; justify-content:center; display:none;" onclick="startEditEventThisDay()">✏️ ویرایش فقط این روز</button>
-    <button class="btn" id="editThisWeekBtn" style="width:100%; justify-content:center; margin-top:10px; display:none;" onclick="startEditEventThisWeek()">✏️ ویرایش فقط این هفته</button>
     <button class="btn ghost" id="editWholeEventBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="startEditEvent()">✏️ ویرایش کل رویداد (همه‌ی روزها)</button>
     <div class="lp-action-sep"></div>
     <div class="lp-act-group-lbl">🗑️ حذف</div>
     <button class="btn danger" id="deleteThisDayBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteEventDay()">🗑️ حذف فقط این روز</button>
-    <button class="btn danger" id="deleteThisWeekBtn" style="width:100%; justify-content:center; margin-top:10px; display:none;" onclick="deleteEventThisWeek()">🗑️ حذف فقط این هفته</button>
-    <button class="btn ghost" id="deleteWholeEventBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteWholeEvent()">🗑️ حذف کل رویداد (همه‌ی روزها)</button>
+    <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteWholeEvent()">🗑️ حذف کل رویداد (همه‌ی روزها)</button>
     <button class="btn ghost" style="width:100%; justify-content:center; margin-top:10px;" onclick="closeModal('eventActionModalBg')">انصراف</button>
   </div>
 </div></div>
@@ -1375,11 +1352,10 @@ try{
     <div class="guide-rows">
       <div class="guide-row"><span class="guide-ic">➕</span><div class="guide-row-txt"><b>رویداد جدید</b><span>بالا «رویداد جدید» را بزن؛ عنوان، روز و ساعت کافی است.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🖐️</span><div class="guide-row-txt"><b>جابه‌جایی و تغییر مدت</b><span>رویداد را بکش تا جابه‌جا شود؛ لبهٔ بالا یا پایینش را یک لحظه نگه دار و بعد بکش تا مدتش کم‌وزیاد شود. روی خانه‌ی خالی بزن تا رویداد جدید بسازی.</span></div></div>
-      <div class="guide-row"><span class="guide-ic">🕒</span><div class="guide-row-txt"><b>«الان» و «امروز»</b><span>«🕒 الان» شبکه را به ساعت فعلی می‌برد و «امروز» به هفته‌ی جاری برمی‌گرداند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🕒</span><div class="guide-row-txt"><b>🕒 الان</b><span>«🕒 الان» شبکه را به ساعت فعلی می‌برد؛ تقویم همیشه همان هفته‌ی جاری را نشان می‌دهد و دیگر دکمه‌ای برای رفتن به هفته‌ی قبل یا بعد ندارد.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🏷️</span><div class="guide-row-txt"><b>دسته‌ها و رنگ‌ها</b><span>با 🏷️ برای رویدادها دسته و رنگ بساز تا یک هفته‌ی شلوغ خوانا بماند.</span></div></div>
     </div>
     <p class="muted guide-note">🌙 ساعت‌های بعد از نیمه‌شب، پایینِ ستونِ همان شب می‌نشینند.</p>
-    <p class="muted guide-note">🗓️ <b>هر هفته برنامه‌ی خودش را دارد:</b> رویدادی که این هفته می‌سازی فقط همین هفته است؛ هفته قبل و بعد جدا هستند. اگر می‌خواهی رویدادی در همه‌ی هفته‌ها بماند، توی فرم «🔁 ثابت (هر هفته)» را بزن. برای برنامه‌ی دو هفته‌ای «2️⃣ هفته‌های زوج» و «1️⃣ هفته‌های فرد» را انتخاب کن (مثلاً مدرسه‌ی هفته‌های زوج تا ۱۵ و هفته‌های فرد تا ۱۷)، یا با «🗓️ هفته‌های انتخابی» خودت هفته‌ها را تیک بزن. زوج/فرد بودن هفته‌ها را هم با دکمه‌ی «🔄 جابه‌جایی زوج/فرد» بالای جدول عوض می‌کنی؛ ثابت‌ها همچنان ادامه دارند. روی بلوک تکرارشونده بزن تا فقط همان هفته را جدا ویرایش یا حذف کنی.</p>
   </section>
 
 
@@ -1532,20 +1508,20 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=24.0"></script>
-<script src="js/enhancements.js?v=24.0"></script>
-<script src="js/sw-register.js?v=24.0"></script>
+<script src="js/core.js?v=24.1"></script>
+<script src="js/enhancements.js?v=24.1"></script>
+<script src="js/sw-register.js?v=24.1"></script>
 
-<script src="js/pomodoro.js?v=24.0"></script>
+<script src="js/pomodoro.js?v=24.1"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=24.0"></script>
-<script src="js/v16.js?v=24.0"></script>
-<script src="js/v162.js?v=24.0"></script>
-<script src="js/v21.js?v=24.0"></script>
+<script src="js/lang.js?v=24.1"></script>
+<script src="js/v16.js?v=24.1"></script>
+<script src="js/v162.js?v=24.1"></script>
+<script src="js/v21.js?v=24.1"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=24.0"></script>
+<script src="js/v213.js?v=24.1"></script>
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
-<script src="js/v22.js?v=24.0"></script>
+<script src="js/v22.js?v=24.1"></script>
 
 </body>
 </html>

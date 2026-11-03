@@ -46,11 +46,6 @@ const _themeToggleBtn = document.getElementById('themeToggleBtn'); if(_themeTogg
 
 /* ============ STORE ============ */
 const STORE_KEY = 'lifePlannerAI_v1';
-/* v24: these three constants must exist before loadStore()'s boot-time
-   normalizer runs, so they live up here rather than in the calendar section. */
-const LP_WEEK_MODES = ['once','always','even','odd','weeks'];
-const LP_WEEK_MS = 7*24*60*60*1000;
-const LP_WEEK_EPOCH_UTC = Date.UTC(2024,0,6); /* a Saturday: week index 0 */
 function loadStore(){
   let db = { tasks:[], habits:[], goals:[], notes:[], events:[], dayPlans:{}, xp:0, level:1, history:{}, quest:null, stats:null };
   try{
@@ -103,8 +98,6 @@ function loadStore(){
 let DB = loadStore();
 DB.notes.forEach(n=>{ if(typeof n.pinned!=='boolean') n.pinned=false; if(!n.updatedAt) n.updatedAt=n.date||todayISO(); });
 DB.events.forEach(e=>{ if(typeof e.reminder!=='boolean') e.reminder=false; });
-/* v24: week-scope metadata + the even/odd anchor are guaranteed on boot. */
-lpNormalizeCalendarWeekData();
 // v12.1 — user-defined categories with a default color (used by events & tasks)
 if(!Array.isArray(DB.categories)) DB.categories=[];
 DB.categories.forEach(c=>{ if(!c.id) c.id=uid(); if(!c.color) c.color='#00e5ff'; if(typeof c.name!=='string') c.name=''; });
@@ -3635,24 +3628,15 @@ function saveHabit(){
 function dateToLocalISO(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-/* v20: one simple week switch. 0 = this week; ±1 = previous/next week. */
-let CAL_WEEK_OFFSET = 0;
-function calWeekShift(n){
-  CAL_WEEK_OFFSET = Math.max(-52, Math.min(52, (Number(n)||0)));
-  renderCalendar();
-}
-function calWeekStep(n){ calWeekShift(CAL_WEEK_OFFSET + (Number(n)||0)); }
-function calWeekToday(){ calWeekShift(0); scrollCalendarToNow(); }
-/* v21.4: the offset is a parameter now. The calendar passes its own
-   CAL_WEEK_OFFSET; the Habits grid passes 0, because seven boxes that
-   belong to another week are seven boxes nobody can tick. */
-function weekDates(offset=CAL_WEEK_OFFSET){
-  // Returns 7 dates for the shown week (Sat to Fri, Iranian calendar week) using LOCAL date
+/* v24.1: the week switcher is gone. There is exactly one week — this one —
+   so no offset can drift between the calendar and the Habits grid. */
+function weekDates(){
+  // Returns 7 dates for THIS week (Sat to Fri, Iranian calendar week) using LOCAL date
   const arr=[];
   const now = new Date();
   const dayOfWeek = (now.getDay()+1)%7; // 0=Sat,1=Sun,...,6=Fri
   const sat = new Date(now);
-  sat.setDate(now.getDate() - dayOfWeek + (Number(offset)||0)*7);
+  sat.setDate(now.getDate() - dayOfWeek);
   for(let i=0;i<7;i++){
     const d=new Date(sat);
     d.setDate(sat.getDate()+i);
@@ -3660,156 +3644,6 @@ function weekDates(offset=CAL_WEEK_OFFSET){
   }
   return arr;
 }
-/* ============================================================
-   v24 — WEEK-SCOPED CALENDAR («هر هفته برنامه‌ی خودش»)
-
-   Before v24 every DB.events entry was an endless weekly rule: an event
-   created while looking at next week also showed up in this week and in
-   every other week. Now every week has its own plan, and repetition is an
-   explicit choice made on the event:
-
-     repeat:'once'   → weekKey: the Saturday ISO of that ONE week (default)
-     repeat:'always' → a fixed event, present in every week
-     repeat:'even' / 'odd' → alternating weeks, relative to DB.calWeekAnchor
-     repeat:'weeks'  → an explicit list of weekKeys chosen by the user
-     (no repeat field) → pre-v24 data: still a fixed weekly event, so old
-       backups and old code keep working without a destructive migration.
-
-   exceptions[] hides a recurring event in one specific week; that is how
-   «فقط این هفته» deletes / edits work without touching the other weeks.
-   ============================================================ */
-function lpIsISODate(v){
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(v||'')) && Number.isFinite(Date.parse(String(v)+'T00:00:00Z'));
-}
-function lpWeekAdd(weekKey,n){
-  if(!lpIsISODate(weekKey)) return weekDates(0)[0];
-  return new Date(Date.parse(weekKey+'T00:00:00Z')+(Number(n)||0)*LP_WEEK_MS).toISOString().slice(0,10);
-}
-function lpWeekIndex(weekKey){
-  if(!lpIsISODate(weekKey)) return 0;
-  return Math.round((Date.parse(weekKey+'T00:00:00Z')-LP_WEEK_EPOCH_UTC)/LP_WEEK_MS);
-}
-/* Saturday ISO of the week that contains a local date. */
-function lpWeekKeyOf(date){
-  const d=new Date(date);
-  d.setDate(d.getDate()-((d.getDay()+1)%7));
-  return dateToLocalISO(d);
-}
-function lpNormalizeCalendarWeekData(){
-  /* Called after loadStore() and after an import. It only fills in missing
-     fields / drops malformed ones; legacy events are never rewritten. */
-  if(!lpIsISODate(DB.calWeekAnchor)) DB.calWeekAnchor=weekDates(0)[0];
-  (DB.events||[]).forEach(e=>{
-    if(!e||typeof e!=='object') return;
-    if(typeof e.repeat==='string' && !LP_WEEK_MODES.includes(e.repeat)) delete e.repeat;
-    if(!lpIsISODate(e.weekKey)) delete e.weekKey;
-    if(!Array.isArray(e.weeks)) delete e.weeks; else e.weeks=[...new Set(e.weeks.filter(lpIsISODate))];
-    if(!Array.isArray(e.exceptions)) delete e.exceptions; else e.exceptions=[...new Set(e.exceptions.filter(lpIsISODate))];
-  });
-}
-function lpEventRepeat(ev){
-  const r=ev&&ev.repeat;
-  if(LP_WEEK_MODES.includes(r)) return r;
-  if(ev&&lpIsISODate(ev.weekKey)) return 'once';
-  if(ev&&Array.isArray(ev.weeks)) return 'weeks';
-  return 'always'; /* legacy: fixed, exactly like before v24 */
-}
-function lpWeekParity(weekKey){
-  const diff=lpWeekIndex(weekKey)-lpWeekIndex(DB.calWeekAnchor||weekDates(0)[0]);
-  return ((diff%2)+2)%2===0 ? 'even' : 'odd';
-}
-function lpEventAppliesToWeek(ev,weekKey){
-  if(!ev||!lpIsISODate(weekKey)) return false;
-  if(Array.isArray(ev.exceptions)&&ev.exceptions.includes(weekKey)) return false;
-  switch(lpEventRepeat(ev)){
-    case 'once':   return ev.weekKey===weekKey;
-    case 'weeks':  return Array.isArray(ev.weeks)&&ev.weeks.includes(weekKey);
-    case 'even':   return lpWeekParity(weekKey)==='even';
-    case 'odd':    return lpWeekParity(weekKey)==='odd';
-    default:       return true;
-  }
-}
-function calShownWeekKey(offset=CAL_WEEK_OFFSET){ return weekDates(offset)[0]; }
-function eventsForWeekKey(weekKey){ return (DB.events||[]).filter(e=>lpEventAppliesToWeek(e,weekKey)); }
-function eventsForWeek(offset=CAL_WEEK_OFFSET){ return eventsForWeekKey(calShownWeekKey(offset)); }
-function lpEventIsRecurring(ev){ const r=lpEventRepeat(ev); return r==='always'||r==='even'||r==='odd'||r==='weeks'; }
-function lpScopeOf(ev){
-  const out={};
-  if(ev&&LP_WEEK_MODES.includes(ev.repeat)) out.repeat=ev.repeat;
-  if(ev&&lpIsISODate(ev.weekKey)) out.weekKey=ev.weekKey;
-  if(ev&&Array.isArray(ev.weeks)) out.weeks=[...ev.weeks];
-  return out;
-}
-/* All weeks that already hold a week-specific event. A recurring candidate
-   must be checked against those weeks (plus the shown week); a one-week
-   candidate is checked only in its own week. */
-function lpAllKnownWeekKeys(){
-  const keys=new Set([calShownWeekKey(),weekDates(0)[0]]);
-  (DB.events||[]).forEach(e=>{
-    if(lpIsISODate(e.weekKey)) keys.add(e.weekKey);
-    (Array.isArray(e.weeks)?e.weeks:[]).forEach(k=>{ if(lpIsISODate(k)) keys.add(k); });
-    (Array.isArray(e.exceptions)?e.exceptions:[]).forEach(k=>{ if(lpIsISODate(k)) keys.add(k); });
-  });
-  return [...keys];
-}
-function lpEventsForCandidateWeeks(ev,ignoreId=null){
-  const mode=lpEventRepeat(ev);
-  let weeks;
-  if(mode==='once') weeks=[ev.weekKey];
-  else if(mode==='weeks') weeks=(ev.weeks||[]).slice();
-  /* A parity event only competes inside its OWN parity weeks: an even-week
-     school block and an odd-week one may share the same clock time. */
-  else weeks=lpAllKnownWeekKeys().filter(k=>lpEventAppliesToWeek(ev,k));
-  if(!weeks.length) weeks=[calShownWeekKey(),weekDates(0)[0]].filter(k=>lpEventAppliesToWeek(ev,k));
-  const seen=new Set([ignoreId]), out=[];
-  weeks.forEach(k=>eventsForWeekKey(k).forEach(e=>{
-    if(!seen.has(e.id)){ seen.add(e.id); out.push(e); }
-  }));
-  return out;
-}
-function lpHideEventInWeek(ev,weekKey){
-  if(!Array.isArray(ev.exceptions)) ev.exceptions=[];
-  if(!ev.exceptions.includes(weekKey)) ev.exceptions.push(weekKey);
-}
-/* A detached one-week copy of a recurring event (keeps color/bite/desc/...). */
-function lpWeekCopy(ev,weekKey,overrides={}){
-  const copy={...JSON.parse(JSON.stringify(ev)),id:uid(),repeat:'once',weekKey};
-  delete copy.weeks; delete copy.exceptions;
-  return Object.assign(copy,overrides);
-}
-function lpWeekRangeLabel(weekKey){
-  if(!lpIsISODate(weekKey)) return '';
-  /* lpWeekAdd counts WEEKS; a week's label ends six DAYS after its Saturday. */
-  const end=new Date(Date.parse(weekKey+'T00:00:00Z')+6*24*60*60*1000).toISOString().slice(0,10);
-  return `${calendarHeaderDate(weekKey)} — ${calendarHeaderDate(end)}`;
-}
-const LP_WEEK_MODE_LABEL={
-  once:'📌 فقط این هفته', always:'🔁 ثابت — هر هفته', even:'🔁 هفته‌های زوج',
-  odd:'🔁 هفته‌های فرد', weeks:'🔁 هفته‌های انتخابی'
-};
-function lpWeekModeLabel(mode){ return LP_WEEK_MODE_LABEL[mode]||LP_WEEK_MODE_LABEL.once; }
-/* Which weeks count as «زوج» is the user's choice. The anchor is a Saturday
-   treated as even; flipping it swaps even/odd for every parity event. */
-function lpSetWeekParity(parity,weekKey){
-  const k=lpIsISODate(weekKey)?weekKey:calShownWeekKey();
-  DB.calWeekAnchor = parity==='odd' ? lpWeekAdd(k,1) : k;
-  save();
-  renderEventRepeatHint(lpGetEventRepeat());
-  renderEventWeekPicker(lpGetEventRepeat());
-  renderCalendar();
-}
-function lpFlipWeekParity(){
-  /* A flip is exactly one week of the global anchor, whichever week is being
-     viewed — two flips always land back on the original pattern. */
-  const shown=calShownWeekKey();
-  DB.calWeekAnchor=lpWeekAdd(DB.calWeekAnchor||weekDates(0)[0],1);
-  save();
-  renderEventRepeatHint(lpGetEventRepeat());
-  renderEventWeekPicker(lpGetEventRepeat());
-  renderCalendar();
-  toast(`🔄 مبنای هفته‌ها عوض شد: هفته‌ی نمایش ${lpWeekParity(shown)==='even'?'زوج':'فرد'} شد`);
-}
-
 function toggleHabitDay(hid, date){
   const h = DB.habits.find(x=>x.id===hid);
   if(!h){ console.warn('toggleHabitDay: habit not found', hid); return; }
@@ -3850,7 +3684,7 @@ function renderHabitShieldToggle(){
 }
 function renderHabits(){
   renderHabitShieldToggle();
-  const wDates = weekDates(0);   /* v21.4: always *this* week */
+  const wDates = weekDates();   /* v24.1: this week is the only week */
   const dayLetters = ['ش','ی','د','س','چ','پ','ج'];
   const listEl = document.getElementById('habitList');
   if(!DB.habits.length){ listEl.innerHTML = `<div class="empty"><div class="ic">🔥</div>هنوز عادتی ثبت نکردی</div>`; }
@@ -4394,113 +4228,11 @@ if(lpBiteGroup){
     if(chip) lpSetEventBite(chip.dataset.v);
   });
 }
-/* ============================================================
-   v24 — the recurrence picker inside the event sheet
-   ============================================================ */
-let lpWeekPickerCount=8;
-window.__eventWeekKey=null;         /* the week the sheet was opened for */
-window.__eventSelectedWeeks=[];     /* explicit weeks for repeat:'weeks' */
-window.__eventRepeatMode='once';    /* our own state, independent of the generic chip toggle */
-window.__editingDetachWeek=null;    /* set by «فقط این هفته» edit/delete modes */
-function lpCurrentEventWeekKey(){ return lpIsISODate(window.__eventWeekKey)?window.__eventWeekKey:calShownWeekKey(); }
-function lpSetEventRepeat(mode='once',opts={}){
-  const valid=LP_WEEK_MODES.includes(mode)?mode:'once';
-  window.__eventRepeatMode=valid;
-  document.querySelectorAll('#eRepeat .chip-opt').forEach(chip=>{
-    const on=chip.dataset.v===valid;
-    chip.classList.toggle('sel',on);
-    chip.setAttribute('aria-pressed',String(on));
-  });
-  window.__eventSelectedWeeks=Array.isArray(opts.selectedWeeks)
-    ? [...new Set(opts.selectedWeeks.filter(lpIsISODate))]
-    : [lpCurrentEventWeekKey()];
-  renderEventRepeatHint(valid);
-  renderEventWeekPicker(valid);
-}
-function lpGetEventRepeat(){ return document.querySelector('#eRepeat .chip-opt.sel')?.dataset.v||'once'; }
-function lpReadEventScope(){
-  const mode=lpGetEventRepeat();
-  if(mode==='once') return {repeat:'once',weekKey:lpCurrentEventWeekKey()};
-  if(mode==='weeks') return {repeat:'weeks',weeks:[...(window.__eventSelectedWeeks||[])].filter(lpIsISODate)};
-  return {repeat:mode};
-}
-function renderEventRepeatHint(mode){
-  const hint=document.getElementById('eRepeatHint'); if(!hint) return;
-  const wk=lpCurrentEventWeekKey(), parity=lpWeekParity(wk);
-  const range=lpWeekRangeLabel(wk);
-  const copy={
-    once:`📌 فقط هفته‌ی ${range} — هفته‌های قبل و بعد برنامه‌ی جداگانه‌ی خودشان را دارند.`,
-    always:`🔁 ثابت: همین رویداد در همه‌ی هفته‌ها میماند؛ هفته‌های دیگر کپی نمی‌شوند.`,
-    even:`2️⃣ فقط هفته‌های زوج (مثلاً مدرسه تا ساعت ۱۵). هفته‌های فرد خالی میمانند تا جدا برنامه بچینی.`,
-    odd:`1️⃣ فقط هفته‌های فرد (مثلاً مدرسه تا ساعت ۱۷). هفته‌های زوج خالی میمانند تا جدا برنامه بچینی.`,
-    weeks:`🗓️ فقط هفته‌هایی که پایین تیک میزنی؛ بقیه‌ی هفته‌ها دستنخورده میمانند.`
-  };
-  let html=`<span class="lp-repeat-copy">${esc(copy[mode]||copy.once)}</span>`;
-  if(mode==='even'||mode==='odd'||mode==='weeks'){
-    html+=`<div class="lp-parity-choice"><span>مبنای زوج/فرد: هفته‌ی بالا <b>${parity==='even'?'زوج':'فرد'}</b> است. خودت انتخاب کن:</span>
-      <button type="button" class="lp-parity-btn${parity==='even'?' sel':''}" data-p="even" aria-pressed="${parity==='even'}">زوج</button>
-      <button type="button" class="lp-parity-btn${parity==='odd'?' sel':''}" data-p="odd" aria-pressed="${parity==='odd'}">فرد</button></div>`;
-  }
-  hint.innerHTML=html;
-  hint.querySelectorAll('.lp-parity-btn').forEach(btn=>btn.addEventListener('click',()=>lpSetWeekParity(btn.dataset.p,wk)));
-}
-function renderEventWeekPicker(mode){
-  const box=document.getElementById('eWeekPicker'); if(!box) return;
-  if(mode!=='weeks'){ box.hidden=true; box.innerHTML=''; return; }
-  box.hidden=false;
-  const start=lpCurrentEventWeekKey();
-  const thisWeek=weekDates(0)[0];
-  let html='<div class="lp-week-picker">';
-  for(let i=0;i<lpWeekPickerCount;i++){
-    const k=lpWeekAdd(start,i);
-    const sel=window.__eventSelectedWeeks.includes(k);
-    const flags=[];
-    if(k===thisWeek) flags.push('این هفته');
-    if(k===start) flags.push('هفته‌ی رویداد');
-    html+=`<button type="button" class="lp-week-row${sel?' sel':''}" data-wk="${k}" aria-pressed="${sel}">
-      <span class="lp-week-check">${sel?'☑':'☐'}</span>
-      <span class="lp-week-range">${esc(lpWeekRangeLabel(k))}</span>
-      <span class="lp-week-tag">${lpWeekParity(k)==='even'?'زوج':'فرد'}</span>
-      ${flags.length?`<span class="lp-week-flag">${esc(flags.join(' · '))}</span>`:''}
-    </button>`;
-  }
-  html+=`<button type="button" class="btn ghost sm lp-week-more" data-more="1">➕ ۸ هفته‌ی دیگر</button></div>`;
-  box.innerHTML=html;
-  box.querySelectorAll('.lp-week-row').forEach(row=>row.addEventListener('click',()=>{
-    const k=row.dataset.wk;
-    const set=new Set(window.__eventSelectedWeeks||[]);
-    if(set.has(k)) set.delete(k); else set.add(k);
-    window.__eventSelectedWeeks=[...set];
-    renderEventWeekPicker('weeks');
-  }));
-  const more=box.querySelector('[data-more]');
-  if(more) more.addEventListener('click',()=>{ lpWeekPickerCount+=8; renderEventWeekPicker('weeks'); });
-}
-const lpRepeatGroup=document.getElementById('eRepeat');
-if(lpRepeatGroup){
-  lpRepeatGroup.addEventListener('click',e=>{
-    const chip=e.target.closest('.chip-opt'); if(!chip) return;
-    const field=document.getElementById('eRepeatField');
-    if(field&&field.classList.contains('is-locked')) return; /* «فقط این هفته» mode */
-    /* The generic .chip-group handler toggles .sel before this listener runs,
-       so use our own state to detect a no-op click. */
-    if(chip.dataset.v===window.__eventRepeatMode) return;
-    lpWeekPickerCount=8;
-    lpSetEventRepeat(chip.dataset.v);
-  });
-}
-
 function openEventModal(){
   window.__editingEventId=null;
   window.__editingEventDay=null;
-  window.__editingDetachWeek=null;
   window.__eventCategoryId=null;
   window.__eventColorPicked=null;
-  /* v24: a new event belongs to the week the calendar is showing. */
-  window.__eventWeekKey=calShownWeekKey();
-  lpWeekPickerCount=8;
-  const repeatField=document.getElementById('eRepeatField');
-  if(repeatField) repeatField.classList.remove('is-locked');
   document.getElementById('eventModalTitle').textContent='📅 رویداد جدید';
   const scopeHint=document.getElementById('eEditScopeHint');
   if(scopeHint){ scopeHint.style.display='none'; scopeHint.innerHTML=''; }
@@ -4510,7 +4242,6 @@ function openEventModal(){
   document.getElementById('eHourEnd').value='12:00';
   document.getElementById('eReminder').checked=false;
   lpFillEventBite();
-  lpSetEventRepeat('once');
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.remove('sel'));
   refreshEventCatChips();
   renderEventColorRow();
@@ -4576,59 +4307,38 @@ async function saveEvent(){
   const cat=window.__eventCategoryId||null;
   const color=window.__eventColorPicked||null;
   const bite=lpGetEventBite();
-  /* v24: an «فقط این هفته» edit is always stored as a one-week event, even
-     if the old series was fixed / even / odd. Everything else reads the
-     recurrence picker. */
-  const detachWeek=window.__editingDetachWeek||null;
-  const scope=detachWeek?{repeat:'once',weekKey:detachWeek}:lpReadEventScope();
-  if(scope.repeat==='weeks'&&!scope.weeks.length){toast('⚠️ حداقل یک هفته رو انتخاب کن');return;}
-  const candidate={title,days,startMin,endMin,...scope};
-  /* An edited series keeps its «only this week» exceptions while clashes are checked. */
-  const editingEv=window.__editingEventId?DB.events.find(x=>x.id===window.__editingEventId):null;
-  if(editingEv&&Array.isArray(editingEv.exceptions)&&!detachWeek) candidate.exceptions=[...editingEv.exceptions];
-  const clearEditState=()=>{
-    window.__editingEventId=null;
-    window.__editingEventDay=null;
-    window.__editingDetachWeek=null;
-  };
 
   // v12.1 — "edit only this day" mode: detach this occurrence from the series
-  // and save it as its own standalone event. v24 — if the series repeats over
-  // weeks, only THIS week is detached; the other weeks stay untouched.
+  // and save it as its own standalone event. The rest of the series is untouched.
   if(window.__editingEventId && window.__editingEventDay!=null){
     const ev=DB.events.find(x=>x.id===window.__editingEventId);
-    if(!ev){ clearEditState(); closeModal('eventModalBg'); return; }
+    if(!ev){ window.__editingEventId=null; window.__editingEventDay=null; closeModal('eventModalBg'); return; }
     const editedDay=window.__editingEventDay;
     const remainderDays=eventDays(ev).filter(d=>d!==editedDay);
-    const others=lpEventsForCandidateWeeks(candidate,ev.id);
-    /* The untouched days of this week stay as a one-week copy when a
-       recurring series is detached here; include them in the clash check. */
-    if(detachWeek&&remainderDays.length) others.push({...ev,days:remainderDays});
-    if(!detachWeek&&remainderDays.length) others.push({...ev,days:remainderDays,startMin:eventStartMinutes(ev),endMin:eventEndMinutes(ev)});
-    const occConflict=lpCandidateConflicts(candidate,others);
+    const others=DB.events.filter(x=>x.id!==ev.id);
+    if(remainderDays.length) others.push({...ev,days:remainderDays,startMin:eventStartMinutes(ev),endMin:eventEndMinutes(ev)});
+    const occConflict=lpCandidateConflicts({title,days,startMin,endMin},others);
     if(occConflict){
       toast(`⚠️ «${occConflict.title}» مانع ثبت این رویداد است؛ ساعت‌ها تداخل دارند`);
       return;
     }
-    if(detachWeek){
-      lpHideEventInWeek(ev,detachWeek);
-      if(remainderDays.length) DB.events.push(lpWeekCopy(ev,detachWeek,{days:remainderDays}));
-    }
-    else if(remainderDays.length){ ev.days=remainderDays; delete ev.day; }
+    if(remainderDays.length){ ev.days=remainderDays; delete ev.day; }
     else { DB.events=DB.events.filter(x=>x.id!==ev.id); }
     DB.events.push({
-      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,bite,...scope,
+      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,bite,
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
-    clearEditState();
+    window.__editingEventId=null;
+    window.__editingEventDay=null;
     closeModal('eventModalBg');
     save();
     renderCalendar();
     rescheduleAllEventReminders();
-    toast(detachWeek?'✏️ فقط این روزِ همین هفته ذخیره شد؛ هفته‌های دیگر دستنخورده ماندند':'✏️ فقط این روز ذخیره شد؛ بقیه‌ی روزها دستنخورده ماندند');
+    toast('✏️ فقط این روز ذخیره شد؛ بقیه‌ی روزها دست‌نخورده ماندند');
     return;
   }
 
+  const candidate={title,days,startMin,endMin};
   const conflict=findEventConflict(candidate,window.__editingEventId);
   if(conflict){
     toast(`⚠️ «${conflict.title}» مانع ثبت این رویداد است؛ ساعت‌ها تداخل دارند`);
@@ -4637,35 +4347,23 @@ async function saveEvent(){
 
   if(window.__editingEventId){
     const ev=DB.events.find(x=>x.id===window.__editingEventId);
-    if(ev && detachWeek){
-      /* Hide the series in just this week and put the edited copy there. */
-      lpHideEventInWeek(ev,detachWeek);
-      DB.events.push(lpWeekCopy(ev,detachWeek,{
-        title,desc,days,startMin,endMin,reminder,cat,color,bite,
-        startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
-      }));
-      toast('✏️ فقط این هفته ویرایش شد؛ بقیه‌ی هفته‌ها دستنخورده ماندند');
-    }else if(ev){
+    if(ev){
       ev.title=title;ev.days=days;ev.startMin=startMin;ev.endMin=endMin;ev.reminder=reminder;
       ev.startHour=Math.floor(startMin/60);ev.endHour=Math.min(24,Math.floor(endMin/60));
       ev.cat=cat;ev.color=color;ev.desc=desc;ev.bite=bite;
       delete ev.energy; // retire the old field when this event is edited; other data stays intact
       delete ev.day;
-      /* replace the old week scope with the newly chosen one */
-      delete ev.repeat; delete ev.weekKey; delete ev.weeks;
-      Object.assign(ev,scope);
-      if(scope.repeat==='once') delete ev.exceptions;
-      toast('✏️ رویداد ویرایش شد');
     }
+    toast('✏️ رویداد ویرایش شد');
   }else{
     DB.events.push({
-      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,bite,...scope,
+      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,bite,
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
-    const msg=scope.repeat==='once'?'📅 رویداد این هفته اضافه شد':'📅 رویداد تکرارشونده اضافه شد';
-    toast(reminder?msg+'؛ یادآورش فعاله':msg);
+    toast(reminder?'📅 رویداد اضافه شد؛ یادآورش فعاله':'📅 رویداد اضافه شد');
   }
-  clearEditState();
+  window.__editingEventId=null;
+  window.__editingEventDay=null;
   closeModal('eventModalBg');
   save();
   renderCalendar();
@@ -4683,10 +4381,9 @@ function eventSegments(e){
   return out;
 }
 function findEventConflict(candidate,ignoreId=null){
-  /* v24: a one-week event only competes with the events of ITS week; a
-     recurring one competes with every week that already has a plan. */
   const cSeg=eventSegments(candidate);
-  for(const other of lpEventsForCandidateWeeks(candidate,ignoreId)){
+  for(const other of DB.events){
+    if(other.id===ignoreId)continue;
     for(const a of cSeg){
       for(const b of eventSegments(other)){
         if(a.day===b.day&&a.start<b.end&&b.start<a.end)return other;
@@ -4702,22 +4399,18 @@ const reminderTimers=new Map();
 function markReminderSent(key){ localStorage.setItem(key,String(Date.now())); }
 function reminderAlreadySent(key){ const v=Number(localStorage.getItem(key)||0); return v>0 && (Date.now()-v)<20*60*60*1000; }
 function nextEventOccurrence(ev){
-  /* v24: walk real calendar days so the event's week rule is honoured —
-     a one-off event next week must not ring this week, and an even-week
-     event must skip the odd week in between. */
   const now=new Date();
-  const days=eventDays(ev), mins=eventStartMinutes(ev);
-  if(!days.length) return null;
-  const base=new Date(now); base.setHours(0,0,0,0);
-  for(let i=0;i<370;i++){
-    const d=new Date(base); d.setDate(base.getDate()+i);
-    if(!days.includes((d.getDay()+1)%7)) continue;
-    if(!lpEventAppliesToWeek(ev,lpWeekKeyOf(d))) continue;
-    const target=new Date(d);
-    target.setHours(Math.floor(mins/60),mins%60,0,0);
-    if(target>now) return target;
-  }
-  return null;
+  const nowDay=(now.getDay()+1)%7;
+  const nowMin=now.getHours()*60+now.getMinutes();
+  let best=null;
+  eventDays(ev).forEach(day=>{
+    let delta=(day-nowDay+7)%7;
+    const mins=eventStartMinutes(ev);
+    if(delta===0 && mins<=nowMin) delta=7;
+    const target=new Date(now); target.setHours(0,0,0,0); target.setDate(target.getDate()+delta); target.setHours(Math.floor(mins/60),mins%60,0,0);
+    if(!best||target<best) best=target;
+  });
+  return best;
 }
 function scheduleEventReminder(ev){
   if(!ev.reminder)return;
@@ -4740,10 +4433,8 @@ function rescheduleAllEventReminders(){ reminderTimers.forEach(t=>clearTimeout(t
 async function checkEventReminders(){
   if(Notification.permission!=='granted') return;
   const now=new Date(); const day=(now.getDay()+1)%7; const minute=now.getHours()*60+now.getMinutes(); const date=todayISO();
-  const weekKey=lpWeekKeyOf(now); /* v24: only this week's plan can ring */
   for(const ev of DB.events){
     if(!ev.reminder||!eventDays(ev).includes(day)||eventStartMinutes(ev)!==minute)continue;
-    if(!lpEventAppliesToWeek(ev,weekKey))continue;
     const key=reminderStorageKey(date,ev.id,day); if(reminderAlreadySent(key))continue;
     markReminderSent(key); await sendNotification('🔔 یادآوری Life Planner',`${ev.title} — شروع شد`,{tag:`lp-${ev.id}-${date}`,renotify:true});
   }
@@ -4766,29 +4457,16 @@ function lpFillEventDesc(ev){
   const box=document.getElementById('eDesc'); if(box) box.value=eventDesc(ev);
 }
 
-function onEventBlockClick(eventId, dayIdx, weekKey){
+function onEventBlockClick(eventId, dayIdx){
   const ev = DB.events.find(x=>x.id===eventId); if(!ev) return;
-  const wk=lpIsISODate(weekKey)?weekKey:calShownWeekKey();
-  window.__eventActionCtx = { eventId, dayIdx, weekKey:wk };
+  window.__eventActionCtx = { eventId, dayIdx };
   document.getElementById('eventActionTitle').textContent = `📅 ${ev.title}`;
   const multiDay = eventDays(ev).length > 1;
-  const recurring = lpEventIsRecurring(ev);
   document.getElementById('deleteThisDayBtn').style.display = multiDay ? 'flex' : 'none';
   const editDayBtn=document.getElementById('editThisDayBtn');
   if(editDayBtn) editDayBtn.style.display = multiDay ? 'flex' : 'none';
-  /* v24: a recurring event can also be edited / removed in ONLY this week. */
-  const editWeekBtn=document.getElementById('editThisWeekBtn');
-  if(editWeekBtn) editWeekBtn.style.display = recurring ? 'flex' : 'none';
-  const deleteWeekBtn=document.getElementById('deleteThisWeekBtn');
-  if(deleteWeekBtn) deleteWeekBtn.style.display = recurring ? 'flex' : 'none';
   const editWholeBtn=document.getElementById('editWholeEventBtn');
-  if(editWholeBtn) editWholeBtn.textContent = recurring
-    ? '✏️ ویرایش کل سری (همه‌ی هفته‌ها)'
-    : (multiDay ? '✏️ ویرایش کل رویداد (همه‌ی روزها)' : '✏️ ویرایش');
-  const deleteWholeBtn=document.getElementById('deleteWholeEventBtn');
-  if(deleteWholeBtn) deleteWholeBtn.textContent = recurring
-    ? '🗑️ حذف کل سری (همه‌ی هفته‌ها)'
-    : (multiDay ? '🗑️ حذف کل رویداد (همه‌ی روزها)' : '🗑️ حذف رویداد');
+  if(editWholeBtn) editWholeBtn.textContent = multiDay ? '✏️ ویرایش کل رویداد (همه‌ی روزها)' : '✏️ ویرایش';
   const meta=document.getElementById('eventActionDetails');
   if(meta){
     const s=eventStartMinutes(ev), e=eventEndMinutes(ev), d=Math.max(0,e-s);
@@ -4797,8 +4475,6 @@ function onEventBlockClick(eventId, dayIdx, weekKey){
     meta.innerHTML=`🕒 <b style="color:var(--neon);direction:ltr;display:inline-block">${formatTimeMinutes(s%1440)} → ${formatTimeMinutes(e%1440)}</b> · ⏱️ ${dur}${cat?` · 🏷️ ${esc(cat.name)}`:''}`;
     const bite=lpEventBite(ev);
     if(bite) meta.innerHTML+=`<div class="lp-event-trait-summary"><span class="lp-bite-dot" style="background:${bite.color}" aria-hidden="true"></span>${bite.icon} ${bite.label}</div>`;
-    /* v24: say out loud why this block is (or is not) in other weeks. */
-    meta.innerHTML+=`<div class="lp-event-week-summary">${lpWeekModeLabel(lpEventRepeat(ev))}${lpEventRepeat(ev)==='once'?` · ${esc(lpWeekRangeLabel(ev.weekKey||wk))}`:''}</div>`;
   }
   // v16.6: the block's optional description, shown only when one was written
   const descEl=document.getElementById('eventActionDesc');
@@ -4809,100 +4485,64 @@ function onEventBlockClick(eventId, dayIdx, weekKey){
   }
   openModal('eventActionModalBg');
 }
-/* Shared by both whole-series and «فقط این هفته» editing. */
-function lpFillEventForm(ev,title,hintHtml,locked){
+function startEditEvent(){
+  const ctx=window.__eventActionCtx;if(!ctx)return;
+  const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
+  closeModal('eventActionModalBg');
   window.__editingEventId=ev.id;
-  window.__editingEventDay=null;
-  window.__eventWeekKey=window.__eventActionCtx?.weekKey||calShownWeekKey();
-  document.getElementById('eventModalTitle').textContent=title;
+  window.__editingEventDay=null; // whole-series edit
+  document.getElementById('eventModalTitle').textContent='✏️ ویرایش کل رویداد';
   const scopeHint=document.getElementById('eEditScopeHint');
-  if(scopeHint){
-    scopeHint.style.display=hintHtml?'block':'none';
-    scopeHint.innerHTML=hintHtml||'';
-  }
-  const repeatField=document.getElementById('eRepeatField');
-  if(repeatField) repeatField.classList.toggle('is-locked',!!locked);
+  if(scopeHint){ scopeHint.style.display='none'; scopeHint.innerHTML=''; }
   document.getElementById('eTitle').value=ev.title;
   lpFillEventDesc(ev);
   document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
   document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
   document.getElementById('eReminder').checked=!!ev.reminder;
   lpFillEventBite(ev);
+  const days=eventDays(ev);
+  document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',days.includes(+o.dataset.v)));
   window.__eventCategoryId=ev.cat||null;
   window.__eventColorPicked=ev.color||null;
   refreshEventCatChips();
   renderEventColorRow();
-}
-function startEditEvent(){
-  const ctx=window.__eventActionCtx;if(!ctx)return;
-  const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
-  closeModal('eventActionModalBg');
-  window.__editingDetachWeek=null;
-  lpFillEventForm(ev,'✏️ ویرایش کل رویداد','',false);
-  const days=eventDays(ev);
-  document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',days.includes(+o.dataset.v)));
-  lpWeekPickerCount=8;
-  lpSetEventRepeat(lpEventRepeat(ev),{selectedWeeks:Array.isArray(ev.weeks)?[...ev.weeks]:undefined});
   openModal('eventModalBg');
 }
-/* v24 — edit ONLY this week: the series gets an exception for this week and
-   the edited values are stored as a separate one-week event. */
-function startEditEventThisWeek(){
-  const ctx=window.__eventActionCtx;if(!ctx)return;
-  const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
-  closeModal('eventActionModalBg');
-  window.__editingDetachWeek=ctx.weekKey;
-  lpFillEventForm(ev,'✏️ ویرایش فقط این هفته',
-    `📌 فقط هفته‌ی <b>${esc(lpWeekRangeLabel(ctx.weekKey))}</b> عوض می‌شود؛ بقیه‌ی هفته‌های این رویداد ثابت میمانند.`,true);
-  const days=eventDays(ev);
-  document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',days.includes(+o.dataset.v)));
-  lpSetEventRepeat('once');
-  openModal('eventModalBg');
-}
-/* v12.1 — edit ONLY the tapped occurrence of a multi-day event. v24 — when
-   that event repeats across weeks, only the tapped WEEK is detached. */
+/* v12.1 — edit ONLY the tapped occurrence of a multi-day event. */
 function startEditEventThisDay(){
   const ctx=window.__eventActionCtx;if(!ctx)return;
   const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
   closeModal('eventActionModalBg');
-  const detach=lpEventIsRecurring(ev)?ctx.weekKey:null;
-  window.__editingDetachWeek=detach;
-  lpFillEventForm(ev,'✏️ ویرایش فقط این روز',
-    `📌 این تغییرات <b>فقط ${dayNames[ctx.dayIdx]}</b> را عوض می‌کند؛ ${detach?'فقط در همین هفته اعمال می‌شود و هفته‌های دیگر ثابت میمانند':'بقیه‌ی روزهای این رویداد سر جایشان می‌مانند'}.`,true);
-  document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',+o.dataset.v===ctx.dayIdx));
-  lpSetEventRepeat('once');
+  window.__editingEventId=ev.id;
   window.__editingEventDay=ctx.dayIdx;
+  document.getElementById('eventModalTitle').textContent='✏️ ویرایش فقط این روز';
+  const scopeHint=document.getElementById('eEditScopeHint');
+  if(scopeHint){
+    scopeHint.style.display='block';
+    scopeHint.innerHTML=`📌 این تغییرات <b>فقط ${dayNames[ctx.dayIdx]}</b> را عوض می‌کند؛ بقیه‌ی روزهای این رویداد سر جایشان می‌مانند.`;
+  }
+  document.getElementById('eTitle').value=ev.title;
+  lpFillEventDesc(ev);
+  document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
+  document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
+  document.getElementById('eReminder').checked=!!ev.reminder;
+  lpFillEventBite(ev);
+  document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',+o.dataset.v===ctx.dayIdx));
+  window.__eventCategoryId=ev.cat||null;
+  window.__eventColorPicked=ev.color||null;
+  refreshEventCatChips();
+  renderEventColorRow();
   openModal('eventModalBg');
-}
-/* v24 — a recurring event is hidden in this week only; a one-week event is
-   deleted outright. */
-function deleteEventThisWeek(){
-  const ctx=window.__eventActionCtx; if(!ctx) return;
-  const ev=DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
-  if(lpEventRepeat(ev)==='once'&&ev.weekKey===ctx.weekKey) DB.events=DB.events.filter(x=>x.id!==ev.id);
-  else lpHideEventInWeek(ev,ctx.weekKey);
-  window.__eventActionCtx=null;
-  closeModal('eventActionModalBg');
-  save();
-  renderCalendar();
-  rescheduleAllEventReminders();
-  toast('🗑️ فقط این هفته حذف شد؛ هفته‌های دیگر دستنخورده ماندند');
 }
 function deleteEventDay(){
   const ctx = window.__eventActionCtx; if(!ctx) return;
   const ev = DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
   const days = eventDays(ev).filter(d=>d!==ctx.dayIdx);
-  if(lpEventIsRecurring(ev)){
-    /* Keep the other weeks exactly as they are: hide the series here and,
-       if other days remain, put a one-week copy of them in this week. */
-    lpHideEventInWeek(ev,ctx.weekKey);
-    if(days.length) DB.events.push(lpWeekCopy(ev,ctx.weekKey,{days}));
-  }else if(days.length){ ev.days = days; delete ev.day; }
+  if(days.length){ ev.days = days; delete ev.day; }
   else { DB.events = DB.events.filter(x=>x.id!==ev.id); }
   window.__eventActionCtx = null;
   closeModal('eventActionModalBg');
   save();
-  renderCalendar();
   rescheduleAllEventReminders();
 }
 function deleteWholeEvent(){
@@ -4911,7 +4551,6 @@ function deleteWholeEvent(){
   window.__eventActionCtx = null;
   closeModal('eventActionModalBg');
   save();
-  renderCalendar();
   rescheduleAllEventReminders();
   toast('🗑️ کل رویداد حذف شد');
 }
@@ -5114,11 +4753,6 @@ function calendarHeaderDate(iso){
 function updateCalendarNowMarker(now=new Date()){
   const grid=document.getElementById('weekGrid');
   if(!grid)return null;
-  if(CAL_WEEK_OFFSET!==0){          /* v20: the live line only belongs to this week */
-    grid.querySelector('.lp-cal-now-line')?.remove();
-    grid.querySelector('.lp-cal-now-label')?.remove();
-    return null;
-  }
   const today=(now.getDay()+1)%7;
   const nightTail=now.getHours()<CAL_START_HOUR;
   const activeDay=nightTail?(today+6)%7:today;
@@ -5170,7 +4804,7 @@ function updateCalendarNowMarker(now=new Date()){
    occupy the same night-tail minutes the user sees on the grid. */
 function calEventIntervalsInColumn(dayIdx){
   const intervals=[];
-  eventsForWeek().forEach(ev=>{   /* v24: only this week's plan books time */
+  (DB.events||[]).forEach(ev=>{
     calEventPlacements(ev).forEach(p=>{
       if(p.col===dayIdx&&p.to>p.from) intervals.push({start:p.from,end:p.to});
     });
@@ -5554,7 +5188,7 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
   const candidate = (!sameDay && multiDay)
     ? {title:ev.title, days:[toDay], startMin:ns, endMin:ne}
     : {title:ev.title, days:(!sameDay?[toDay]:days), startMin:ns, endMin:ne};
-  const others=lpEventsForCandidateWeeks({...lpScopeOf(ev),exceptions:ev.exceptions},ev.id); /* v24: only weeks this event actually occupies */
+  const others=DB.events.filter(x=>x.id!==ev.id);
   if(!sameDay && multiDay){
     const rem=days.filter(dd=>dd!==fromDay);
     if(rem.length) others.push({title:ev.title, days:rem, startMin:eventStartMinutes(ev), endMin:eventEndMinutes(ev)});
@@ -5573,7 +5207,7 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
     const sourceStart=eventStartMinutes(ev);
     const conflictDuration=Math.max(15,eventEndMinutes(conflict)-eventStartMinutes(conflict));
     const displaced={title:conflict.title,days:[fromDay],startMin:sourceStart,endMin:sourceStart+conflictDuration};
-    const unaffected=others.filter(x=>x.id!==conflict.id);
+    const unaffected=DB.events.filter(x=>x.id!==ev.id&&x.id!==conflict.id);
     const targetConflict=lpCandidateConflicts(candidate,unaffected);
     const secondConflict=lpCandidateConflicts(displaced,unaffected);
     const candidatesClash=lpCandidateConflicts(candidate,[displaced]);
@@ -5607,7 +5241,7 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
     DB.events.push({
       id:newId, title:ev.title, desc:eventDesc(ev), days:[toDay], startMin:ns, endMin:ne,
       reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null, bite:ev.bite||null,
-      startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60)), ...lpScopeOf(ev)
+      startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
     if(undo) undo.removedIds.push(newId); // undoing the move must take the split day back
     msg=`📌 این روز از «${esc(ev.title)}» جدا شد و به ${dayNames[toDay]} ${calClockLabel(ns)} رفت`;
@@ -5697,7 +5331,7 @@ function lpResizeConflict(r){
   const {startMin,endMin}=lpResizeTimes(r);
   const days=eventDays(ev);
   const candidate={title:ev.title, days, startMin, endMin};
-  const others=lpEventsForCandidateWeeks({...lpScopeOf(ev),exceptions:ev.exceptions},ev.id); /* v24 */
+  const others=DB.events.filter(x=>x.id!==ev.id);
   if(days.length>1){
     candidate.days=[r.dayIdx];
     const rem=days.filter(dd=>dd!==r.dayIdx);
@@ -5980,7 +5614,7 @@ function lpApplyEventResize(evRef, dayIdx, shift, gridFrom, gridTo, edge){
     DB.events.push({
       id:newId, title:ev.title, desc:eventDesc(ev), days:[dayIdx], startMin:ns, endMin:ne,
       reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null, bite:ev.bite||null,
-      startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60)), ...lpScopeOf(ev)
+      startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
     if(undo) undo.removedIds.push(newId); // undoing must take the split day back
   }else{
@@ -6024,25 +5658,6 @@ document.addEventListener('keydown', e=>{
   if(lpDragState.edgeGrab){ lpEdgeGrabCleanup(lpDragState.edgeGrab); }
 });
 
-/* v24: a week is its own plan. This strip spells out the dates, whether the
-   week counts as even/odd, and how many of its blocks are one-offs versus
-   repeating events — plus the switch that flips the even/odd anchor. */
-function renderCalWeekSummary(weekKey,weekEvents,wISOs){
-  const box=document.getElementById('calWeekSummary'); if(!box) return;
-  const parity=lpWeekParity(weekKey);
-  const fixed=weekEvents.filter(lpEventIsRecurring).length;
-  const singles=weekEvents.length-fixed;
-  const total=toFaDigits(String(weekEvents.length));
-  const parts=[];
-  if(singles) parts.push(`${toFaDigits(String(singles))} فقط همین هفته`);
-  if(fixed) parts.push(`${toFaDigits(String(fixed))} تکرارشونده`);
-  const countTxt=weekEvents.length?`${total} رویداد (${parts.join(' · ')})`:'هنوز رویدادی ندارد — برنامه‌ی این هفته جداست';
-  box.innerHTML=`<span class="cws-range">📆 ${esc(calendarHeaderDate(wISOs[0]))} — ${esc(calendarHeaderDate(wISOs[6]))}</span>
-    <span class="cws-parity ${parity}">${parity==='even'?'🔢 هفتهٔ زوج':'🔢 هفتهٔ فرد'}</span>
-    <span class="cws-count">${countTxt}</span>
-    <button class="cws-flip" type="button" onclick="lpFlipWeekParity()" title="زوج و فرد را جابهجا کن" aria-label="زوج و فرد را جابهجا کن">🔄 جابهجایی زوج/فرد</button>`;
-}
-
 function renderCalendar(){
   /* v21.9: never rebuild the grid while a drag/resize owns the pointer.
      save()'s coalesced renderAll used to replace #weekGrid mid-gesture,
@@ -6051,7 +5666,7 @@ function renderCalendar(){
   if(lpGestureBusy()) return;
   const START=CAL_START_HOUR,END=CAL_END_HOUR,PX_HOUR=CAL_PX_HOUR;
   const now=new Date();
-  const thisWeek = CAL_WEEK_OFFSET===0;
+  const thisWeek = true;   /* v24.1: the calendar is always this week */
   const today=(now.getDay()+1)%7;
   /* Between midnight and 06:00 we are still inside the night tail of the
      PREVIOUS column, so "now" is highlighted there (e.g. 01:00 Sunday lights
@@ -6061,10 +5676,6 @@ function renderCalendar(){
   const activeHour=thisWeek?(nightTail?now.getHours()+24:now.getHours()):-1;
 
   const dates=weekDates().map(calendarHeaderDate);
-  const wISOs=weekDates();
-  const weekKey=wISOs[0];
-  const weekEvents=eventsForWeekKey(weekKey); /* v24: this week, and only this week */
-  renderCalWeekSummary(weekKey,weekEvents,wISOs);
   let head='<div class="lp-cal-head lp-cal-time"></div>';
   dayNames.forEach((d,i)=>{
     head+=`<div class="lp-cal-head${thisWeek&&i===today?' today current-day':''}"><span class="lp-cal-day-name">${d}</span><span class="lp-cal-head-date" dir="auto">${dates[i]||''}</span></div>`;
@@ -6086,13 +5697,8 @@ function renderCalendar(){
   document.getElementById('weekGrid').innerHTML=
     `<div class="lp-cal-wrap" style="--lp-cal-rows:${END-START};--lp-cal-px-hour:${PX_HOUR}px"><div class="lp-cal-header">${head}</div><div class="lp-cal-body"><div class="lp-cal-time-col">${axis}</div><div class="lp-cal-days">${days}</div></div></div>`;
 
-  /* v20: a single, plain week switch — no agenda view, no templates. */
-  const lbl=document.getElementById('calWeekLabel');
-  if(lbl) lbl.textContent = CAL_WEEK_OFFSET===0
-    ? 'این هفته'
-    : `${calendarHeaderDate(wISOs[0])} — ${calendarHeaderDate(wISOs[6])}`;
-  const tBtn=document.getElementById('calWeekTodayBtn');
-  if(tBtn) tBtn.classList.toggle('sel', CAL_WEEK_OFFSET===0);
+  /* v24.1: no week bar, no «قبل/بعد/امروز» buttons, no agenda view and no
+     templates — the grid above is simply the current week, always. */
 
   const cols=document.querySelectorAll('#weekGrid .lp-cal-day');
   cols.forEach(col=>col.querySelectorAll('.lp-cal-slot').forEach(slot=>{
@@ -6101,7 +5707,7 @@ function renderCalendar(){
   // v20: day headers are display-only
   updateCalendarNowMarker(now);
   const offGrid=[]; // blocks that fall in the 03:00–06:00 gap the grid does not draw
-  weekEvents.forEach(e=>{
+  DB.events.forEach(e=>{
     const s=eventStartMinutes(e),en=eventEndMinutes(e);
     if(!Number.isFinite(s)||!Number.isFinite(en)||en<=s)return;
     const placements=calEventPlacements(e);
@@ -6120,13 +5726,6 @@ function renderCalendar(){
       const bite=lpEventBite(e);
       const badge=lpEventBiteBadge(e);
       el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>${badge?`<span class="ev-traits">${badge}</span>`:''}`;
-      /* v24: a CSS-only marker (never part of the block's text) tells a
-         repeating event apart from a one-week one. */
-      if(lpEventIsRecurring(e)){
-        const r=lpEventRepeat(e);
-        el.dataset.wkIcon=r==='even'?'🔁 زوج':(r==='odd'?'🔁 فرد':(r==='weeks'?'🔁 چند هفته':'🔁'));
-        el.classList.add('ev-week-recurring');
-      }
       if(bite){
         el.classList.add(`ev-bite-${e.bite}`);
         el.setAttribute('aria-label',`${e.title} — ${bite.label}`);
@@ -6155,7 +5754,7 @@ function renderCalendar(){
       }
       attachEventDrag(el,e,d,shift);
       attachEventResize(el,e,d,shift,from,to);
-      el.onclick=()=>onEventBlockClick(e.id,d,weekKey);
+      el.onclick=()=>onEventBlockClick(e.id,d);
       col.appendChild(el);
     });
   });
@@ -6346,8 +5945,6 @@ document.getElementById('importFile').onchange = (e)=>{
       DB.events = Array.isArray(DB.events)?DB.events:[];
       DB.notes.forEach(n=>{ if(typeof n.pinned!=='boolean') n.pinned=false; if(!n.updatedAt) n.updatedAt=n.date||todayISO(); });
       DB.events.forEach(e=>{ if(typeof e.reminder!=='boolean') e.reminder=false; });
-      /* v24: an old backup simply gets a fresh even/odd anchor. */
-      lpNormalizeCalendarWeekData();
       // run migration guards (same as after loadStore)
       if(!DB.quest){ DB.quest = { current:null, nextAt: Date.now()+2*60*1000, waitStart: Date.now(), bags:{} }; }
       if(DB.quest.waitStart===undefined) DB.quest.waitStart = Date.now();
@@ -6505,7 +6102,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.0';
+const LP_APP_VERSION='24.1';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
