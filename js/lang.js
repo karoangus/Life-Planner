@@ -1585,6 +1585,11 @@
 
   var EXTRA_V243 = {
     "چک‌لیست روزانه": "Daily checklist",
+    "➕ کار جدید": "➕ New item",
+    "☑️ کار جدید": "☑️ New item",
+    "✏️ ویرایش کار روزانه": "✏️ Edit daily item",
+    "عنوان کار": "Item title",
+    "کار روزانه": "Daily item",
     "📖 راهنمای چک‌لیست روزانه": "📖 Daily checklist guide",
     "راهنمای چک‌لیست روزانه": "Daily checklist guide",
     "☀️ رفتن به چک‌لیست امروز": "☀️ Go to today’s checklist",
@@ -1599,8 +1604,20 @@
     "توضیحات اختیاری؛ جزئیات یا قدم‌های انجام این کار...": "Optional description: details or steps for this item…",
     "توضیحات کار": "Item description",
     "📝 توضیحات (اختیاری)": "📝 Description (optional)",
-    "اولویت‌بندی و رنگ‌ها مثل بخش تسک‌هاست؛ فهرست و عملکرد این بخش کاملاً جداست.": "Priorities and colors match Tasks; this list and its progress stay separate.",
+    "اولویت‌بندی و رنگ‌ها مثل بخش تسک‌هاست؛ فهرست و عملکرد این بخش کاملاً جداست. برای دیدن توضیحات هر کار روی کارت آن بزن.": "Priorities and colors match Tasks; this list and its progress stay separate. Open an item to view its description.",
     "ویرایش توضیحات و اولویت": "Edit description and priority",
+    "برای دیدن توضیحات هر کار روی کارت آن بزن.": "Open an item to view its description.",
+    "✏️ ویرایش": "✏️ Edit",
+    "☑️ کار روزانه": "☑️ Daily item",
+    "✅ انجام‌شده": "✅ Done",
+    "⬜ انجام‌نشده": "⬜ Not done",
+    "✅ انجام شده": "✅ Done",
+    "⬜ انجام نشده": "⬜ Not done",
+    "✅ انجام شد!": "✅ Done!",
+    "↩️ برگرداندن به انجام‌نشده": "↩️ Mark as not done",
+    "📝 توضیحی برای این کار ثبت نشده.": "📝 No description for this item.",
+    "این کار روزانه حذف بشه؟": "Delete this daily item?",
+    "⚠️ این کار برای امروز پیدا نشد": "⚠️ This item was not found for today",
     "هنوز روز قبلی‌ای ثبت نشده": "No previous days yet",
     "چک‌لیست‌های پرشده‌ی روزهای گذشته اینجا می‌مانند تا عملکردت را مرور کنی.": "Completed daily checklists stay here so you can review your progress.",
     "توضیحات": "Description",
@@ -1608,7 +1625,7 @@
     "ویرایش کار روزانه": "Edit daily item",
     "عنوان": "Title",
     "اولویت": "Priority",
-    "عنوان هر کار را بنویس؛ توضیح اختیاری هم برای جزئیات و قدم‌های انجام دارد. با ✏️ بعداً عنوان یا توضیح را ویرایش کن.": "Write an item title and optionally add details or steps. Use ✏️ later to edit its title or description.",
+    "روی «➕ کار جدید» بزن تا پنجره‌ی ثبت عنوان، اولویت و توضیحات باز شود؛ روی کارت هم بزن تا جزئیات را ببینی و ویرایش کنی.": "Tap “➕ New item” to open the title, priority, and description editor; tap a card to view and edit its details.",
     "بحرانی، بالا، متوسط و پایین دقیقاً با ترتیب و رنگ‌های بخش تسک‌ها مرتب می‌شوند؛ خود فهرست کاملاً مستقل است.": "Critical, high, medium, and low use the same order and colors as Tasks; this checklist stays independent.",
     "هر کاری را که انجام دادی تیک بزن. نوار پیشرفت، تعداد انجام‌شده‌ها را نشان می‌دهد؛ این تیک‌ها XP یا تسک‌ها را تغییر نمی‌دهند.": "Tick each completed item. The progress bar shows your total; checklist ticks never change Tasks or XP.",
     "در تب «روزهای قبل» می‌توانی فهرست هر روز، توضیحات، اولویت و تیک‌های انجام‌شده یا باقی‌مانده را مرور کنی.": "In Past days, review each list, its descriptions and priorities, and which items were done or left.",
@@ -1696,7 +1713,8 @@
      string; the tag pill (`.note-tag`) is user text and is never touched. */
   var USER_CONTENT = '.task-title,.habit-name,.goal-title,.ev-title,.lp-ev-desc,.lp-cat-name,' +
                      '.subtask-item-title,.subtask-edit-title,.note-card h4,' +
-                     '.note-card p.note-body,.note-card .note-tag';
+                     '.note-card p.note-body,.note-card .note-tag,' +
+                     '.daily-checklist-title,.daily-checklist-details-note,#dailyChecklistDetailsTitle';
 
   function isUserContent(node){
     var el = node.nodeType === 1 ? node : node.parentElement;

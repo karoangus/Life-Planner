@@ -3310,25 +3310,33 @@ if (!useFallback) {
 
   const dailyView = indexHtml.slice(indexHtml.indexOf('id="view-daily-checklist"'), indexHtml.indexOf('<!-- CALENDAR -->'));
   const dailyCode = coreJs.slice(coreJs.indexOf('/* ============ DAILY CHECKLIST'), coreJs.indexOf('/* =============================================================\n   v20:'));
-  check('v24.3 daily checklist is a distinct section with the requested slogan and evening review hint',
-    dailyView.includes('چک‌لیست روزانه') && dailyView.includes('هر کار انجام شده رو تیک بزن. دیدن پیشرفت، سوخت نظم است...') &&
-    dailyView.includes('امروز اینارو انجام میدم') && dailyView.includes('آخر شب برگرد'));
-  check('v24.3 descriptions can be added and edited per item, with task-like priority sorting and card colors',
-    dailyView.includes(`id="dailyChecklistDescription"`) && indexHtml.includes(`id="dailyChecklistEditModalBg"`) &&
-    coreJs.includes('description:typeof item.description') && dailyCode.includes('openDailyChecklistItemEditor') &&
-    dailyCode.includes('saveDailyChecklistEdit') && dailyCode.includes('return sortTasks(items||[])') &&
-    dailyCode.includes('priority-card-${priority}'));
-  check('v24.3 date-history tab preserves checked and unchecked states as read-only',
-    dailyView.includes(`data-checklist-tab="history"`) && dailyCode.includes('renderDailyChecklistHistory') &&
+  const dailyItemMarkup = dailyCode.slice(dailyCode.indexOf('function dailyChecklistItemMarkup'), dailyCode.indexOf('function renderDailyChecklist()'));
+  check('v24.4 daily checklist uses a task-like add/edit modal for title, priority, and description',
+    dailyView.includes('onclick="openDailyChecklistModal()"') && indexHtml.includes('id="dailyChecklistModalBg"') &&
+    indexHtml.includes('id="dailyChecklistTitle"') && indexHtml.includes('id="dailyChecklistDescription"') &&
+    indexHtml.includes('id="dailyChecklistPriority"') && dailyCode.includes('function openDailyChecklistModal') &&
+    dailyCode.includes('function saveDailyChecklistItem') && dailyCode.includes('item.description=description'));
+  check('v24.4 card descriptions stay in the task-like details window, not under the card',
+    !dailyItemMarkup.includes('item.description') && dailyItemMarkup.includes('openDailyChecklistDetails') &&
+    dailyItemMarkup.includes('type="checkbox"') && indexHtml.includes('id="dailyChecklistDetailsModalBg"') &&
+    dailyCode.includes('dailyChecklistDetailsDescription') && dailyCode.includes('renderDailyChecklistDetails'));
+  check('v24.4 details window offers task-like toggle, edit, and delete actions',
+    indexHtml.includes('toggleDailyChecklistFromDetails()') && indexHtml.includes('editDailyChecklistFromDetails()') &&
+    indexHtml.includes('deleteDailyChecklistFromDetails()') && dailyCode.includes('function toggleDailyChecklistFromDetails') &&
+    dailyCode.includes('function editDailyChecklistFromDetails') && dailyCode.includes('function deleteDailyChecklistFromDetails'));
+  check('v24.4 priority order/colors and read-only day history remain consistent',
+    dailyCode.includes('return sortTasks(items||[])') && dailyCode.includes('priority-card-${priority}') &&
+    dailyView.includes('data-checklist-tab="history"') && dailyCode.includes('renderDailyChecklistHistory') &&
     dailyCode.includes('date<today') && dailyCode.includes('readOnly:true') && dailyCode.includes('disabled'));
-  check('v24.3 daily checklist is persisted and included in imported backups',
+  check('v24.4 daily checklist persists, is backed up, and has an in-section/Settings guide',
     coreJs.includes('db.dailyChecklists = normalizeDailyChecklists(db.dailyChecklists)') &&
     coreJs.includes('DB.dailyChecklists = normalizeDailyChecklists(DB.dailyChecklists)') &&
     coreJs.includes("{id:'daily-checklist', label:'چک‌لیست روزانه'") &&
-    indexHtml.includes('id="view-daily-checklist"') &&
+    indexHtml.includes('id="view-daily-checklist"') && indexHtml.includes("openGuide('daily-checklist')") &&
     v213Js.includes("'daily-checklist': '📖 راهنمای چک‌لیست روزانه'") &&
     langJs.includes('var EXTRA_V243') && langJs.includes('Daily checklist guide') &&
-    langJs.includes('Description (optional)') && langJs.includes('Past days'));
+    langJs.includes('Description (optional)') && langJs.includes('Past days') &&
+    langJs.includes('.daily-checklist-title,.daily-checklist-details-note,#dailyChecklistDetailsTitle'));
 
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];

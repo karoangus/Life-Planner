@@ -8,12 +8,12 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=24.3">
-<link rel="stylesheet" href="css/design-system.css?v=24.3">
-<link rel="stylesheet" href="css/v20.css?v=24.3">
-<link rel="stylesheet" href="css/v213.css?v=24.3">
-<link rel="stylesheet" href="css/v22.css?v=24.3">
-<link rel="stylesheet" href="css/ui-refresh.css?v=24.3">
+<link rel="stylesheet" href="css/app.css?v=24.4">
+<link rel="stylesheet" href="css/design-system.css?v=24.4">
+<link rel="stylesheet" href="css/v20.css?v=24.4">
+<link rel="stylesheet" href="css/v213.css?v=24.4">
+<link rel="stylesheet" href="css/v22.css?v=24.4">
+<link rel="stylesheet" href="css/ui-refresh.css?v=24.4">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -184,7 +184,7 @@ try{
     <div class="view" id="view-daily-checklist">
       <div class="topbar">
         <div><h1>☀️ چک‌لیست روزانه</h1><div class="sub" id="dailyChecklistDate"></div></div>
-        <div class="top-actions"><button class="guide-btn" type="button" onclick="openGuide('daily-checklist')" title="راهنمای چک‌لیست روزانه" aria-label="راهنمای چک‌لیست روزانه">❓</button></div>
+        <div class="top-actions"><button class="guide-btn" type="button" onclick="openGuide('daily-checklist')" title="راهنمای چک‌لیست روزانه" aria-label="راهنمای چک‌لیست روزانه">❓</button><button class="btn" type="button" onclick="openDailyChecklistModal()">➕ کار جدید</button></div>
       </div>
       <div class="guide-slot" id="guideSlot-daily-checklist"></div>
       <div class="daily-checklist-slogan">هر کار انجام شده رو تیک بزن. دیدن پیشرفت، سوخت نظم است...</div>
@@ -197,16 +197,7 @@ try{
           <div><h2>امروز اینارو انجام میدم</h2><p>کارهای امروزت رو بنویس؛ آخر شب برگرد و تیک بزن ببینی چقدر پیش رفتی.</p></div>
           <div class="daily-checklist-progress" id="dailyChecklistProgress">۰ از ۰</div>
         </div>
-        <div class="daily-checklist-form">
-          <input type="text" id="dailyChecklistInput" maxlength="120" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" placeholder="مثلاً: نیم ساعت کتاب بخونم" aria-label="کار امروز" onkeydown="if(event.key==='Enter')addDailyChecklistItem()">
-          <select id="dailyChecklistPriority" aria-label="اولویت کار">
-            <option value="critical">بحرانی</option><option value="high">بالا</option><option value="medium" selected>متوسط</option><option value="low">پایین</option>
-          </select>
-          <button class="btn" type="button" onclick="addDailyChecklistItem()">➕ افزودن</button>
-          <label class="daily-checklist-description-label" for="dailyChecklistDescription">📝 توضیحات (اختیاری)</label>
-          <textarea id="dailyChecklistDescription" maxlength="1600" rows="2" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" placeholder="توضیحات اختیاری؛ جزئیات یا قدم‌های انجام این کار..." aria-label="توضیحات کار"></textarea>
-        </div>
-        <div class="daily-checklist-priority-note">اولویت‌بندی و رنگ‌ها مثل بخش تسک‌هاست؛ فهرست و عملکرد این بخش کاملاً جداست.</div>
+        <div class="daily-checklist-priority-note">اولویت‌بندی و رنگ‌ها مثل بخش تسک‌هاست؛ فهرست و عملکرد این بخش کاملاً جداست. برای دیدن توضیحات هر کار روی کارت آن بزن.</div>
         <div id="dailyChecklistItems" class="daily-checklist-items"></div>
       </section>
       <section class="daily-checklist-history" id="dailyChecklistHistoryPanel" style="display:none;">
@@ -1026,7 +1017,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.3</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.4</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1036,12 +1027,24 @@ try{
 
 
 <!-- MODALS -->
-<div class="modal-bg" id="dailyChecklistEditModalBg"><div class="modal">
-  <h2>✏️ ویرایش کار روزانه</h2>
-  <div class="field"><label for="dailyChecklistEditTitle">عنوان</label><input id="dailyChecklistEditTitle" type="text" maxlength="120" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false"></div>
-  <div class="field"><label for="dailyChecklistEditDescription">توضیحات</label><textarea id="dailyChecklistEditDescription" maxlength="1600" rows="5" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" placeholder="جزئیات، یادآوری یا قدم‌های انجام این کار"></textarea></div>
-  <div class="field"><label for="dailyChecklistEditPriority">اولویت</label><select id="dailyChecklistEditPriority"><option value="critical">بحرانی</option><option value="high">بالا</option><option value="medium">متوسط</option><option value="low">پایین</option></select></div>
-  <div class="modal-actions"><button class="btn ghost" type="button" onclick="closeModal('dailyChecklistEditModalBg')">انصراف</button><button class="btn" type="button" onclick="saveDailyChecklistEdit()">💾 ذخیره</button></div>
+<div class="modal-bg" id="dailyChecklistModalBg"><div class="modal">
+  <h2 id="dailyChecklistModalTitle">☑️ کار جدید</h2>
+  <div class="field"><label for="dailyChecklistTitle">عنوان کار</label><input id="dailyChecklistTitle" type="text" maxlength="120" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" placeholder="مثلاً: نیم ساعت کتاب بخونم" onkeydown="if(event.key==='Enter')saveDailyChecklistItem()"></div>
+  <div class="field"><label>اولویت</label><div class="chip-group" id="dailyChecklistPriority">
+    <div class="chip-opt" data-v="low">پایین</div><div class="chip-opt sel" data-v="medium">متوسط</div><div class="chip-opt" data-v="high">بالا</div><div class="chip-opt" data-v="critical">بحرانی</div>
+  </div></div>
+  <div class="field"><label for="dailyChecklistDescription">توضیحات <span style="color:var(--txt-dim2);font-weight:500;">(اختیاری)</span></label><textarea id="dailyChecklistDescription" maxlength="1600" rows="5" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" placeholder="جزئیات، یادآوری یا قدم‌های انجام این کار"></textarea></div>
+  <div class="modal-actions"><button class="btn ghost" type="button" onclick="closeModal('dailyChecklistModalBg')">انصراف</button><button class="btn" type="button" onclick="saveDailyChecklistItem()">💾 ذخیره</button></div>
+</div></div>
+<div class="modal-bg" id="dailyChecklistDetailsModalBg"><div class="modal">
+  <div class="task-action-head daily-checklist-details-head"><h2 id="dailyChecklistDetailsTitle">☑️ کار روزانه</h2><button class="btn ghost sm" type="button" onclick="closeModal('dailyChecklistDetailsModalBg')" aria-label="بستن">✕</button></div>
+  <div id="dailyChecklistDetailsMeta" class="task-action-pills"></div>
+  <div id="dailyChecklistDetailsDescription" class="task-action-info"></div>
+  <div class="daily-checklist-detail-actions" id="dailyChecklistDetailsActions">
+    <button class="btn" id="dailyChecklistDetailsToggle" type="button" onclick="toggleDailyChecklistFromDetails()">✅ انجام شد</button>
+    <button class="btn ghost" type="button" onclick="editDailyChecklistFromDetails()">✏️ ویرایش</button>
+    <button class="btn danger" type="button" onclick="deleteDailyChecklistFromDetails()">🗑️ حذف</button>
+  </div>
 </div></div>
 <div class="modal-bg" id="taskModalBg"><div class="modal">
   <h2>✅ تسک جدید</h2>
@@ -1394,7 +1397,7 @@ try{
   <section class="guide-panel" data-g="daily-checklist" role="tabpanel">
     <p class="guide-lead">فهرست کارهای روزانه‌ات را با اولویت و توضیحات مخصوص خودشان بچین و شب، عملکردت را مرور کن.</p>
     <div class="guide-rows">
-      <div class="guide-row"><span class="guide-ic">✍️</span><div class="guide-row-txt"><b>ثبت کار و توضیحات</b><span>عنوان هر کار را بنویس؛ توضیح اختیاری هم برای جزئیات و قدم‌های انجام دارد. با ✏️ بعداً عنوان یا توضیح را ویرایش کن.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">✍️</span><div class="guide-row-txt"><b>ثبت کار و توضیحات</b><span>روی «➕ کار جدید» بزن تا پنجره‌ی ثبت عنوان، اولویت و توضیحات باز شود؛ روی کارت هم بزن تا جزئیات را ببینی و ویرایش کنی.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🎨</span><div class="guide-row-txt"><b>اولویت و رنگ</b><span>بحرانی، بالا، متوسط و پایین دقیقاً با ترتیب و رنگ‌های بخش تسک‌ها مرتب می‌شوند؛ خود فهرست کاملاً مستقل است.</span></div></div>
       <div class="guide-row"><span class="guide-ic">✅</span><div class="guide-row-txt"><b>تیک و پیشرفت</b><span>هر کاری را که انجام دادی تیک بزن. نوار پیشرفت، تعداد انجام‌شده‌ها را نشان می‌دهد؛ این تیک‌ها XP یا تسک‌ها را تغییر نمی‌دهند.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🗓️</span><div class="guide-row-txt"><b>روزهای قبل</b><span>در تب «روزهای قبل» می‌توانی فهرست هر روز، توضیحات، اولویت و تیک‌های انجام‌شده یا باقی‌مانده را مرور کنی.</span></div></div>
@@ -1562,20 +1565,20 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=24.3"></script>
-<script src="js/enhancements.js?v=24.3"></script>
-<script src="js/sw-register.js?v=24.3"></script>
+<script src="js/core.js?v=24.4"></script>
+<script src="js/enhancements.js?v=24.4"></script>
+<script src="js/sw-register.js?v=24.4"></script>
 
-<script src="js/pomodoro.js?v=24.3"></script>
+<script src="js/pomodoro.js?v=24.4"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=24.3"></script>
-<script src="js/v16.js?v=24.3"></script>
-<script src="js/v162.js?v=24.3"></script>
-<script src="js/v21.js?v=24.3"></script>
+<script src="js/lang.js?v=24.4"></script>
+<script src="js/v16.js?v=24.4"></script>
+<script src="js/v162.js?v=24.4"></script>
+<script src="js/v21.js?v=24.4"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=24.3"></script>
+<script src="js/v213.js?v=24.4"></script>
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
-<script src="js/v22.js?v=24.3"></script>
+<script src="js/v22.js?v=24.4"></script>
 
 </body>
 </html>
