@@ -61,12 +61,12 @@
   var STORE_KEY = 'lifePlannerGuides_v213';
   var MODAL_ID = 'guideModalBg';
 
-  /* Sections that own a guide. The Calendar has one too, it just never shows
+  /* Sections that own a guide. The Daily Checklist joins the shared guide engine. The Calendar has one too, it just never shows
      a first-visit hint (its intro line already sits above the grid). */
-  var SECTIONS = ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes',
+  var SECTIONS = ['dashboard', 'tasks', 'daily-checklist', 'calendar', 'habits', 'goals', 'notes',
                   'pomodoro', 'shop', 'skills', 'boss', 'yvy', 'city', 'profile', 'settings'];
   var HINTED = {
-    dashboard: true, tasks: true, habits: true, goals: true, notes: true,
+    dashboard: true, tasks: true, 'daily-checklist': true, habits: true, goals: true, notes: true,
     /* v21.7 */ pomodoro: true, shop: true, skills: true, boss: true,
     yvy: true, city: true, profile: true, settings: true
   };
@@ -74,6 +74,7 @@
   var TITLES = {
     dashboard: '📖 راهنمای داشبورد',
     tasks: '📖 راهنمای تسک‌ها',
+    'daily-checklist': '📖 راهنمای چک‌لیست روزانه',
     calendar: '📖 راهنمای تقویم',
     habits: '📖 راهنمای عادت‌ها',
     goals: '📖 راهنمای اهداف',
@@ -92,6 +93,7 @@
   var CTA = {
     dashboard: { label: '📥 اینباکس سریع', fn: 'openInboxQuickAdd' },
     tasks: { label: '➕ تسک جدید', fn: 'openTaskModal' },
+    'daily-checklist': { label: '☀️ رفتن به چک‌لیست امروز', local: function () { window.showView('daily-checklist'); } },
     calendar: { label: '➕ رویداد جدید', fn: 'openEventModal' },
     /* v21.4 */
     habits: { label: '➕ عادت جدید', fn: 'openHabitModal' },
@@ -153,6 +155,10 @@
     tasks: {
       ic: '✍️',
       txt: 'فقط یک عنوان بنویس و «ذخیره» را بزن؛ بقیه‌ی گزینه‌ها اختیاری‌اند.'
+    },
+    'daily-checklist': {
+      ic: '☑️',
+      txt: 'عنوان، توضیح و اولویت کارهای امروزت را ثبت کن؛ روزهای قبل هم برای مرور می‌مانند.'
     },
     /* v21.4: one line per section, and only ever once */
     habits: {

@@ -56,6 +56,7 @@ function normalizeDailyChecklists(value){
       .map(item=>({
         id:/^[a-z0-9_-]{1,64}$/i.test(String(item.id||'')) ? String(item.id) : uid(),
         title:String(item.title).trim().slice(0,120),
+        description:typeof item.description==='string'?item.description.slice(0,1600):'',
         priority:DAILY_CHECKLIST_PRIORITIES.includes(item.priority)?item.priority:'medium',
         done:!!item.done,
         created:Number(item.created)||Date.now(),
@@ -5821,31 +5822,104 @@ function dailyChecklistItems(date=todayISO()){
   if(!Array.isArray(DB.dailyChecklists[date])) DB.dailyChecklists[date]=[];
   return DB.dailyChecklists[date];
 }
+let dailyChecklistTab='today';
+let dailyChecklistRenderedDate='';
+function setDailyChecklistTab(tab){
+  dailyChecklistTab=tab==='history'?'history':'today';
+  document.querySelectorAll('#dailyChecklistTabs [data-checklist-tab]').forEach(button=>{
+    const selected=button.dataset.checklistTab===dailyChecklistTab;
+    button.classList.toggle('sel',selected);
+    button.setAttribute('aria-selected',selected?'true':'false');
+  });
+  const todayPanel=document.getElementById('dailyChecklistTodayPanel');
+  const historyPanel=document.getElementById('dailyChecklistHistoryPanel');
+  if(todayPanel) todayPanel.style.display=dailyChecklistTab==='today'?'':'none';
+  if(historyPanel) historyPanel.style.display=dailyChecklistTab==='history'?'':'none';
+  if(dailyChecklistTab==='history') renderDailyChecklistHistory();
+}
+function dailyChecklistPrioritySorted(items){ return sortTasks(items||[]); }
+function dailyChecklistItemMarkup(item,{readOnly=false}={}){
+  const done=!!item.done;
+  const description=String(item.description||'').trim();
+  const priority=DAILY_CHECKLIST_PRIORITIES.includes(item.priority)?item.priority:'medium';
+  const safeId=String(item.id||'').replace(/[^a-z0-9_-]/gi,'');
+  const checkId=`daily-check-${safeId}`;
+  const toggleAttr=readOnly?'':`onchange="toggleDailyChecklistItem('${safeId}')"`;
+  return `<article class="daily-checklist-row priority-card-${priority} ${done?'is-done':''}">
+    <div class="daily-checklist-check"><input id="${checkId}" type="checkbox" ${done?'checked':''} ${readOnly?'disabled':''} ${toggleAttr}>
+      <label for="${checkId}" class="daily-checklist-copy"><span class="daily-checklist-title">${esc(item.title)}</span>${description?`<span class="daily-checklist-description">${esc(description).replace(/\n/g,'<br>')}</span>`:''}</label>
+    </div>
+    <span class="daily-checklist-priority priority-${priority}">${DAILY_CHECKLIST_PRIORITY_LABELS[priority]}</span>
+    ${readOnly?'':`<button class="daily-checklist-action" type="button" onclick="openDailyChecklistItemEditor('${safeId}')" aria-label="ویرایش کار" title="ویرایش توضیحات و اولویت">✏️</button><button class="daily-checklist-delete" type="button" onclick="deleteDailyChecklistItem('${safeId}')" aria-label="حذف کار" title="حذف">×</button>`}
+  </article>`;
+}
 function renderDailyChecklist(){
+  dailyChecklistRenderedDate=todayISO();
   const dateEl=document.getElementById('dailyChecklistDate');
   if(dateEl) dateEl.textContent=new Date().toLocaleDateString('fa-IR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  const items=dailyChecklistItems().slice().sort((a,b)=>{
-    const p=(PRIORITY_ORDER[a.priority]??2)-(PRIORITY_ORDER[b.priority]??2);
-    return p || Number(a.done)-Number(b.done) || (a.created||0)-(b.created||0);
-  });
+  const items=dailyChecklistPrioritySorted(dailyChecklistItems());
   const done=items.filter(item=>item.done).length;
   const progress=document.getElementById('dailyChecklistProgress');
   if(progress) progress.textContent=`${toFaDigits(done)} از ${toFaDigits(items.length)} انجام‌شده`;
   const list=document.getElementById('dailyChecklistItems');
-  if(!list) return;
-  list.innerHTML=items.length ? items.map(item=>`<div class="daily-checklist-row ${item.done?'is-done':''}">
-    <label class="daily-checklist-check"><input type="checkbox" ${item.done?'checked':''} onchange="toggleDailyChecklistItem('${esc(item.id)}')"><span class="daily-checklist-title">${esc(item.title)}</span></label>
-    <span class="daily-checklist-priority priority-${item.priority}">${DAILY_CHECKLIST_PRIORITY_LABELS[item.priority]||'متوسط'}</span>
-    <button class="daily-checklist-delete" type="button" onclick="deleteDailyChecklistItem('${esc(item.id)}')" aria-label="حذف کار" title="حذف">×</button>
-  </div>`).join('') : '<div class="daily-checklist-empty"><span>🌱</span><b>هنوز کاری برای امروز ننوشتی</b><small>اولین قدمت رو اضافه کن؛ تیک‌ها رو هر وقت انجامش دادی بزن.</small></div>';
+  if(list) list.innerHTML=items.length ? items.map(item=>dailyChecklistItemMarkup(item)).join('') : '<div class="daily-checklist-empty"><span>🌱</span><b>هنوز کاری برای امروز ننوشتی</b><small>اولین قدمت رو اضافه کن؛ تیک‌ها رو هر وقت انجامش دادی بزن.</small></div>';
+  setDailyChecklistTab(dailyChecklistTab);
+}
+function renderDailyChecklistHistory(){
+  const box=document.getElementById('dailyChecklistHistory');
+  if(!box) return;
+  const today=todayISO();
+  const days=Object.keys(DB.dailyChecklists||{}).filter(date=>date<today && Array.isArray(DB.dailyChecklists[date]) && DB.dailyChecklists[date].length)
+    .sort((a,b)=>b.localeCompare(a));
+  if(!days.length){
+    box.innerHTML='<div class="daily-checklist-empty"><span>🗓️</span><b>هنوز روز قبلی‌ای ثبت نشده</b><small>چک‌لیست‌های پرشده‌ی روزهای گذشته اینجا می‌مانند تا عملکردت را مرور کنی.</small></div>';
+    return;
+  }
+  box.innerHTML=days.map(date=>{
+    const items=dailyChecklistPrioritySorted(DB.dailyChecklists[date]);
+    const done=items.filter(item=>item.done).length;
+    const pct=items.length?Math.round(done/items.length*100):0;
+    const dayLabel=new Date(`${date}T12:00:00`).toLocaleDateString('fa-IR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    return `<section class="daily-history-day">
+      <header class="daily-history-day-head"><div><h3>${dayLabel}</h3><span>${toFaDigits(done)} از ${toFaDigits(items.length)} کار انجام شد</span></div><strong>${toFaDigits(pct)}٪</strong></header>
+      <div class="daily-history-progress"><i style="width:${pct}%"></i></div>
+      <div class="daily-checklist-items">${items.map(item=>dailyChecklistItemMarkup(item,{readOnly:true})).join('')}</div>
+    </section>`;
+  }).join('');
 }
 function addDailyChecklistItem(){
   const input=document.getElementById('dailyChecklistInput');
   const title=String(input?.value||'').trim();
   if(!title){ toast('✍️ اول یک کار برای امروز بنویس'); input?.focus(); return; }
   const priority=document.getElementById('dailyChecklistPriority')?.value||'medium';
-  dailyChecklistItems().push({id:uid(),title:title.slice(0,120),priority:DAILY_CHECKLIST_PRIORITIES.includes(priority)?priority:'medium',done:false,created:Date.now(),doneAt:null});
+  const description=String(document.getElementById('dailyChecklistDescription')?.value||'').trim().slice(0,1600);
+  dailyChecklistItems().push({id:uid(),title:title.slice(0,120),description,priority:DAILY_CHECKLIST_PRIORITIES.includes(priority)?priority:'medium',done:false,created:Date.now(),doneAt:null});
   if(input) input.value='';
+  const descriptionEl=document.getElementById('dailyChecklistDescription'); if(descriptionEl) descriptionEl.value='';
+  save();
+  renderDailyChecklist();
+}
+function openDailyChecklistItemEditor(id){
+  const item=dailyChecklistItems().find(entry=>String(entry.id)===String(id));
+  if(!item) return;
+  window.__dailyChecklistEditingId=String(item.id);
+  document.getElementById('dailyChecklistEditTitle').value=item.title||'';
+  document.getElementById('dailyChecklistEditDescription').value=item.description||'';
+  document.getElementById('dailyChecklistEditPriority').value=DAILY_CHECKLIST_PRIORITIES.includes(item.priority)?item.priority:'medium';
+  openModal('dailyChecklistEditModalBg');
+}
+function saveDailyChecklistEdit(){
+  const id=window.__dailyChecklistEditingId;
+  const item=dailyChecklistItems().find(entry=>String(entry.id)===String(id));
+  if(!item) return;
+  const title=String(document.getElementById('dailyChecklistEditTitle')?.value||'').trim();
+  if(!title){ toast('✍️ عنوان کار را بنویس'); return; }
+  item.title=title.slice(0,120);
+  item.description=String(document.getElementById('dailyChecklistEditDescription')?.value||'').trim().slice(0,1600);
+  const priority=document.getElementById('dailyChecklistEditPriority')?.value||'medium';
+  item.priority=DAILY_CHECKLIST_PRIORITIES.includes(priority)?priority:'medium';
+  window.__dailyChecklistEditingId=null;
+  closeModal('dailyChecklistEditModalBg');
   save();
   renderDailyChecklist();
 }
@@ -6149,6 +6223,9 @@ function scheduleCalendarMinuteTick(){
   },Math.max(20,delay));
 }
 scheduleCalendarMinuteTick();
+setInterval(()=>{
+  if(viewActive('daily-checklist') && dailyChecklistRenderedDate!==todayISO()) renderDailyChecklist();
+},60000);
 document.addEventListener('visibilitychange',()=>{
   const cv=document.getElementById('view-calendar');
   if(!document.hidden&&cv&&cv.classList.contains('active'))updateCalendarNowMarker();
@@ -6176,7 +6253,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.2';
+const LP_APP_VERSION='24.3';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

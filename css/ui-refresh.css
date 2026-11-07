@@ -170,10 +170,10 @@ html.lp-perf *,html.lp-perf *::before,html.lp-perf *::after{scroll-behavior:auto
 .daily-checklist-title{overflow-wrap:anywhere;font-size:12px;font-weight:700;line-height:1.7;}
 .daily-checklist-row.is-done .daily-checklist-title{color:var(--txt-dim2);text-decoration:line-through;}
 .daily-checklist-priority{flex:none;padding:4px 8px;border-radius:999px;background:color-mix(in srgb,var(--txt-dim) 10%,transparent);color:var(--txt-dim);font-size:10px;font-weight:800;}
-.daily-checklist-priority.priority-critical{background:rgba(255,83,112,.13);color:#ff647c;}
-.daily-checklist-priority.priority-high{background:rgba(255,164,69,.14);color:#ffad5c;}
-.daily-checklist-priority.priority-medium{background:rgba(77,161,255,.13);color:#65adff;}
-.daily-checklist-priority.priority-low{background:rgba(46,230,166,.12);color:#42dca7;}
+.daily-checklist-priority.priority-critical{background:rgba(255,84,112,.22);color:#ff8098;}
+.daily-checklist-priority.priority-high{background:rgba(255,84,112,.12);color:var(--danger);}
+.daily-checklist-priority.priority-medium{background:rgba(255,181,69,.12);color:var(--warn);}
+.daily-checklist-priority.priority-low{background:rgba(46,230,166,.12);color:var(--ok);}
 .daily-checklist-delete{width:30px;height:30px;flex:none;border:0;border-radius:9px;background:transparent;color:var(--txt-dim2);font-size:21px;cursor:pointer;}
 .daily-checklist-delete:hover{background:rgba(255,83,112,.12);color:#ff647c;}
 .daily-checklist-empty{display:grid;justify-items:center;gap:7px;padding:30px 12px;color:var(--txt-dim);text-align:center;}
@@ -186,3 +186,35 @@ html.lp-perf *,html.lp-perf *::before,html.lp-perf *::after{scroll-behavior:auto
   .daily-checklist-heading h2{font-size:16px;}
   .daily-checklist-priority{font-size:9px;padding:4px 6px;}
 }
+
+/* v24.3 — richer daily checklist cards, editing and date history. */
+.daily-checklist-tabs{margin:0 0 14px;}
+.daily-checklist-tabs .chip-opt{font:inherit;}
+.daily-checklist-form textarea{grid-column:1/-1;width:100%;min-height:60px;box-sizing:border-box;padding:10px 12px;border:1px solid var(--refresh-line);border-radius:12px;background:var(--bg2);color:var(--txt);font:inherit;font-size:12px;line-height:1.7;resize:vertical;}
+.daily-checklist-row{position:relative;overflow:hidden;}
+.daily-checklist-row.priority-card-critical{border-inline-start:3px solid #ff8098;background:color-mix(in srgb,#ff8098 8%,var(--refresh-soft));}
+.daily-checklist-row.priority-card-high{border-inline-start:3px solid var(--danger);background:color-mix(in srgb,var(--danger) 7%,var(--refresh-soft));}
+.daily-checklist-row.priority-card-medium{border-inline-start:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 7%,var(--refresh-soft));}
+.daily-checklist-row.priority-card-low{border-inline-start:3px solid var(--ok);background:color-mix(in srgb,var(--ok) 6%,var(--refresh-soft));}
+.daily-checklist-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px;cursor:pointer;}
+.daily-checklist-description{color:var(--txt-dim);font-size:11px;line-height:1.75;overflow-wrap:anywhere;}
+.daily-checklist-action{width:32px;height:32px;flex:none;border:1px solid var(--refresh-line);border-radius:9px;background:transparent;cursor:pointer;font-size:14px;}
+.daily-checklist-action:hover{background:color-mix(in srgb,var(--neon) 10%,transparent);}
+.daily-checklist-history{display:flex;flex-direction:column;gap:12px;padding:clamp(16px,2.3vw,26px);border:1px solid var(--refresh-line);border-radius:var(--refresh-radius);background:var(--refresh-glass);}
+.daily-checklist-history-head{margin-bottom:12px;}
+.daily-checklist-history-head h2{font-size:17px;}
+.daily-checklist-history-head p{margin-top:5px;color:var(--txt-dim);font-size:12px;line-height:1.8;}
+.daily-history-day{padding:16px;margin-bottom:12px;border:1px solid var(--refresh-line);border-radius:16px;background:var(--refresh-soft);}
+.daily-history-day-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.daily-history-day-head h3{font-size:13px;}
+.daily-history-day-head span{display:block;margin-top:4px;color:var(--txt-dim);font-size:11px;}
+.daily-history-day-head strong{color:var(--neon);font-size:14px;}
+.daily-history-progress{height:6px;margin:11px 0 12px;overflow:hidden;border-radius:99px;background:var(--refresh-line);}
+.daily-history-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--neon),#42dca7);}
+.daily-history-day .daily-checklist-row{background:color-mix(in srgb,var(--refresh-soft) 72%,transparent);}
+.daily-checklist-row input:disabled{opacity:.85;}
+@media(max-width:520px){
+  .daily-checklist-form textarea{grid-column:1/-1;}
+  .daily-history-day{padding:12px;}
+}
+.daily-checklist-description-label{grid-column:1/-1;margin:1px 2px -5px;color:var(--txt-dim);font-size:11px;font-weight:750;}
