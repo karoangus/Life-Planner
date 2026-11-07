@@ -268,7 +268,9 @@ if (!useFallback) {
     const stored = ev.desc; // captured now: `ev` is live and gets edited below
     const block = document.querySelector('#weekGrid .ev-block');
     const blockText = block ? block.textContent.trim() : '';
-    const hasHint = !!(block && block.classList.contains('has-desc'));
+    // v24.5: no corner glyph either — the block holds nothing but its name
+    const hasHint = !!(block && !block.querySelector('.ev-trait,.ev-traits,.ev-reminder-dot') &&
+      getComputedStyle(block, '::after').content === 'none');
     block && block.click();
     const box = document.getElementById('eventActionDesc');
     const shown = box && box.style.display !== 'none' ? box.textContent : '';
@@ -293,7 +295,7 @@ if (!useFallback) {
     return { stored, blockText, hasHint, shown, cleared, plainHidden, prefilled, edited };
   });
   check('v16.6 event description saved with the event', evDesc.stored === 'فصل ۳ کتاب\nمرور لغت‌ها', JSON.stringify(evDesc));
-  check('v16.6 block shows only the title (plus a small hint)', evDesc.blockText === 'زبان' && evDesc.hasHint, JSON.stringify(evDesc));
+  check('v16.6 block shows only the title (no corner badges)', evDesc.blockText === 'زبان' && evDesc.hasHint, JSON.stringify(evDesc));
   check('v16.6 tapping the block shows the description', evDesc.shown === 'فصل ۳ کتاب\nمرور لغت‌ها', JSON.stringify(evDesc));
   check('v16.6 no description → nothing extra shown', evDesc.cleared && evDesc.plainHidden, JSON.stringify(evDesc));
   check('v16.6 editing pre-fills and updates the description', evDesc.prefilled === 'فصل ۳ کتاب\nمرور لغت‌ها' && evDesc.edited === 'فصل ۴', JSON.stringify(evDesc));
@@ -2559,7 +2561,7 @@ if (!useFallback) {
   check('v16.6 description field in the event modal + action sheet',
     indexHtml.includes('id="eDesc"') && indexHtml.includes('id="eventActionDesc"') &&
     coreJs.includes('function eventDesc') && coreJs.includes('function lpReadEventDesc') &&
-    appCss.includes('.lp-ev-desc') && appCss.includes('.ev-block.has-desc'));
+    appCss.includes('.lp-ev-desc') && !coreJs.includes("classList.add('has-desc')"));
   check('v16.6 description kept on save, edit and drag-split',
     (coreJs.match(/id:uid\(\),title,desc,/g) || []).length === 2 && coreJs.includes('ev.desc=desc') &&
     coreJs.includes('desc:eventDesc(ev)') && (coreJs.match(/  lpFillEventDesc\(ev\);/g) || []).length === 2);

@@ -4231,10 +4231,10 @@ function lpSetEventBite(value=''){
 }
 function lpGetEventBite(){ return document.querySelector('#eBite .chip-opt.sel')?.dataset.v||null; }
 function lpFillEventBite(ev={}){ lpSetEventBite(ev.bite); }
-function lpEventBiteBadge(ev){
-  const bite=lpEventBite(ev);
-  return bite?`<span class="ev-trait" title="${esc(bite.label)}" aria-label="${esc(bite.label)}">${bite.icon}</span>`:'';
-}
+/* v24.5 — the bite is told by the block's FRAME only. The little emoji badge
+   that used to hang in the block's corner is gone (same for the reminder dot
+   and the description glyph), so nothing competes with the event name. The
+   sheet opened by tapping the block still spells the bite out in words. */
 const lpBiteGroup=document.getElementById('eBite');
 if(lpBiteGroup){
   lpBiteGroup.querySelectorAll('.chip-opt').forEach(chip=>{
@@ -4757,6 +4757,10 @@ const CAL_EDGE_ARM_MS=200, CAL_EDGE_MOVE_PX=6, CAL_EDGE_SIDE_PX=6;
 const LP_UNDO_WINDOW_MS=8000;
 const CAL_DAY_MIN=1440;
 const CAL_SPAN_MIN=(CAL_END_HOUR-CAL_START_HOUR)*60;
+/* v24.5 — how much room an event name gets inside its block. Both numbers are
+   mirrored in css/app.css (`.ev-block .ev-title` line-height / padding), so the
+   line count renderCalendar() writes into `--ev-lines` is exactly what fits. */
+const LP_EV_TITLE_LINE=13, LP_EV_TITLE_PAD=9;
 /* 25:30 on the grid is really 01:30 of the next day — show it as such. */
 function calClockLabel(min){ return formatTimeMinutes(((Math.round(min)%CAL_DAY_MIN)+CAL_DAY_MIN)%CAL_DAY_MIN); }
 function calHourLabel(h){ return String(((h%24)+24)%24).padStart(2,'0')+':00'; }
@@ -4823,9 +4827,10 @@ function updateCalendarNowMarker(now=new Date()){
 /* Treat events already drawn in the tapped calendar column as booked ranges.
    Placements are used instead of the stored clock fields so overnight events
    occupy the same night-tail minutes the user sees on the grid. */
-function calEventIntervalsInColumn(dayIdx){
+function calEventIntervalsInColumn(dayIdx, excludeId=null){
   const intervals=[];
   (DB.events||[]).forEach(ev=>{
+    if(excludeId && ev.id===excludeId) return; // the block being dragged does not block itself
     calEventPlacements(ev).forEach(p=>{
       if(p.col===dayIdx&&p.to>p.from) intervals.push({start:p.from,end:p.to});
     });
@@ -4933,6 +4938,41 @@ function calEventPlacements(e){
   return out;
 }
 const lpDragState={ drag:null, resize:null, edgeGrab:null, holdTimer:null, suppressClickUntil:0 };
+/* ============ v24.5 — «جا شدن» : DROP INTO THE GAP BETWEEN TWO EVENTS ======
+   Dropping a block into a hole that is shorter than the block used to be a
+   straight collision — the move was refused (or turned into a swap), even
+   though the hole was obviously where the finger was. Now the free stretch of
+   the target column under the pointer IS the drop target:
+
+     • the block shrinks to the height of the hole if it is too tall for it,
+     • and slides back inside when it only overhangs the hole's end,
+     • never below the usual 15-minute step.
+
+   The pointer landing straight on top of another block is untouched: that is
+   still the familiar swap / «تداخل» answer, because there the user is aiming
+   at an event, not at the space around it. */
+function lpFreeGapAt(dayIdx, gridStart, eventId){
+  const lo=CAL_START_HOUR*60, hi=CAL_END_HOUR*60;
+  let gapStart=lo, gapEnd=hi;
+  const intervals=calEventIntervalsInColumn(dayIdx, eventId);
+  for(const it of intervals){
+    if(it.end<=gridStart){ gapStart=Math.max(gapStart,it.end); continue; }
+    if(it.start>=gridStart){ gapEnd=Math.min(gapEnd,it.start); break; }
+    return null;                          // the pointer is inside a booked block
+  }
+  return gapEnd>gapStart ? {start:gapStart, end:gapEnd} : null;
+}
+function lpFitEventInGap(dayIdx, gridStart, duration, eventId){
+  const gap=lpFreeGapAt(dayIdx,gridStart,eventId);
+  if(!gap) return null;
+  const room=gap.end-gap.start;
+  if(room<CAL_SNAP_MIN) return null;      // no usable hole — leave the old behaviour
+  const dur=Math.min(Math.max(CAL_SNAP_MIN,duration),room);
+  const start=Math.max(gap.start, Math.min(gridStart, gap.end-dur));
+  return {start, duration:dur, end:start+dur,
+    gapStart:gap.start, gapEnd:gap.end,
+    shrunk:dur<duration, moved:start!==gridStart};
+}
 function lpCandidateConflicts(candidate,events){
   const cSeg=eventSegments(candidate);
   for(const other of events){
@@ -5033,7 +5073,7 @@ function lpBeginDrag(e, el, ev, dayIdx, shift){
     moved:false, lastX:e.clientX, lastY:e.clientY, raf:0, firstFrame:true,
     daysWrap, cols:[], colRects:[], vw:window.innerWidth,
     dur:Math.max(15, eventEndMinutes(ev)-eventStartMinutes(ev)),
-    lastCol:null, dropCol:-1, ghostLabelTxt:'' };
+    lastCol:null, dropCol:-1, ghostLabelTxt:'', fitCache:null, ghostFit:false };
   lpDragState.drag=d;
   lpRefreshDragGeom(d);
   document.addEventListener('touchmove', lpBlockScroll, {passive:false});
@@ -5102,7 +5142,17 @@ function lpDragMove(e){
   let min=Math.round(((d.lastY-daysTop-d.grabY)/CAL_PX_HOUR*60 + CAL_START_HOUR*60)/CAL_SNAP_MIN)*CAL_SNAP_MIN;
   min=Math.max(CAL_START_HOUR*60, Math.min(maxStart, min));
   d.curDay=target;
-  d.curStart=min;
+  /* v24.5 — the ghost previews the same «fit into the gap» the drop applies, so
+     the block is already the size and position it will land in. Cached per
+     snapped slot: crossing the grid costs a few comparisons, not a DB scan. */
+  const fitKey=`${target}:${min}`;
+  if(!d.fitCache||d.fitCache.key!==fitKey){
+    d.fitCache={key:fitKey, value:(target==null||!d.dur)?null:lpFitEventInGap(target,min,d.dur,d.evRef.id)};
+  }
+  const fit=d.fitCache.value;
+  const shownStart=fit?fit.start:min;
+  const shownDur=fit?fit.duration:Math.min(d.dur,CAL_SPAN_MIN);
+  d.curStart=shownStart;
   d.moved=true;
   if(target==null){
     // hide instead of remove/append: re-entering the grid must not rebuild it
@@ -5120,18 +5170,25 @@ function lpDragMove(e){
     d.cols[target]?.appendChild(d.ghost);
     d.dropCol=target;
   }
-  const slot=calNormalizeSlot(target,min);
-  const label=`${dayNames[slot.day]} · ${calClockLabel(min)}`;
+  const shrunk=!!(fit&&fit.shrunk);
+  if(d.ghostFit!==shrunk){
+    d.ghostFit=shrunk;
+    d.ghost.classList.toggle('ev-ghost-fit',shrunk);
+  }
+  const slot=calNormalizeSlot(target,shownStart);
+  const label=shrunk
+    ? `${dayNames[slot.day]} · ${calClockLabel(shownStart)} تا ${calClockLabel(shownStart+shownDur)}`
+    : `${dayNames[slot.day]} · ${calClockLabel(shownStart)}`;
   if(d.ghostLabelTxt!==label){ // innerHTML was rebuilt on every crossing before
     d.ghostLabelTxt=label;
     d.ghostLabel.textContent=label;
-    d.ghost.classList.toggle('ev-ghost-night', min>=CAL_DAY_MIN);
+    d.ghost.classList.toggle('ev-ghost-night', shownStart>=CAL_DAY_MIN);
   }
-  if(String(min)!==d.ghost.dataset.min || String(target)!==d.ghost.dataset.day){
+  if(String(shownStart)!==d.ghost.dataset.min || String(target)!==d.ghost.dataset.day){
     d.ghost.dataset.day=String(target);
-    d.ghost.dataset.min=String(min);
-    d.ghost.style.top=((min-CAL_START_HOUR*60)/60*CAL_PX_HOUR)+'px';
-    d.ghost.style.height=Math.max(12, Math.min(d.dur,CAL_SPAN_MIN)/60*CAL_PX_HOUR-2)+'px';
+    d.ghost.dataset.min=String(shownStart);
+    d.ghost.style.top=((shownStart-CAL_START_HOUR*60)/60*CAL_PX_HOUR)+'px';
+    d.ghost.style.height=Math.max(12, shownDur/60*CAL_PX_HOUR-2)+'px';
   }
 }
 function lpAutoscrollStep(){
@@ -5195,16 +5252,22 @@ function lpRelocateEventOccurrence(ev,fromDay,toDay,startMin,endMin){
 function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
   const ev=DB.events.find(x=>x.id===evRef.id)||evRef;
   const dur=Math.max(15, eventEndMinutes(ev)-eventStartMinutes(ev));
-  const gridStart=Math.max(CAL_START_HOUR*60, Math.min(CAL_END_HOUR*60-Math.min(dur,CAL_SPAN_MIN), newStart));
+  const requested=Math.max(CAL_START_HOUR*60, Math.min(CAL_END_HOUR*60-Math.min(dur,CAL_SPAN_MIN), newStart));
+  /* v24.5 — dropping into the free stretch between two blocks takes that whole
+     stretch: the event shrinks to the hole and/or slides inside it. A drop that
+     lands straight ON a block still falls through to the swap/refusal below. */
+  const fit=lpFitEventInGap(toCol, requested, dur, ev.id);
+  const gridStart=fit?fit.start:requested;
+  const duration=fit?fit.duration:dur;
   /* The grid column keeps running past midnight, so a drop at 25:00 of column
      "Saturday" is really 01:00 on Sunday. Store the real day + clock time. */
   const slot=calNormalizeSlot(toCol, gridStart);
   const toDay=slot.day, ns=slot.min;
-  const ne=ns+dur;
+  const ne=ns+duration;
   const days=eventDays(ev);
   const sameDay=(toDay===fromDay);
   const multiDay=days.length>1;
-  if(sameDay && ns===eventStartMinutes(ev)){ return; } // dropped back on its own slot
+  if(sameDay && ns===eventStartMinutes(ev) && duration===dur){ return; } // dropped back on its own slot
 
   const candidate = (!sameDay && multiDay)
     ? {title:ev.title, days:[toDay], startMin:ns, endMin:ne}
@@ -5273,6 +5336,11 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
     msg=!sameDay
       ? `📅 «${esc(ev.title)}» به ${dayNames[toDay]} منتقل شد — ${calClockLabel(ns)} تا ${calClockLabel(ne)}`
       : `🕒 «${esc(ev.title)}» به ${calClockLabel(ns)} تا ${calClockLabel(ne)} منتقل شد`;
+  }
+  if(fit && fit.shrunk){
+    msg=`🪄 «${esc(ev.title)}» به اندازهٔ فضای خالی جمع شد — ${calClockLabel(ns)} تا ${calClockLabel(ne)}`;
+  }else if(fit && fit.moved){
+    msg=`🪄 «${esc(ev.title)}» داخل فضای خالی جا گرفت — ${calClockLabel(ns)} تا ${calClockLabel(ne)}`;
   }
   lpEventUndoRecord=undo;
   save();
@@ -5679,6 +5747,57 @@ document.addEventListener('keydown', e=>{
   if(lpDragState.edgeGrab){ lpEdgeGrabCleanup(lpDragState.edgeGrab); }
 });
 
+/* ============ v24.5 — A NAME THAT FITS, NOT A NAME THAT IS CUT ============
+   A week column on a phone is ~44px wide, and a five-letter Persian word is
+   ~40px at the default size — so the browser used to slice it in half
+   («محصو / ل») and the event looked like random letters. Instead of guessing
+   one font size for every block, each title steps down (11.5 → 8px) just far
+   enough for its LONGEST word to fit the column, and only a word that is still
+   too wide at the floor size is allowed to break. Every width is read in one
+   batch before any style is written, so the grid is still built with a single
+   layout, and measurements are cached per word + size. */
+const LP_TITLE_SIZES=[11.5,11,10.5,10,9.5,9,8.5,8];
+const lpTitleMeter={ctx:null, cache:new Map()};
+function lpLongestWordIn(text){
+  const words=String(text||'').trim().split(/\s+/);
+  return words.reduce((longest,word)=>word.length>longest.length?word:longest,'');
+}
+function lpTuneEventTitles(root){
+  if(!root) return;
+  const titles=[...root.querySelectorAll('.ev-block .ev-title')];
+  if(!titles.length) return;
+  const widths=titles.map(t=>t.clientWidth);            // read…
+  const styles=titles.map(t=>getComputedStyle(t));
+  const family=styles[0].fontFamily||'sans-serif';
+  if(!lpTitleMeter.ctx){
+    const canvas=document.createElement('canvas');
+    lpTitleMeter.ctx=canvas.getContext('2d');
+  }
+  const ctx=lpTitleMeter.ctx;
+  const measure=(word,size)=>{
+    const key=size+'|'+word;
+    let width=lpTitleMeter.cache.get(key);
+    if(width===undefined){
+      ctx.font=`800 ${size}px ${family}`;
+      width=ctx.measureText(word).width;
+      lpTitleMeter.cache.set(key,width);
+    }
+    return width;
+  };
+  titles.forEach((title,i)=>{
+    const base=parseFloat(styles[i].fontSize)||11.5;
+    const avail=widths[i]-0.5;                          // half a pixel of slack
+    const word=lpLongestWordIn(title.textContent);
+    if(!(avail>0)||!word) return;
+    let size=0;
+    for(const candidate of LP_TITLE_SIZES){
+      if(candidate>base+0.01) continue;
+      if(measure(word,candidate)<=avail){ size=candidate; break; }
+    }
+    if(!size) size=Math.min(base,LP_TITLE_SIZES[LP_TITLE_SIZES.length-1]);
+    if(Math.abs(size-base)>0.01) title.style.fontSize=size+'px';   // …then write
+  });
+}
 function renderCalendar(){
   /* v21.9: never rebuild the grid while a drag/resize owns the pointer.
      save()'s coalesced renderAll used to replace #weekGrid mid-gesture,
@@ -5740,33 +5859,38 @@ function renderCalendar(){
       el.type='button';
       const duration=to-from;
       const sizeClass=duration<15?' event-tiny':(duration<30?' event-short':'');
+      const blockH=Math.max(10,(to-from)/60*PX_HOUR-2);
       el.className='ev-block'+sizeClass+(from>=CAL_DAY_MIN?' ev-night':'');
       el.style.top=((from-START*60)/60*PX_HOUR)+'px';
-      el.style.height=Math.max(10,(to-from)/60*PX_HOUR-2)+'px';
-      el.title=`${e.title} — ${dayNames[d]} ${calClockLabel(s)} تا ${calClockLabel(en)} · لبه را نگه دار و بکش تا زمانش عوض شود؛ وسط را بکش تا جابه‌جا شود`;
+      el.style.height=blockH+'px';
+      /* v24.5 — the box is only the box: the bite emoji, the reminder dot and
+         the description glyph that used to sit in the corners are gone. The
+         name now owns the whole block: it starts at the top edge, uses the full
+         width, and shows as many WHOLE lines as the block is tall — anything
+         left over ends in an ellipsis instead of being sliced mid-letter. The
+         line arithmetic is kept in sync with css/app.css (line-height 13px,
+         7px of title padding, LP_EV_TITLE_LINE). */
+      const titleLines=Math.max(1, Math.floor((blockH-LP_EV_TITLE_PAD)/LP_EV_TITLE_LINE));
+      /* One-line blocks skip the clamp on purpose: the «…» at the end of a single
+         line eats into the last word («مطالع…»), while a plain clip at the block
+         edge still shows that word whole. */
+      el.style.setProperty('--ev-lines', titleLines>1?String(titleLines):'none');
+      const hint=[]
+      if(e.reminder) hint.push('یادآور فعال');
+      if(eventDesc(e)) hint.push('توضیح دارد');
+      el.title=`${e.title} — ${dayNames[d]} ${calClockLabel(s)} تا ${calClockLabel(en)}${hint.length?` · ${hint.join(' · ')}`:''} · لبه را نگه دار و بکش تا زمانش عوض شود؛ وسط را بکش تا جابه‌جا شود`;
       const bite=lpEventBite(e);
-      const badge=lpEventBiteBadge(e);
-      el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>${badge?`<span class="ev-traits">${badge}</span>`:''}`;
+      el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
       if(bite){
         el.classList.add(`ev-bite-${e.bite}`);
         el.setAttribute('aria-label',`${e.title} — ${bite.label}`);
-      }
-      if(eventDesc(e)){
-        // v16.6: small hint that tapping the block reveals a description
-        el.classList.add('has-desc');
-      }
-      if(e.reminder){
-        const dot=document.createElement('span');
-        dot.className='ev-reminder-dot';
-        dot.title='یادآور فعال است';
-        dot.setAttribute('aria-label','یادآور فعال است');
-        el.appendChild(dot);
       }
       const ecol=eventColor(e);
       if(ecol){
         el.style.background=`linear-gradient(160deg,${lpHexToRgba(ecol,.5)},${lpHexToRgba(ecol,.26)})`;
         el.style.borderColor=lpHexToRgba(ecol,.7);
-        el.style.boxShadow=`inset 0 0 0 1px ${lpHexToRgba(ecol,.28)}, 0 2px 10px ${lpHexToRgba(ecol,.22)}`;
+        // v24.5: keep the glassy top highlight the stylesheet gives every block
+        el.style.boxShadow=`inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px ${lpHexToRgba(ecol,.28)}, 0 2px 10px ${lpHexToRgba(ecol,.22)}`;
       }
       if(bite){
         // A simple, slightly stronger frame; never repaint the block body.
@@ -5792,6 +5916,7 @@ function renderCalendar(){
     note.innerHTML=`🌙 <span>بیرون از بازهٔ نمایش تقویم</span> — ${names}${more}`;
     wrap.appendChild(note);
   }
+  lpTuneEventTitles(document.getElementById('weekGrid')); // v24.5 — whole words, not halves
   // v20: day-plan panel removed
 }
 
@@ -6294,7 +6419,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.4';
+const LP_APP_VERSION='24.5';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

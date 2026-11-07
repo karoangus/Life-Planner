@@ -136,11 +136,13 @@ try{
     ok(`${bite}: frame uses ${color}, while the block body keeps the user's color`);
   }
   const markers = await page.evaluate(()=>({
-    badges:document.querySelectorAll('.ev-block[aria-label^="آزمون"] .ev-trait').length,
-    groups:document.querySelectorAll('.ev-block[aria-label^="آزمون"] .ev-traits').length
+    badges:document.querySelectorAll('.ev-block .ev-trait,.ev-block .ev-traits').length,
+    dots:document.querySelectorAll('.ev-block .ev-reminder-dot').length,
+    children:[...document.querySelectorAll('.ev-block[aria-label^="آزمون"]')]
+      .map(b=>[...b.children].filter(c=>!c.classList.contains('ev-resize-handle')).map(c=>c.className))
   }));
-  assert.deepEqual(markers,{badges:3,groups:3});
-  ok('each event has exactly one bite marker, never an extra energy badge');
+  assert.deepEqual(markers,{badges:0,dots:0,children:[['ev-title'],['ev-title'],['ev-title']]});
+  ok('v24.5 the box carries nothing but its name — no bite emoji, no reminder dot, no corner glyph');
 
   const categoryBody = await createEvent({title:'آزمون رنگ دسته',bite:'normal',days:[4],start:'16:00',end:'17:00',custom:false});
   const categoryView = await page.evaluate(id=>{
@@ -240,6 +242,149 @@ try{
   assert.equal(persisted.events.find(e=>e.id==='untouched-legacy').energy,'low');
   assert.ok(persisted.events.filter(e=>e.id!=='untouched-legacy').every(e=>e.energy===undefined));
   ok('bites survive reload and backup; unedited legacy data is not destructively migrated');
+
+  /* ---------- v24.5: a quiet box, a readable name, a drop that fits ---------- */
+  const quiet = await page.evaluate(()=>{
+    const saved=JSON.parse(JSON.stringify(DB.events));
+    DB.events=[{id:'quiet-box',title:'جلسه با تیم محصول',days:[0],startMin:9*60,endMin:11*60,
+      reminder:true,desc:'دستور جلسه',bite:'normal'}];
+    save(); showView('calendar'); renderCalendar();
+    const block=document.querySelector('#weekGrid .ev-block');
+    const title=block.querySelector('.ev-title');
+    const ts=getComputedStyle(title);
+    const result={
+      children:[...block.children].filter(c=>!c.classList.contains('ev-resize-handle')).map(c=>c.className),
+      cornerBadges:block.querySelectorAll('.ev-trait,.ev-traits,.ev-reminder-dot').length,
+      after:getComputedStyle(block,'::after').content,
+      lines:Number(block.style.getPropertyValue('--ev-lines')),
+      text:title.textContent,
+      align:ts.textAlign,
+      lineHeight:ts.lineHeight,
+      clamp:ts.webkitLineClamp,
+      tooltip:block.title,
+      borderWidth:getComputedStyle(block).borderTopWidth,
+      height:parseFloat(block.style.height)
+    };
+    DB.events=saved; save(); renderCalendar();
+    return result;
+  });
+  assert.deepEqual(quiet.children,['ev-title']);
+  assert.deepEqual({cornerBadges:quiet.cornerBadges,after:quiet.after,text:quiet.text,border:quiet.borderWidth},
+    {cornerBadges:0,after:'none',text:'جلسه با تیم محصول',border:'3px'});
+  assert.ok(quiet.lines>=6,`only ${quiet.lines} lines of room`);
+  assert.deepEqual({align:quiet.align,lineHeight:quiet.lineHeight,clamp:quiet.clamp},{align:'start',lineHeight:'13px',clamp:String(quiet.lines)});
+  assert.ok(quiet.tooltip.includes('یادآور فعال') && quiet.tooltip.includes('توضیح دارد'),quiet.tooltip);
+  ok('v24.5 the block has no corner icons, keeps its bite frame, and gives the name full-height lines');
+
+  const shapes = await page.evaluate(()=>{
+    const saved=JSON.parse(JSON.stringify(DB.events));
+    DB.events=[
+      {id:'shape-tall',title:'جلسه با تیم محصول',days:[0],startMin:9*60,endMin:11*60,bite:'normal'},
+      {id:'shape-short',title:'تماس کوتاه',days:[0],startMin:12*60+30,endMin:12*60+50},
+      {id:'shape-tiny',title:'یادآوری سریع',days:[0],startMin:15*60,endMin:15*60+10}
+    ];
+    save(); showView('calendar'); renderCalendar();
+    const blocks=[...document.querySelectorAll('#weekGrid .lp-cal-day[data-day="0"] .ev-block')];
+    const title=blocks[0].querySelector('.ev-title');
+    const range=document.createRange();
+    range.selectNodeContents(title);
+    const widest=Math.max(...[...range.getClientRects()].map(r=>r.width));
+    const result={
+      radius:blocks.map(b=>getComputedStyle(b).borderTopLeftRadius),
+      corner:getComputedStyle(blocks[0]).borderTopLeftRadius,
+      fitsWord:widest<=title.clientWidth+0.6,
+      font:parseFloat(getComputedStyle(title).fontSize),
+      tilted:getComputedStyle(blocks[0]).alignItems
+    };
+    DB.events=saved; save(); renderCalendar();
+    return result;
+  });
+  assert.deepEqual(shapes.radius,['14px','11px','999px']);
+  assert.ok(shapes.fitsWord && shapes.font>=8, JSON.stringify(shapes));
+  assert.equal(shapes.tilted,'stretch');
+  ok('v24.5 blocks are softly rounded (pills when tiny) and the longest word always fits its box');
+
+  const squashed = await page.evaluate(()=>{
+    const saved=JSON.parse(JSON.stringify(DB.events));
+    DB.events=[
+      {id:'gap-before',title:'قبل',days:[1],startMin:8*60,endMin:10*60},
+      {id:'gap-after',title:'بعد',days:[1],startMin:11*60,endMin:12*60},
+      {id:'gap-mover',title:'رویداد بزرگ',days:[1],startMin:14*60,endMin:15*60+30}
+    ];
+    save(); showView('calendar'); renderCalendar();
+    // a 90-minute block dropped 15 minutes into a 60-minute hole
+    const mover=()=>DB.events.find(e=>e.id==='gap-mover');
+    const setMover=(days,startMin,endMin)=>{ const e=mover(); e.days=days; e.startMin=startMin; e.endMin=endMin; save(); renderCalendar(); };
+    const snap=e=>({day:eventDays(e)[0],start:e.startMin,end:e.endMin});
+    const preview=lpFitEventInGap(1,10*60+15,90,'gap-mover');
+    lpApplyEventDrag(mover(),1,1,10*60+15);
+    const squashed=snap(mover());
+    // a 60-minute block dropped on the last quarter of that hole slides back in
+    setMover([1],8*60,9*60);
+    lpApplyEventDrag(mover(),1,1,10*60+45);
+    const slid=snap(mover());
+    // plenty of room on another column → nothing shrinks
+    setMover([1],14*60,15*60+30);
+    lpApplyEventDrag(mover(),1,3,9*60);
+    const roomy={...snap(mover()),duration:eventEndMinutes(mover())-eventStartMinutes(mover())};
+    // a drop straight ON another block is still the old answer (never a shrink)
+    setMover([1],14*60,15*60+30);
+    const onBlock=lpFitEventInGap(1,8*60+30,90,'gap-mover');
+    const result={
+      preview:{start:preview&&preview.start,duration:preview&&preview.duration,shrunk:preview&&preview.shrunk},
+      squashed,
+      slid,
+      roomy,
+      onBlock
+    };
+    DB.events=saved; save(); renderCalendar();
+    return result;
+  });
+  assert.deepEqual(squashed.preview,{start:600,duration:60,shrunk:true});
+  assert.deepEqual(squashed.squashed,{day:1,start:600,end:660});
+  assert.deepEqual(squashed.slid,{day:1,start:600,end:660});
+  assert.deepEqual(squashed.roomy,{day:3,start:540,end:630,duration:90});
+  assert.equal(squashed.onBlock,null);
+  ok('v24.5 a block dropped into a hole shrinks into it, slides back in when it overhangs, and never shrinks where there is room');
+
+  await page.evaluate(()=>{
+    window.__savedEvents=JSON.parse(JSON.stringify(DB.events)); // the later tests keep using them
+    DB.events=[
+      {id:'live-before',title:'قبل',days:[1],startMin:8*60,endMin:10*60},
+      {id:'live-after',title:'بعد',days:[1],startMin:11*60,endMin:12*60},
+      {id:'live-mover',title:'رویداد بزرگ',days:[1],startMin:14*60,endMin:15*60+30}
+    ];
+    save(); showView('calendar'); renderCalendar();
+    document.querySelector('#weekGrid .lp-cal-wrap').scrollIntoView({block:'start'});
+  });
+  const live = await page.evaluate(()=>{
+    const col=document.querySelector('#weekGrid .lp-cal-day[data-day="1"]').getBoundingClientRect();
+    const block=[...document.querySelectorAll('#weekGrid .lp-cal-day[data-day="1"] .ev-block')]
+      .find(b=>b.textContent.includes('رویداد بزرگ')).getBoundingClientRect();
+    const at=min=>Math.round(col.top+((min-6*60)/60)*52);
+    return {x:Math.round(col.left+col.width/2), from:{x:Math.round(block.left+block.width/2),y:Math.round(block.top+block.height/2)}, grabY:Math.round(block.height/2), at610:at(610)};
+  });
+  await page.mouse.move(live.from.x,live.from.y);
+  await page.mouse.down();
+  await page.mouse.move(live.x,live.at610+live.grabY,{steps:10});
+  await new Promise(resolve=>setTimeout(resolve,150));
+  const ghost = await page.evaluate(()=>{
+    const g=document.querySelector('#weekGrid .ev-ghost');
+    return g?{height:parseFloat(g.style.height),fit:g.classList.contains('ev-ghost-fit'),label:g.textContent}:null;
+  });
+  await page.mouse.up();
+  await new Promise(resolve=>setTimeout(resolve,120));
+  const landed = await page.evaluate(()=>{
+    const e=DB.events.find(x=>x.id==='live-mover');
+    const out={start:e.startMin,end:e.endMin};
+    DB.events=window.__savedEvents; delete window.__savedEvents;
+    save(); renderCalendar();
+    return out;
+  });
+  assert.ok(ghost && ghost.fit && Math.round(ghost.height)===50,JSON.stringify(ghost));
+  assert.ok(ghost.label.includes('10:00') && ghost.label.includes('11:00'),ghost.label);
+  assert.deepEqual(landed,{start:600,end:660});
+  ok('v24.5 dragging shows the block already shrunk to the hole, and the drop lands exactly there');
 
   await page.evaluate(()=>{localStorage.setItem('lifePlannerLang_v1','en');});
   await page.reload({waitUntil:'load'});
