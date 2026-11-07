@@ -46,8 +46,26 @@ const _themeToggleBtn = document.getElementById('themeToggleBtn'); if(_themeTogg
 
 /* ============ STORE ============ */
 const STORE_KEY = 'lifePlannerAI_v1';
+const DAILY_CHECKLIST_PRIORITIES = ['critical','high','medium','low'];
+function normalizeDailyChecklists(value){
+  if(!value || typeof value!=='object' || Array.isArray(value)) return {};
+  const clean={};
+  Object.entries(value).forEach(([date,items])=>{
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(items)) return;
+    clean[date]=items.filter(item=>item && typeof item==='object' && typeof item.title==='string' && item.title.trim())
+      .map(item=>({
+        id:/^[a-z0-9_-]{1,64}$/i.test(String(item.id||'')) ? String(item.id) : uid(),
+        title:String(item.title).trim().slice(0,120),
+        priority:DAILY_CHECKLIST_PRIORITIES.includes(item.priority)?item.priority:'medium',
+        done:!!item.done,
+        created:Number(item.created)||Date.now(),
+        doneAt:Number(item.doneAt)||null
+      }));
+  });
+  return clean;
+}
 function loadStore(){
-  let db = { tasks:[], habits:[], goals:[], notes:[], events:[], dayPlans:{}, xp:0, level:1, history:{}, quest:null, stats:null };
+  let db = { tasks:[], habits:[], goals:[], notes:[], events:[], dayPlans:{}, dailyChecklists:{}, xp:0, level:1, history:{}, quest:null, stats:null };
   try{
     const raw = localStorage.getItem(STORE_KEY);
     if(raw){ const parsed = JSON.parse(raw); db = Object.assign(db, parsed); }
@@ -83,6 +101,7 @@ function loadStore(){
     if(typeof e.note !== 'string') e.note = '';
     if(!e.items.length && !e.note.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(k)) delete db.dayPlans[k];
   });
+  db.dailyChecklists = normalizeDailyChecklists(db.dailyChecklists);
   if(!db.dayPlanPrefs || typeof db.dayPlanPrefs !== 'object' || Array.isArray(db.dayPlanPrefs)) db.dayPlanPrefs = {};
   if(typeof db.dayPlanPrefs.showDone !== 'boolean') db.dayPlanPrefs.showDone = true;
   if(typeof db.dayPlanPrefs.showLinked !== 'boolean') db.dayPlanPrefs.showLinked = false;
@@ -276,6 +295,7 @@ const PINNED_NAV_EXTRA_MAX = 5;
 const PINNED_NAV_OPTIONS = [
   {id:'dashboard', label:'داشبورد', icon:'🏠'},
   {id:'tasks', label:'تسک‌ها', icon:'✅'},
+  {id:'daily-checklist', label:'چک‌لیست روزانه', icon:'☑️'},
   {id:'habits', label:'عادت‌ها', icon:'🔥'},
   {id:'goals', label:'اهداف', icon:'🎯'},
   {id:'calendar', label:'تقویم هفتگی', icon:'📅'},
@@ -5794,6 +5814,57 @@ function renderCalendar(){
    week no longer keeps a ghost panel open, filters are gone (there is nothing
    left to filter), and adding an item never leaves the page.
    ============================================================= */
+/* ============ DAILY CHECKLIST (independent from tasks) ============ */
+const DAILY_CHECKLIST_PRIORITY_LABELS = {critical:'بحرانی',high:'بالا',medium:'متوسط',low:'پایین'};
+function dailyChecklistItems(date=todayISO()){
+  if(!DB.dailyChecklists || typeof DB.dailyChecklists!=='object') DB.dailyChecklists={};
+  if(!Array.isArray(DB.dailyChecklists[date])) DB.dailyChecklists[date]=[];
+  return DB.dailyChecklists[date];
+}
+function renderDailyChecklist(){
+  const dateEl=document.getElementById('dailyChecklistDate');
+  if(dateEl) dateEl.textContent=new Date().toLocaleDateString('fa-IR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const items=dailyChecklistItems().slice().sort((a,b)=>{
+    const p=(PRIORITY_ORDER[a.priority]??2)-(PRIORITY_ORDER[b.priority]??2);
+    return p || Number(a.done)-Number(b.done) || (a.created||0)-(b.created||0);
+  });
+  const done=items.filter(item=>item.done).length;
+  const progress=document.getElementById('dailyChecklistProgress');
+  if(progress) progress.textContent=`${toFaDigits(done)} از ${toFaDigits(items.length)} انجام‌شده`;
+  const list=document.getElementById('dailyChecklistItems');
+  if(!list) return;
+  list.innerHTML=items.length ? items.map(item=>`<div class="daily-checklist-row ${item.done?'is-done':''}">
+    <label class="daily-checklist-check"><input type="checkbox" ${item.done?'checked':''} onchange="toggleDailyChecklistItem('${esc(item.id)}')"><span class="daily-checklist-title">${esc(item.title)}</span></label>
+    <span class="daily-checklist-priority priority-${item.priority}">${DAILY_CHECKLIST_PRIORITY_LABELS[item.priority]||'متوسط'}</span>
+    <button class="daily-checklist-delete" type="button" onclick="deleteDailyChecklistItem('${esc(item.id)}')" aria-label="حذف کار" title="حذف">×</button>
+  </div>`).join('') : '<div class="daily-checklist-empty"><span>🌱</span><b>هنوز کاری برای امروز ننوشتی</b><small>اولین قدمت رو اضافه کن؛ تیک‌ها رو هر وقت انجامش دادی بزن.</small></div>';
+}
+function addDailyChecklistItem(){
+  const input=document.getElementById('dailyChecklistInput');
+  const title=String(input?.value||'').trim();
+  if(!title){ toast('✍️ اول یک کار برای امروز بنویس'); input?.focus(); return; }
+  const priority=document.getElementById('dailyChecklistPriority')?.value||'medium';
+  dailyChecklistItems().push({id:uid(),title:title.slice(0,120),priority:DAILY_CHECKLIST_PRIORITIES.includes(priority)?priority:'medium',done:false,created:Date.now(),doneAt:null});
+  if(input) input.value='';
+  save();
+  renderDailyChecklist();
+}
+function toggleDailyChecklistItem(id){
+  const item=dailyChecklistItems().find(entry=>String(entry.id)===String(id));
+  if(!item) return;
+  item.done=!item.done;
+  item.doneAt=item.done?Date.now():null;
+  save();
+  renderDailyChecklist();
+}
+function deleteDailyChecklistItem(id){
+  const items=dailyChecklistItems();
+  const idx=items.findIndex(entry=>String(entry.id)===String(id));
+  if(idx<0) return;
+  items.splice(idx,1);
+  save();
+  renderDailyChecklist();
+}
 /* =============================================================
    v20: the per-day calendar plan («برنامه روز») was removed.
 
@@ -5908,6 +5979,7 @@ document.getElementById('importFile').onchange = (e)=>{
         toast('⚠️ فایل نامعتبر است — بک‌آپ لایف پلنر نیست'); return;
       }
       DB = parsed;
+      DB.dailyChecklists = normalizeDailyChecklists(DB.dailyChecklists);
       const restoredUI = (parsed.uiSettings && typeof parsed.uiSettings==='object') ? parsed.uiSettings : null;
       if(restoredUI){
         if(restoredUI.fontSize) localStorage.setItem('lifePlannerFontSize_v2',restoredUI.fontSize);
@@ -6015,6 +6087,7 @@ function renderView(v){
   const jobs = {
     dashboard: ()=>{ renderXP(); renderDashboard(); renderTodayWidget(); renderQuestBox(); },
     tasks:     ()=>renderTasks(document.querySelector('#taskFilters .sel')?.dataset.f || 'all'),
+    'daily-checklist': ()=>renderDailyChecklist(),
     calendar:  ()=>renderCalendar(),
     habits:    ()=>renderHabits(),
     goals:     ()=>renderGoals(),
@@ -6037,6 +6110,7 @@ function renderAll(){
   const jobs = [
     ['XP', ()=>renderXP()],
     ['Tasks', ()=>{ if(viewActive('tasks')) renderTasks(document.querySelector('#taskFilters .sel')?.dataset.f || 'all'); else if(onDashboard) renderTodayWidget(); }],
+    ['Daily checklist', ()=>{ if(viewActive('daily-checklist')) renderDailyChecklist(); }],
     ['Habits', ()=>{ if(viewActive('habits')) renderHabits(); }],
     ['Goals', ()=>{ if(viewActive('goals')) renderGoals(); }],
     ['Notes', ()=>{ if(viewActive('notes')) renderNotes(); }],
@@ -6102,7 +6176,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.1';
+const LP_APP_VERSION='24.2';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

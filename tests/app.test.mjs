@@ -3308,6 +3308,21 @@ if (!useFallback) {
     indexHtml.includes('پنج تب') && indexHtml.includes('تب باس') &&
     indexHtml.includes('توی یک باکس خوش‌ساخت') && langJs.includes('پنج تب'));
 
+  const dailyView = indexHtml.slice(indexHtml.indexOf('id="view-daily-checklist"'), indexHtml.indexOf('<!-- CALENDAR -->'));
+  const dailyCode = coreJs.slice(coreJs.indexOf('/* ============ DAILY CHECKLIST'), coreJs.indexOf('/* =============================================================\n   v20:'));
+  check('v24.2 daily checklist is a distinct section with the requested slogan and evening review hint',
+    dailyView.includes('چک‌لیست روزانه') && dailyView.includes('هر کار انجام شده رو تیک بزن. دیدن پیشرفت، سوخت نظم است...') &&
+    dailyView.includes('امروز اینارو انجام میدم') && dailyView.includes('آخر شب برگرد'));
+  check('v24.2 checklist items are separate, date-keyed, priority-sorted and never task/XP actions',
+    coreJs.includes('dailyChecklists:{},') && coreJs.includes('DAILY_CHECKLIST_PRIORITIES') &&
+    dailyCode.includes('PRIORITY_ORDER[a.priority]') && dailyCode.includes('toggleDailyChecklistItem') &&
+    !dailyCode.includes('DB.tasks') && !dailyCode.includes('addXP(') && !dailyCode.includes('toggleTask('));
+  check('v24.2 daily checklist is persisted and included in imported backups',
+    coreJs.includes('db.dailyChecklists = normalizeDailyChecklists(db.dailyChecklists)') &&
+    coreJs.includes('DB.dailyChecklists = normalizeDailyChecklists(DB.dailyChecklists)') &&
+    coreJs.includes("{id:'daily-checklist', label:'چک‌لیست روزانه'") &&
+    indexHtml.includes('id="view-daily-checklist"'));
+
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];
   const cacheVer = (swJs.match(/life-planner-cache-v(\d+)/) || [])[1];

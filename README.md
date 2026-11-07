@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-24.1-00e5ff?style=for-the-badge&logoColor=white" alt="Version 24.1" />
+  <img src="https://img.shields.io/badge/نسخه-24.2-00e5ff?style=for-the-badge&logoColor=white" alt="Version 24.2" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -330,6 +330,12 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 24.2 — «چک‌لیست روزانه»
+
+- ☑️ **چک‌لیست مستقل روزانه:** بخش «چک‌لیست روزانه» را از منوی «بیشتر» باز کن، کارهای امروزت را با اولویت بحرانی/بالا/متوسط/پایین بنویس و هر وقت انجامشان دادی تیک بزن. موارد براساس همان ترتیب اولویت‌بندی بخش تسک‌ها مرتب می‌شوند، اما داده‌ها، تیک‌ها و عملکردشان کاملاً جدا هستند و هیچ XP یا تغییری در تسک‌ها ایجاد نمی‌کنند.
+- 💾 چک‌لیست‌ها جداگانه و به تفکیک تاریخ ذخیره می‌شوند و در پشتیبان برنامه هم می‌آیند؛ شمارنده‌ی پیشرفت روز نشان می‌دهد چند کار از فهرست انجام شده است.
+- ☁️ نسخه به `24.2` رفت و نام کش سرویس‌ورکر به `const CACHE_NAME = 'life-planner-cache-v100';` تغییر کرد.
 
 ### ✨ نسخه 24.1 — «برگشت به قبل، بدون هدر هفته‌ها»
 
