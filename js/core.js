@@ -5838,19 +5838,20 @@ function setDailyChecklistTab(tab){
   if(dailyChecklistTab==='history') renderDailyChecklistHistory();
 }
 function dailyChecklistPrioritySorted(items){ return sortTasks(items||[]); }
-function dailyChecklistItemMarkup(item,{readOnly=false}={}){
+function dailyChecklistItemMarkup(item,{readOnly=false,date=todayISO()}={}){
   const done=!!item.done;
-  const description=String(item.description||'').trim();
   const priority=DAILY_CHECKLIST_PRIORITIES.includes(item.priority)?item.priority:'medium';
   const safeId=String(item.id||'').replace(/[^a-z0-9_-]/gi,'');
-  const checkId=`daily-check-${safeId}`;
-  const toggleAttr=readOnly?'':`onchange="toggleDailyChecklistItem('${safeId}')"`;
+  const safeDate=/^\d{4}-\d{2}-\d{2}$/.test(date)?date:todayISO();
+  const checkId=`daily-check-${safeId}-${safeDate.replace(/-/g,'')}`;
+  const toggleAttr=readOnly?'':`onchange="toggleDailyChecklistItem('${safeId}','${safeDate}')"`;
   return `<article class="daily-checklist-row priority-card-${priority} ${done?'is-done':''}">
-    <div class="daily-checklist-check"><input id="${checkId}" type="checkbox" ${done?'checked':''} ${readOnly?'disabled':''} ${toggleAttr}>
-      <label for="${checkId}" class="daily-checklist-copy"><span class="daily-checklist-title">${esc(item.title)}</span>${description?`<span class="daily-checklist-description">${esc(description).replace(/\n/g,'<br>')}</span>`:''}</label>
-    </div>
-    <span class="daily-checklist-priority priority-${priority}">${DAILY_CHECKLIST_PRIORITY_LABELS[priority]}</span>
-    ${readOnly?'':`<button class="daily-checklist-action" type="button" onclick="openDailyChecklistItemEditor('${safeId}')" aria-label="ویرایش کار" title="ویرایش توضیحات و اولویت">✏️</button><button class="daily-checklist-delete" type="button" onclick="deleteDailyChecklistItem('${safeId}')" aria-label="حذف کار" title="حذف">×</button>`}
+    <input class="daily-checklist-row-check" id="${checkId}" type="checkbox" ${done?'checked':''} ${readOnly?'disabled':''} ${toggleAttr} aria-label="${done?'انجام‌شده':'انجام‌نشده'}">
+    <button class="daily-checklist-body" type="button" onclick="openDailyChecklistDetails('${safeId}','${safeDate}',${readOnly})">
+      <span class="daily-checklist-title">${esc(item.title)}</span>
+      <span class="daily-checklist-priority priority-${priority}">${DAILY_CHECKLIST_PRIORITY_LABELS[priority]}</span>
+      ${readOnly?`<span class="daily-history-item-status">${done?'✅ انجام‌شده':'⬜ انجام‌نشده'}</span>`:''}
+    </button>
   </article>`;
 }
 function renderDailyChecklist(){
@@ -5862,7 +5863,7 @@ function renderDailyChecklist(){
   const progress=document.getElementById('dailyChecklistProgress');
   if(progress) progress.textContent=`${toFaDigits(done)} از ${toFaDigits(items.length)} انجام‌شده`;
   const list=document.getElementById('dailyChecklistItems');
-  if(list) list.innerHTML=items.length ? items.map(item=>dailyChecklistItemMarkup(item)).join('') : '<div class="daily-checklist-empty"><span>🌱</span><b>هنوز کاری برای امروز ننوشتی</b><small>اولین قدمت رو اضافه کن؛ تیک‌ها رو هر وقت انجامش دادی بزن.</small></div>';
+  if(list) list.innerHTML=items.length ? items.map(item=>dailyChecklistItemMarkup(item,{date:todayISO()})).join('') : '<div class="daily-checklist-empty"><span>🌱</span><b>هنوز کاری برای امروز ننوشتی</b><small>اولین قدمت رو اضافه کن؛ تیک‌ها رو هر وقت انجامش دادی بزن.</small></div>';
   setDailyChecklistTab(dailyChecklistTab);
 }
 function renderDailyChecklistHistory(){
@@ -5883,59 +5884,99 @@ function renderDailyChecklistHistory(){
     return `<section class="daily-history-day">
       <header class="daily-history-day-head"><div><h3>${dayLabel}</h3><span>${toFaDigits(done)} از ${toFaDigits(items.length)} کار انجام شد</span></div><strong>${toFaDigits(pct)}٪</strong></header>
       <div class="daily-history-progress"><i style="width:${pct}%"></i></div>
-      <div class="daily-checklist-items">${items.map(item=>dailyChecklistItemMarkup(item,{readOnly:true})).join('')}</div>
+      <div class="daily-checklist-items">${items.map(item=>dailyChecklistItemMarkup(item,{readOnly:true,date})).join('')}</div>
     </section>`;
   }).join('');
 }
-function addDailyChecklistItem(){
-  const input=document.getElementById('dailyChecklistInput');
-  const title=String(input?.value||'').trim();
-  if(!title){ toast('✍️ اول یک کار برای امروز بنویس'); input?.focus(); return; }
-  const priority=document.getElementById('dailyChecklistPriority')?.value||'medium';
-  const description=String(document.getElementById('dailyChecklistDescription')?.value||'').trim().slice(0,1600);
-  dailyChecklistItems().push({id:uid(),title:title.slice(0,120),description,priority:DAILY_CHECKLIST_PRIORITIES.includes(priority)?priority:'medium',done:false,created:Date.now(),doneAt:null});
-  if(input) input.value='';
-  const descriptionEl=document.getElementById('dailyChecklistDescription'); if(descriptionEl) descriptionEl.value='';
-  save();
-  renderDailyChecklist();
+window.__dailyChecklistEditingId=null;
+window.__dailyChecklistDetail=null;
+function openDailyChecklistModal(id=null){
+  if(!id) setDailyChecklistTab('today');
+  const item=id?dailyChecklistItems().find(entry=>String(entry.id)===String(id)):null;
+  if(id && !item){ toast('⚠️ این کار برای امروز پیدا نشد'); return; }
+  window.__dailyChecklistEditingId=item?String(item.id):null;
+  document.getElementById('dailyChecklistModalTitle').textContent=item?'✏️ ویرایش کار روزانه':'☑️ کار جدید';
+  document.getElementById('dailyChecklistTitle').value=item?.title||'';
+  document.getElementById('dailyChecklistDescription').value=item?.description||'';
+  document.querySelectorAll('#dailyChecklistPriority .chip-opt').forEach(chip=>{
+    chip.classList.toggle('sel',chip.dataset.v===(item?.priority||'medium'));
+  });
+  openModal('dailyChecklistModalBg');
 }
-function openDailyChecklistItemEditor(id){
-  const item=dailyChecklistItems().find(entry=>String(entry.id)===String(id));
-  if(!item) return;
-  window.__dailyChecklistEditingId=String(item.id);
-  document.getElementById('dailyChecklistEditTitle').value=item.title||'';
-  document.getElementById('dailyChecklistEditDescription').value=item.description||'';
-  document.getElementById('dailyChecklistEditPriority').value=DAILY_CHECKLIST_PRIORITIES.includes(item.priority)?item.priority:'medium';
-  openModal('dailyChecklistEditModalBg');
-}
-function saveDailyChecklistEdit(){
-  const id=window.__dailyChecklistEditingId;
-  const item=dailyChecklistItems().find(entry=>String(entry.id)===String(id));
-  if(!item) return;
-  const title=String(document.getElementById('dailyChecklistEditTitle')?.value||'').trim();
+function saveDailyChecklistItem(){
+  const title=String(document.getElementById('dailyChecklistTitle')?.value||'').trim();
   if(!title){ toast('✍️ عنوان کار را بنویس'); return; }
-  item.title=title.slice(0,120);
-  item.description=String(document.getElementById('dailyChecklistEditDescription')?.value||'').trim().slice(0,1600);
-  const priority=document.getElementById('dailyChecklistEditPriority')?.value||'medium';
-  item.priority=DAILY_CHECKLIST_PRIORITIES.includes(priority)?priority:'medium';
+  const priority=document.querySelector('#dailyChecklistPriority .chip-opt.sel')?.dataset.v||'medium';
+  const description=String(document.getElementById('dailyChecklistDescription')?.value||'').trim().slice(0,1600);
+  const id=window.__dailyChecklistEditingId;
+  if(id){
+    const item=dailyChecklistItems().find(entry=>String(entry.id)===String(id));
+    if(!item){ closeModal('dailyChecklistModalBg'); return; }
+    item.title=title.slice(0,120);
+    item.description=description;
+    item.priority=DAILY_CHECKLIST_PRIORITIES.includes(priority)?priority:'medium';
+  } else {
+    dailyChecklistItems().push({id:uid(),title:title.slice(0,120),description,priority:DAILY_CHECKLIST_PRIORITIES.includes(priority)?priority:'medium',done:false,created:Date.now(),doneAt:null});
+  }
   window.__dailyChecklistEditingId=null;
-  closeModal('dailyChecklistEditModalBg');
+  closeModal('dailyChecklistModalBg');
   save();
   renderDailyChecklist();
 }
-function toggleDailyChecklistItem(id){
-  const item=dailyChecklistItems().find(entry=>String(entry.id)===String(id));
+function openDailyChecklistDetails(id,date=todayISO(),readOnly=false){
+  const item=(DB.dailyChecklists?.[date]||[]).find(entry=>String(entry.id)===String(id));
+  if(!item) return;
+  window.__dailyChecklistDetail={id:String(item.id),date,readOnly:!!readOnly||date!==todayISO()};
+  renderDailyChecklistDetails();
+  openModal('dailyChecklistDetailsModalBg');
+}
+function renderDailyChecklistDetails(){
+  const current=window.__dailyChecklistDetail;
+  if(!current) return;
+  const item=(DB.dailyChecklists?.[current.date]||[]).find(entry=>String(entry.id)===String(current.id));
+  if(!item){ closeModal('dailyChecklistDetailsModalBg'); return; }
+  const priority=DAILY_CHECKLIST_PRIORITIES.includes(item.priority)?item.priority:'medium';
+  const title=document.getElementById('dailyChecklistDetailsTitle');
+  if(title) title.textContent=item.title||'☑️ کار روزانه';
+  const meta=document.getElementById('dailyChecklistDetailsMeta');
+  if(meta) meta.innerHTML=`<span class="pill ${priority}">${DAILY_CHECKLIST_PRIORITY_LABELS[priority]}</span><span class="pill ${item.done?'done-label':'st-notstarted'}">${item.done?'✓ انجام شده':'⬜ انجام نشده'}</span><span class="pill">📅 ${isoToJalaliText(current.date)}</span>`;
+  const desc=document.getElementById('dailyChecklistDetailsDescription');
+  if(desc) desc.innerHTML=item.description?`<div class="daily-checklist-details-note">${esc(item.description).replace(/\n/g,'<br>')}</div>`:'<div class="muted">📝 توضیحی برای این کار ثبت نشده.</div>';
+  const actions=document.getElementById('dailyChecklistDetailsActions');
+  if(actions) actions.style.display=current.readOnly?'none':'';
+  const toggle=document.getElementById('dailyChecklistDetailsToggle');
+  if(toggle) toggle.textContent=item.done?'↩️ برگرداندن به انجام‌نشده':'✅ انجام شد!';
+}
+function toggleDailyChecklistFromDetails(){
+  const current=window.__dailyChecklistDetail;
+  if(!current||current.readOnly) return;
+  toggleDailyChecklistItem(current.id,current.date);
+  renderDailyChecklistDetails();
+}
+function editDailyChecklistFromDetails(){
+  const current=window.__dailyChecklistDetail;
+  if(!current||current.readOnly) return;
+  const id=current.id;
+  closeModal('dailyChecklistDetailsModalBg');
+  openDailyChecklistModal(id);
+}
+function deleteDailyChecklistFromDetails(){
+  const current=window.__dailyChecklistDetail;
+  if(!current||current.readOnly) return;
+  const item=(DB.dailyChecklists?.[current.date]||[]).find(entry=>String(entry.id)===String(current.id));
+  if(!item||!confirm('این کار روزانه حذف بشه؟')) return;
+  DB.dailyChecklists[current.date]=DB.dailyChecklists[current.date].filter(entry=>String(entry.id)!==String(current.id));
+  window.__dailyChecklistDetail=null;
+  closeModal('dailyChecklistDetailsModalBg');
+  save();
+  renderDailyChecklist();
+}
+function toggleDailyChecklistItem(id,date=todayISO()){
+  if(date!==todayISO()) return;
+  const item=dailyChecklistItems(date).find(entry=>String(entry.id)===String(id));
   if(!item) return;
   item.done=!item.done;
   item.doneAt=item.done?Date.now():null;
-  save();
-  renderDailyChecklist();
-}
-function deleteDailyChecklistItem(id){
-  const items=dailyChecklistItems();
-  const idx=items.findIndex(entry=>String(entry.id)===String(id));
-  if(idx<0) return;
-  items.splice(idx,1);
   save();
   renderDailyChecklist();
 }
@@ -6253,7 +6294,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.3';
+const LP_APP_VERSION='24.4';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
