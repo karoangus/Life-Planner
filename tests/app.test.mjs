@@ -1100,11 +1100,11 @@ if (!useFallback) {
     const out = {};
 
     out.helpButtons = document.querySelectorAll(
-      '#view-dashboard .guide-btn, #view-tasks .guide-btn, #view-calendar .guide-open-btn,' +
+      '#view-dashboard .guide-btn, #view-tasks .guide-btn, #view-daily-checklist .guide-btn, #view-calendar .guide-open-btn,' +
       ' #view-habits .guide-btn, #view-goals .guide-btn, #view-notes .guide-btn,' +
       /* v21.7: the last four sections carry the same single ❓ */
       ' #view-pomodoro .guide-btn, #view-shop .guide-btn, #view-skills .guide-btn, #view-boss .guide-btn').length;
-    out.slotAnchors = ['guideSlot-dashboard', 'guideSlot-tasks', 'guideSlot-habits', 'guideSlot-goals', 'guideSlot-notes',
+    out.slotAnchors = ['guideSlot-dashboard', 'guideSlot-tasks', 'guideSlot-daily-checklist', 'guideSlot-habits', 'guideSlot-goals', 'guideSlot-notes',
       'guideSlot-pomodoro', 'guideSlot-shop', 'guideSlot-skills', 'guideSlot-boss']
       .filter(id => document.getElementById(id)).length;
     out.panels = [...document.querySelectorAll('#guideModalBg .guide-panel[data-g]')].map(p => p.dataset.g).join(',');
@@ -1153,10 +1153,10 @@ if (!useFallback) {
     return out;
   });
   check('v21.3 every simplified section has its own ❓ and one guide modal explains them all',
-    v213.helpButtons === 10 && v213.slotAnchors === 9 &&
-    v213.panels === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
+    v213.helpButtons === 11 && v213.slotAnchors === 10 &&
+    v213.panels === 'dashboard,tasks,daily-checklist,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
     /* v23.5: the tasks guide explains the new boss tab and the boss guide points at it */
-    v213.rowsPerPanel === '4,5,4,4,4,4,4,4,4,5,4,4,4,4', JSON.stringify(v213));
+    v213.rowsPerPanel === '4,5,4,4,4,4,4,4,4,4,5,4,4,4,4', JSON.stringify(v213));
   check('v21.3 the calendar intro is one quiet line and the guide kept the full gestures',
     v213.introChars < 90 && v213.guideKeepsGestures, JSON.stringify(v213));
   check('v21.3 opening the guide shows exactly one panel with the right action',
@@ -1350,7 +1350,7 @@ if (!useFallback) {
     v214.goals === 'goals|📖 راهنمای اهداف|➕ هدف جدید' &&
     v214.notes === 'notes|📖 راهنمای یادداشت‌ها|➕ یادداشت جدید', JSON.stringify(v214));
   check('v21.4 six tabs, one visible panel, and the action opens that section’s sheet',
-    v214.tabs === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' && v214.visiblePanels === 1 &&
+    v214.tabs === 'dashboard,tasks,daily-checklist,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' && v214.visiblePanels === 1 &&
     v214.ctaClosedGuide && v214.ctaOpenedSheet, JSON.stringify(v214));
   check('v21.4 switching tab follows panel, title and action together, and reading marks it seen',
     v214.afterTab === 'notes|📖 راهنمای یادداشت‌ها|➕ یادداشت جدید' && v214.readingMarksSeen,
@@ -1555,9 +1555,9 @@ if (!useFallback) {
     v215.skills === 'skills|📖 راهنمای درخت مهارت|🛍️ برو به XP Shop' &&
     v215.bossIdle === 'boss|📖 راهنمای باس هفتگی|⚔️ ساخت باس', JSON.stringify(v215));
   check('v21.7 ten tabs, four rows each, and only one panel on screen',
-    v215.tabs === 'dashboard,tasks,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
+    v215.tabs === 'dashboard,tasks,daily-checklist,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
     /* v23.5: the tasks guide gained a row for the new boss tab, the boss guide one more */
-    v215.rowsPerPanel === '4,5,4,4,4,4,4,4,4,5,4,4,4,4' && v215.visiblePanels === 1, JSON.stringify(v215));
+    v215.rowsPerPanel === '4,5,4,4,4,4,4,4,4,4,5,4,4,4,4' && v215.visiblePanels === 1, JSON.stringify(v215));
   check('v21.7 each action lands in the real thing, and the shop one spends nothing',
     v215.pomoCtaStarted && v215.pomoCtaClosedGuide && v215.shopCtaOpenedOdds && v215.shopCtaSpentNothing &&
     v215.oddsListed && v215.skillsCtaWentToShop && v215.skillsCtaClosedGuide, JSON.stringify(v215));
@@ -2859,20 +2859,20 @@ if (!useFallback) {
   const v213Css = fs.readFileSync(path.join(ROOT, 'css/v213.css'), 'utf-8');
 
   check('v21.3 every simplified section carries its own ❓ into one shared guide',
-    ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes']
+    ['dashboard', 'tasks', 'daily-checklist', 'calendar', 'habits', 'goals', 'notes']
       .every(v => indexHtml.includes(`onclick="openGuide('${v}')"`)) &&
-    indexHtml.includes('id="guideSlot-dashboard"') && indexHtml.includes('id="guideSlot-tasks"') &&
+    indexHtml.includes('id="guideSlot-dashboard"') && indexHtml.includes('id="guideSlot-tasks"') && indexHtml.includes('id="guideSlot-daily-checklist"') &&
     indexHtml.includes('id="guideModalBg"') && indexHtml.includes('id="guideTabs"') &&
     indexHtml.includes('id="guideCta"') && indexHtml.includes('onclick="guidePrimaryAction()"'));
 
   check('v21.3 one guide modal holds one panel per section, four short rows each',
-    ['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes']
+    ['dashboard', 'tasks', 'daily-checklist', 'calendar', 'habits', 'goals', 'notes']
       .every(g => indexHtml.includes(`data-g="${g}" role="tabpanel"`)) &&
     /* v23.5 added one row to the tasks guide and one to the boss guide */
-    (indexHtml.match(/class="guide-row"/g) || []).length === 58 &&
-    (indexHtml.match(/class="guide-lead"/g) || []).length === 14 &&
-    /var SECTIONS = \['dashboard', 'tasks', 'calendar', 'habits', 'goals', 'notes',[\s\S]{0,80}?'pomodoro', 'shop', 'skills', 'boss', 'yvy', 'city', 'profile', 'settings'\];/.test(v213Js));
-
+    (indexHtml.match(/class="guide-row"/g) || []).length === 62 &&
+    (indexHtml.match(/class="guide-lead"/g) || []).length === 15 &&
+    v213Js.includes("var SECTIONS = ['dashboard', 'tasks', 'daily-checklist', 'calendar'") &&
+    v213Js.includes("'pomodoro', 'shop', 'skills', 'boss', 'yvy', 'city', 'profile', 'settings'"));
   check('v21.3 each guide ends in the action it explains, not in more reading',
     ['openInboxQuickAdd', 'openTaskModal', 'openEventModal', 'openHabitModal', 'openGoalModal', 'openNoteModal']
       .every(fn => v213Js.includes(`fn: '${fn}'`)) &&
@@ -2929,8 +2929,8 @@ if (!useFallback) {
   check('v21.4 habits, goals and notes carry the same single ❓, slot and panel',
     v214Sections.every(v => indexHtml.includes(`onclick="openGuide('${v}')"`) &&
       indexHtml.includes(`id="guideSlot-${v}"`) && indexHtml.includes(`data-g="${v}" role="tab"`)) &&
-    (indexHtml.match(/class="guide-btn"/g) || []).length === 13 &&
-    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 28 &&
+    (indexHtml.match(/class="guide-btn"/g) || []).length === 14 &&
+    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 30 &&
     v213Js.includes("habits: { label: '➕ عادت جدید', fn: 'openHabitModal' }") &&
     v213Js.includes("goals: { label: '➕ هدف جدید', fn: 'openGoalModal' }") &&
     v213Js.includes("notes: { label: '➕ یادداشت جدید', fn: 'openNoteModal' }"));
@@ -2947,8 +2947,8 @@ if (!useFallback) {
 
   check('v21.4 the guides in Settings grew with the sections',
     /* v21.7: the sentence no longer lists the sections one by one — there are ten */
-    indexHtml.includes('راهنمای کوتاهِ هر چهارده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.') &&
-    langJs.includes('"راهنمای کوتاهِ هر چهارده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود."'));
+    indexHtml.includes('راهنمای کوتاهِ پانزده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.') &&
+    langJs.includes('"راهنمای کوتاهِ پانزده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود."'));
 
   check('v21.4 every new string has an English translation',
     ['راهنمای عادت‌ها', 'راهنمای اهداف', 'راهنمای یادداشت‌ها', 'عادت جدید', 'هدف جدید', 'یادداشت جدید',
@@ -3020,9 +3020,9 @@ if (!useFallback) {
     v215Sections.every(v => indexHtml.includes(`onclick="openGuide('${v}')"`) &&
       indexHtml.includes(`id="guideSlot-${v}"`) && indexHtml.includes(`data-g="${v}" role="tab"`) &&
       indexHtml.includes(`data-g="${v}" role="tabpanel"`)) &&
-    (indexHtml.match(/class="guide-btn"/g) || []).length === 13 &&
-    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 28 &&
-    (indexHtml.match(/data-g="/g) || []).length === 28 &&
+    (indexHtml.match(/class="guide-btn"/g) || []).length === 14 &&
+    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 30 &&
+    (indexHtml.match(/data-g="/g) || []).length === 30 &&
     v213Js.includes("pomodoro: '📖 راهنمای پومودورو'") && v213Js.includes("shop: '📖 راهنمای XP Shop'") &&
     v213Js.includes("skills: '📖 راهنمای درخت مهارت'") && v213Js.includes("boss: '📖 راهنمای باس هفتگی'"));
 
@@ -3155,11 +3155,11 @@ if (!useFallback) {
   const readmePomo = readme.split('### 2. 🍅')[1].split('### 3. 🎮')[0];
   const readmeGuides = readme.split('### 9. 📖')[1].split('## 🏗️')[0];
   check('v21.7 the README describes what the app really does',
-    readme.includes('نسخه 21.7') && readme.includes('راهنمای ده بخش') &&
+    readme.includes('نسخه 21.7') && readme.includes('راهنمای ده بخش') && readme.includes('جزئیات، رنگ و مرور روزهای چک‌لیست') &&
     !readmePomo.includes('اعلان‌های معکوس زنده') &&
     readmePomo.includes('اعلان‌ها فقط سه‌جا می‌آیند') && readmePomo.includes('کلید روشن/خاموش اعلان‌ها') &&
     readmeGuides.includes('پومودورو، XP Shop، درخت مهارت، باس هفتگی') &&
-    readmeGuides.includes('هر چهارده راهنما') &&
+    readmeGuides.includes('هر پانزده راهنما') &&
     readme.includes('ساختِ تسک داخل صفحه‌ی باس') && readme.includes('life-planner-cache-v88'));
 
   const v213CssCode = v213Css.replace(/\/\*[\s\S]*?\*\//g, '');   /* comments may talk about blur */
@@ -3172,7 +3172,7 @@ if (!useFallback) {
      '"تیکش بزن"', '"تو تقویم جاش بده"', '"✅ انجام شد"', '"مأموریت روزانه"', '"برنامه‌ی امروز"',
      '"جابه‌جایی و تغییر مدت"', '"📥 اینباکس سریع"']
       .every(k => langJs.includes(k)) &&
-    ['Dashboard guide', 'Tasks guide', 'Section guides', 'the first three steps', 'Write down one task',
+    ['Dashboard guide', 'Tasks guide', 'Daily checklist guide', 'Section guides', 'the first three steps', 'Write down one task',
      'Tick it off', 'Give it a place in the calendar', 'Quick Inbox', 'Daily quest']
       .every(en => langJs.includes(en)));
 
@@ -3310,18 +3310,25 @@ if (!useFallback) {
 
   const dailyView = indexHtml.slice(indexHtml.indexOf('id="view-daily-checklist"'), indexHtml.indexOf('<!-- CALENDAR -->'));
   const dailyCode = coreJs.slice(coreJs.indexOf('/* ============ DAILY CHECKLIST'), coreJs.indexOf('/* =============================================================\n   v20:'));
-  check('v24.2 daily checklist is a distinct section with the requested slogan and evening review hint',
+  check('v24.3 daily checklist is a distinct section with the requested slogan and evening review hint',
     dailyView.includes('چک‌لیست روزانه') && dailyView.includes('هر کار انجام شده رو تیک بزن. دیدن پیشرفت، سوخت نظم است...') &&
     dailyView.includes('امروز اینارو انجام میدم') && dailyView.includes('آخر شب برگرد'));
-  check('v24.2 checklist items are separate, date-keyed, priority-sorted and never task/XP actions',
-    coreJs.includes('dailyChecklists:{},') && coreJs.includes('DAILY_CHECKLIST_PRIORITIES') &&
-    dailyCode.includes('PRIORITY_ORDER[a.priority]') && dailyCode.includes('toggleDailyChecklistItem') &&
-    !dailyCode.includes('DB.tasks') && !dailyCode.includes('addXP(') && !dailyCode.includes('toggleTask('));
-  check('v24.2 daily checklist is persisted and included in imported backups',
+  check('v24.3 descriptions can be added and edited per item, with task-like priority sorting and card colors',
+    dailyView.includes(`id="dailyChecklistDescription"`) && indexHtml.includes(`id="dailyChecklistEditModalBg"`) &&
+    coreJs.includes('description:typeof item.description') && dailyCode.includes('openDailyChecklistItemEditor') &&
+    dailyCode.includes('saveDailyChecklistEdit') && dailyCode.includes('return sortTasks(items||[])') &&
+    dailyCode.includes('priority-card-${priority}'));
+  check('v24.3 date-history tab preserves checked and unchecked states as read-only',
+    dailyView.includes(`data-checklist-tab="history"`) && dailyCode.includes('renderDailyChecklistHistory') &&
+    dailyCode.includes('date<today') && dailyCode.includes('readOnly:true') && dailyCode.includes('disabled'));
+  check('v24.3 daily checklist is persisted and included in imported backups',
     coreJs.includes('db.dailyChecklists = normalizeDailyChecklists(db.dailyChecklists)') &&
     coreJs.includes('DB.dailyChecklists = normalizeDailyChecklists(DB.dailyChecklists)') &&
     coreJs.includes("{id:'daily-checklist', label:'چک‌لیست روزانه'") &&
-    indexHtml.includes('id="view-daily-checklist"'));
+    indexHtml.includes('id="view-daily-checklist"') &&
+    v213Js.includes("'daily-checklist': '📖 راهنمای چک‌لیست روزانه'") &&
+    langJs.includes('var EXTRA_V243') && langJs.includes('Daily checklist guide') &&
+    langJs.includes('Description (optional)') && langJs.includes('Past days'));
 
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];

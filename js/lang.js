@@ -1583,6 +1583,49 @@
   };
   for(var _k235 in EXTRA_V235){ if(Object.prototype.hasOwnProperty.call(EXTRA_V235, _k235)) EXACT[_k235] = EXTRA_V235[_k235]; }
 
+  var EXTRA_V243 = {
+    "چک‌لیست روزانه": "Daily checklist",
+    "📖 راهنمای چک‌لیست روزانه": "📖 Daily checklist guide",
+    "راهنمای چک‌لیست روزانه": "Daily checklist guide",
+    "☀️ رفتن به چک‌لیست امروز": "☀️ Go to today’s checklist",
+    "هر کار انجام شده رو تیک بزن. دیدن پیشرفت، سوخت نظم است...": "Tick off each completed task. Seeing progress fuels discipline...",
+    "راهنمای کوتاهِ پانزده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.": "A short guide to all fifteen sections. Open each one with the ❓ button in its section.",
+    "☀️ امروز": "☀️ Today",
+    "🗓️ روزهای قبل": "🗓️ Past days",
+    "مرور روزهای قبل": "Review past days",
+    "امروز اینارو انجام میدم": "Today I will do these",
+    "کارهای امروزت رو بنویس؛ آخر شب برگرد و تیک بزن ببینی چقدر پیش رفتی.": "Write down today’s tasks; come back tonight and tick them to see how you did.",
+    "ببین چه کارهایی انجام شد و کدام‌ها برای دفعه‌ی بعد باقی ماند.": "See what you completed and what is still left for next time.",
+    "توضیحات اختیاری؛ جزئیات یا قدم‌های انجام این کار...": "Optional description: details or steps for this item…",
+    "توضیحات کار": "Item description",
+    "📝 توضیحات (اختیاری)": "📝 Description (optional)",
+    "اولویت‌بندی و رنگ‌ها مثل بخش تسک‌هاست؛ فهرست و عملکرد این بخش کاملاً جداست.": "Priorities and colors match Tasks; this list and its progress stay separate.",
+    "ویرایش توضیحات و اولویت": "Edit description and priority",
+    "هنوز روز قبلی‌ای ثبت نشده": "No previous days yet",
+    "چک‌لیست‌های پرشده‌ی روزهای گذشته اینجا می‌مانند تا عملکردت را مرور کنی.": "Completed daily checklists stay here so you can review your progress.",
+    "توضیحات": "Description",
+    "جزئیات، یادآوری یا قدم‌های انجام این کار": "Details, reminders, or steps for this item",
+    "ویرایش کار روزانه": "Edit daily item",
+    "عنوان": "Title",
+    "اولویت": "Priority",
+    "عنوان هر کار را بنویس؛ توضیح اختیاری هم برای جزئیات و قدم‌های انجام دارد. با ✏️ بعداً عنوان یا توضیح را ویرایش کن.": "Write an item title and optionally add details or steps. Use ✏️ later to edit its title or description.",
+    "بحرانی، بالا، متوسط و پایین دقیقاً با ترتیب و رنگ‌های بخش تسک‌ها مرتب می‌شوند؛ خود فهرست کاملاً مستقل است.": "Critical, high, medium, and low use the same order and colors as Tasks; this checklist stays independent.",
+    "هر کاری را که انجام دادی تیک بزن. نوار پیشرفت، تعداد انجام‌شده‌ها را نشان می‌دهد؛ این تیک‌ها XP یا تسک‌ها را تغییر نمی‌دهند.": "Tick each completed item. The progress bar shows your total; checklist ticks never change Tasks or XP.",
+    "در تب «روزهای قبل» می‌توانی فهرست هر روز، توضیحات، اولویت و تیک‌های انجام‌شده یا باقی‌مانده را مرور کنی.": "In Past days, review each list, its descriptions and priorities, and which items were done or left.",
+    "فهرست کارهای روزانه‌ات را با اولویت و توضیحات مخصوص خودشان بچین و شب، عملکردت را مرور کن.": "Plan today’s items with their own priorities and descriptions, then review your progress at night.",
+    "عنوان، توضیح و اولویت کارهای امروزت را ثبت کن؛ روزهای قبل هم برای مرور می‌مانند.": "Add titles, descriptions, and priorities for today’s items; past days stay available for review.",
+    "ثبت کار و توضیحات": "Add items and descriptions",
+    "اولویت و رنگ": "Priority and color",
+    "تیک و پیشرفت": "Check off and track",
+    "روزهای قبل": "Past days",
+    "امروز": "Today",
+    "اولویت‌بندی: بحرانی ← بالا ← متوسط ← پایین؛ جدا از بخش تسک‌ها": "Priority: Critical ← High ← Medium ← Low; separate from Tasks",
+    "✍️ اول یک کار برای امروز بنویس":  "✍️ Add an item for today first",
+    "✍️ عنوان کار را بنویس": "✍️ Enter an item title",
+    "کار انجام شد": "items completed"
+  };
+  for(var _k243 in EXTRA_V243){ if(Object.prototype.hasOwnProperty.call(EXTRA_V243, _k243)) EXACT[_k243] = EXTRA_V243[_k243]; }
+
   function compose(s, depth){
     if(depth > 3) return null;
 
