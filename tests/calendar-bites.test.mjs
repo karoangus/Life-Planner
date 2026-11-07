@@ -272,7 +272,7 @@ try{
   assert.deepEqual({cornerBadges:quiet.cornerBadges,after:quiet.after,text:quiet.text,border:quiet.borderWidth},
     {cornerBadges:0,after:'none',text:'جلسه با تیم محصول',border:'3px'});
   assert.ok(quiet.lines>=6,`only ${quiet.lines} lines of room`);
-  assert.deepEqual({align:quiet.align,lineHeight:quiet.lineHeight,clamp:quiet.clamp},{align:'start',lineHeight:'13px',clamp:String(quiet.lines)});
+  assert.deepEqual({align:quiet.align,lineHeight:quiet.lineHeight,clamp:quiet.clamp},{align:'center',lineHeight:'13px',clamp:String(quiet.lines)});
   assert.ok(quiet.tooltip.includes('یادآور فعال') && quiet.tooltip.includes('توضیح دارد'),quiet.tooltip);
   ok('v24.5 the block has no corner icons, keeps its bite frame, and gives the name full-height lines');
 
@@ -294,14 +294,15 @@ try{
       corner:getComputedStyle(blocks[0]).borderTopLeftRadius,
       fitsWord:widest<=title.clientWidth+0.6,
       font:parseFloat(getComputedStyle(title).fontSize),
-      tilted:getComputedStyle(blocks[0]).alignItems
+      tilted:getComputedStyle(blocks[0]).alignItems,
+      valign:getComputedStyle(blocks[0]).justifyContent
     };
     DB.events=saved; save(); renderCalendar();
     return result;
   });
   assert.deepEqual(shapes.radius,['14px','11px','999px']);
   assert.ok(shapes.fitsWord && shapes.font>=8, JSON.stringify(shapes));
-  assert.equal(shapes.tilted,'stretch');
+  assert.deepEqual({stretch:shapes.tilted,centre:shapes.valign},{stretch:'stretch',centre:'center'});
   ok('v24.5 blocks are softly rounded (pills when tiny) and the longest word always fits its box');
 
   const squashed = await page.evaluate(()=>{

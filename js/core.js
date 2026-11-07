@@ -5865,11 +5865,11 @@ function renderCalendar(){
       el.style.height=blockH+'px';
       /* v24.5 — the box is only the box: the bite emoji, the reminder dot and
          the description glyph that used to sit in the corners are gone. The
-         name now owns the whole block: it starts at the top edge, uses the full
-         width, and shows as many WHOLE lines as the block is tall — anything
-         left over ends in an ellipsis instead of being sliced mid-letter. The
-         line arithmetic is kept in sync with css/app.css (line-height 13px,
-         7px of title padding, LP_EV_TITLE_LINE). */
+         name owns the whole block and stays centred (v24.6 — the centred look
+         was the one people liked), and it shows as many WHOLE lines as the
+         block is tall — anything left over ends in an ellipsis instead of being
+         sliced mid-letter. The line arithmetic is kept in sync with
+         css/app.css (line-height 13px, LP_EV_TITLE_LINE/_PAD). */
       const titleLines=Math.max(1, Math.floor((blockH-LP_EV_TITLE_PAD)/LP_EV_TITLE_LINE));
       /* One-line blocks skip the clamp on purpose: the «…» at the end of a single
          line eats into the last word («مطالع…»), while a plain clip at the block
@@ -6419,7 +6419,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.5';
+const LP_APP_VERSION='24.6';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
