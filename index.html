@@ -8,12 +8,12 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=24.1">
-<link rel="stylesheet" href="css/design-system.css?v=24.1">
-<link rel="stylesheet" href="css/v20.css?v=24.1">
-<link rel="stylesheet" href="css/v213.css?v=24.1">
-<link rel="stylesheet" href="css/v22.css?v=24.1">
-<link rel="stylesheet" href="css/ui-refresh.css?v=24.1">
+<link rel="stylesheet" href="css/app.css?v=24.2">
+<link rel="stylesheet" href="css/design-system.css?v=24.2">
+<link rel="stylesheet" href="css/v20.css?v=24.2">
+<link rel="stylesheet" href="css/v213.css?v=24.2">
+<link rel="stylesheet" href="css/v22.css?v=24.2">
+<link rel="stylesheet" href="css/ui-refresh.css?v=24.2">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -178,6 +178,29 @@ try{
         <div class="chip-group" style="margin-bottom:16px;" id="categoryFilters"></div>
         <div id="allTasks"></div>
       </div>
+    </div>
+
+    <!-- DAILY CHECKLIST -->
+    <div class="view" id="view-daily-checklist">
+      <div class="topbar">
+        <div><h1>☀️ چک‌لیست روزانه</h1><div class="sub" id="dailyChecklistDate"></div></div>
+      </div>
+      <div class="daily-checklist-slogan">هر کار انجام شده رو تیک بزن. دیدن پیشرفت، سوخت نظم است...</div>
+      <section class="daily-checklist-card">
+        <div class="daily-checklist-heading">
+          <div><h2>امروز اینارو انجام میدم</h2><p>کارهای امروزت رو بنویس؛ آخر شب برگرد و تیک بزن ببینی چقدر پیش رفتی.</p></div>
+          <div class="daily-checklist-progress" id="dailyChecklistProgress">۰ از ۰</div>
+        </div>
+        <div class="daily-checklist-form">
+          <input type="text" id="dailyChecklistInput" maxlength="120" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" placeholder="مثلاً: نیم ساعت کتاب بخونم" aria-label="کار امروز" onkeydown="if(event.key==='Enter')addDailyChecklistItem()">
+          <select id="dailyChecklistPriority" aria-label="اولویت کار">
+            <option value="critical">بحرانی</option><option value="high">بالا</option><option value="medium" selected>متوسط</option><option value="low">پایین</option>
+          </select>
+          <button class="btn" type="button" onclick="addDailyChecklistItem()">➕ افزودن</button>
+        </div>
+        <div class="daily-checklist-priority-note">اولویت‌بندی: بحرانی ← بالا ← متوسط ← پایین؛ جدا از بخش تسک‌ها</div>
+        <div id="dailyChecklistItems" class="daily-checklist-items"></div>
+      </section>
     </div>
 
     <!-- CALENDAR -->
@@ -990,7 +1013,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.1</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.2</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1508,20 +1531,20 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=24.1"></script>
-<script src="js/enhancements.js?v=24.1"></script>
-<script src="js/sw-register.js?v=24.1"></script>
+<script src="js/core.js?v=24.2"></script>
+<script src="js/enhancements.js?v=24.2"></script>
+<script src="js/sw-register.js?v=24.2"></script>
 
-<script src="js/pomodoro.js?v=24.1"></script>
+<script src="js/pomodoro.js?v=24.2"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=24.1"></script>
-<script src="js/v16.js?v=24.1"></script>
-<script src="js/v162.js?v=24.1"></script>
-<script src="js/v21.js?v=24.1"></script>
+<script src="js/lang.js?v=24.2"></script>
+<script src="js/v16.js?v=24.2"></script>
+<script src="js/v162.js?v=24.2"></script>
+<script src="js/v21.js?v=24.2"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=24.1"></script>
+<script src="js/v213.js?v=24.2"></script>
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
-<script src="js/v22.js?v=24.1"></script>
+<script src="js/v22.js?v=24.2"></script>
 
 </body>
 </html>
