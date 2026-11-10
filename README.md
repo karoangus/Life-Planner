@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-24.6-00e5ff?style=for-the-badge&logoColor=white" alt="Version 24.6" />
+  <img src="https://img.shields.io/badge/نسخه-24.7-00e5ff?style=for-the-badge&logoColor=white" alt="Version 24.7" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -330,6 +330,13 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 24.7 — «آفلاینِ واقعی برای اینترنت ملی»
+
+- 📴 **آفلاین واقعی — یک بار لود، بعد برای همیشه بدون اینترنت:** همه‌چیز از اول Local-First بود (localStorage)، اما حالا با **ذخیره دائمی (Storage Persistence)** و **PWA نصب‌شده** حتی اگر یک ماه سر نزنی، با اینترنت ملی (فقط سایت‌های ایرانی) هم بدون خطای «اینترنت می‌خواهد» بالا می‌آید. بنر آفلاین ✅، نشان «آفلاین» در داشبورد و کارت «📴 آفلاین و اینترنت ملی» در تنظیمات اضافه شد.
+- 📲 **نصب یک‌ضرب:** دکمه «📲 نصب روی گوشی» (beforeinstallprompt) + راهنمای نصب در تنظیمات. بعد از نصب، از آیکون گوشی در حالت standalone باز می‌شود و حتی اگر github.io در حالت ملی فیلتر باشد، نیازی به دامنه ایرانی یا VPN نیست. کش سرویس‌ورکر به `life-planner-cache-v105` رفت و `offline.html` + `css/offline.css` + `js/offline.js` به SHELL آفلاین اضافه شد.
+- 🌐 **حقیقت دامنه ایرانی:** توضیح صادقانه در برنامه: در حالت ملی فقط ‎.irهای داخل ایران بازند و github.io خارجی حساب می‌شود؛ راه‌حل واقعی همین آفلاین‌سازی است. اگر خواستی روی دامنه ‎.ir بیاوری، همین پوشه را روی هر هاست ایرانی (ایران‌سرور، پارس‌پک …) آپلود کن — بدون تغییر کد کار می‌کند. فایل `offline.html` هم به عنوان Fallback آفلاین اضافه شد.
+- 🧪 تست آفلاین: دکمه «🧪 تست آفلاین» و «✅ ذخیره آفلاین» در تنظیمات؛ وضعیت کش، حافظه دائمی و نصب بودن را لحظه‌ای نشان می‌دهد. نسخه به `24.7` رفت و `const CACHE_NAME = 'life-planner-cache-v105';`.
 
 ### ✨ نسخه 24.6 — «اسم، همان‌جای همیشگی»
 
