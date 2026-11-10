@@ -20,8 +20,8 @@
    • a new worker takes over immediately (skipWaiting + claim).
    ============================================================ */
 
-const VERSION = '24.6';
-const CACHE_NAME = 'life-planner-cache-v104';
+const VERSION = '24.7';
+const CACHE_NAME = 'life-planner-cache-v105';
 const OFFLINE_URL = './index.html';
 
 self.addEventListener('message', e => {
@@ -40,6 +40,8 @@ const SHELL = [
   `./css/v213.css?v=${VERSION}`,
   `./css/v22.css?v=${VERSION}`,
   `./css/ui-refresh.css?v=${VERSION}`,
+  `./css/offline.css?v=${VERSION}`,
+  `./offline.html`,
   `./js/core.js?v=${VERSION}`,
   `./js/enhancements.js?v=${VERSION}`,
   `./js/sw-register.js?v=${VERSION}`,
@@ -50,6 +52,7 @@ const SHELL = [
   `./js/v21.js?v=${VERSION}`,
   `./js/v213.js?v=${VERSION}`,
   `./js/v22.js?v=${VERSION}`,
+  `./js/offline.js?v=${VERSION}`,
   './audio/city_day.ogg',
   './audio/city_night.ogg',
   './audio/city_rain.ogg',
@@ -84,7 +87,7 @@ self.addEventListener('activate', e => {
 });
 
 const isHtml = req => req.mode === 'navigate' ||
-  /\/(?:index\.html)?$/.test(new URL(req.url).pathname);
+  /\/(?:index\.html|offline\.html)?$/.test(new URL(req.url).pathname);
 
 const isFreshFirst = req => {
   const p = new URL(req.url).pathname;

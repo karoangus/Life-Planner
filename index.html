@@ -8,12 +8,13 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=24.6">
-<link rel="stylesheet" href="css/design-system.css?v=24.6">
-<link rel="stylesheet" href="css/v20.css?v=24.6">
-<link rel="stylesheet" href="css/v213.css?v=24.6">
-<link rel="stylesheet" href="css/v22.css?v=24.6">
-<link rel="stylesheet" href="css/ui-refresh.css?v=24.6">
+<link rel="stylesheet" href="css/app.css?v=24.7">
+<link rel="stylesheet" href="css/design-system.css?v=24.7">
+<link rel="stylesheet" href="css/v20.css?v=24.7">
+<link rel="stylesheet" href="css/v213.css?v=24.7">
+<link rel="stylesheet" href="css/v22.css?v=24.7">
+<link rel="stylesheet" href="css/ui-refresh.css?v=24.7">
+<link rel="stylesheet" href="css/offline.css?v=24.7">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -32,6 +33,10 @@ try{
 
 <div class="crisis-banner" id="crisisBanner" style="display:none;">
   🚨 وضعیت بحرانیه! <span id="crisisCountdown" class="num">۶۰:۰۰</span> تا از دست دادن فرصت
+</div>
+<!-- v24.7 — offline / national-internet banner: hidden when online, visible offline -->
+<div class="offline-banner" id="offlineBanner" style="display:none;" role="status" aria-live="polite">
+  <span>📴 حالت آفلاین — برنامه از حافظه گوشی اجرا می‌شود و اینترنت لازم نیست ✅</span>
 </div>
 <div class="app">
   <!-- BOTTOM NAV (2–4 customizable quick links + More button) -->
@@ -89,6 +94,7 @@ try{
             <div class="sub" id="todayStr"></div>
           </div>
           <div class="top-actions">
+            <span class="offline-badge" id="offlineBadge" style="display:none;" title="وضعیت آفلاین">📴 آفلاین ✅</span>
             <div class="icon-btn" onclick="openInboxQuickAdd()">📥</div>
             <!-- v21.3: every simplified section keeps one ❓ that explains it -->
             <button class="guide-btn" type="button" onclick="openGuide('dashboard')" title="راهنمای داشبورد" aria-label="راهنمای داشبورد">❓</button>
@@ -991,6 +997,19 @@ try{
         </div>
       </div>
 
+      <!-- v24.7 — offline / national internet: one-load-then-no-net-ever -->
+      <div class="card settings-card offline-card" id="offlineSettingsCard">
+        <div class="card-head"><h3>📴 آفلاین و اینترنت ملی</h3><span class="offline-card-badge" id="offlineDot" style="display:none;">● آفلاین ✅</span></div>
+        <p class="muted settings-help">این برنامه از اول <b>بدون سرور</b> است — همه‌ی داده‌ها فقط در حافظه همین گوشی (localStorage) ذخیره می‌شوند. بعد از <b>یک بار لود کامل</b>، برای همیشه بدون اینترنت کار می‌کند. در حالت اینترنت ملی (فقط سایت‌های ایرانی) کافیست از آیکون نصب‌شده بازش کنی؛ نیازی به دامنه ایرانی یا VPN نیست.</p>
+        <div class="offline-status" id="offlineStatusText" style="font-size:12.5px; line-height:1.9; background:var(--hover); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:10px 0;"></div>
+        <div class="settings-actions" style="flex-wrap:wrap;">
+          <button class="btn" type="button" onclick="lpEnsureOfflineReady()">✅ ذخیره آفلاین</button>
+          <button class="btn ghost" type="button" onclick="lpTestOffline()">🧪 تست آفلاین</button>
+          <button class="btn ghost" type="button" id="pwaInstallBtn" onclick="lpTriggerInstall()" style="display:none;">📲 نصب روی گوشی</button>
+        </div>
+        <p class="muted" style="font-size:11.5px; margin-top:10px; line-height:1.8;">💡 <b>چطور نصب کنم؟</b> در کروم/Edge: منوی ⋮ ← <b>نصب برنامه</b> / Add to Home Screen. در آیفون Safari: دکمه Share ← Add to Home Screen. بعد از نصب، حتی با اینترنت ملی از آیکون باز می‌شود.<br>🔒 <b>دامنه ایرانی:</b> github.io در حالت ملی باز نمی‌شود چون خارجی است. راه حل واقعی همین آفلاین‌سازی است. اگر خواستی روی دامنه ‎.ir بیاوری، کافیست همین پوشه را روی هر هاست ایرانی (مثلاً ایران‌سرور، پارس‌پک) آپلود کنی — بدون تغییر کد کار می‌کند.</p>
+      </div>
+
       <!-- v21.3: the section guides also live here, so they can be found
            without hunting for a ❓ in each section (now fifteen in total). -->
       <div class="card settings-card">
@@ -1017,7 +1036,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.6</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.7</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1565,20 +1584,22 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=24.6"></script>
-<script src="js/enhancements.js?v=24.6"></script>
-<script src="js/sw-register.js?v=24.6"></script>
+<script src="js/core.js?v=24.7"></script>
+<script src="js/enhancements.js?v=24.7"></script>
+<script src="js/sw-register.js?v=24.7"></script>
 
-<script src="js/pomodoro.js?v=24.6"></script>
+<script src="js/pomodoro.js?v=24.7"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=24.6"></script>
-<script src="js/v16.js?v=24.6"></script>
-<script src="js/v162.js?v=24.6"></script>
-<script src="js/v21.js?v=24.6"></script>
+<script src="js/lang.js?v=24.7"></script>
+<script src="js/v16.js?v=24.7"></script>
+<script src="js/v162.js?v=24.7"></script>
+<script src="js/v21.js?v=24.7"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=24.6"></script>
+<script src="js/v213.js?v=24.7"></script>
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
-<script src="js/v22.js?v=24.6"></script>
+<script src="js/v22.js?v=24.7"></script>
+<!-- v24.7: offline / national-internet persistence + PWA install -->
+<script src="js/offline.js?v=24.7"></script>
 
 </body>
 </html>

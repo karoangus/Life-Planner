@@ -1,0 +1,55 @@
+/* Life Planner — offline layer (v24.7) */
+.offline-banner{
+  background: linear-gradient(135deg, #0a3a1a 0%, #0f5c2a 100%);
+  border: 1px solid #2ee6a6;
+  color: #e8fff4;
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin: 10px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1.7;
+  box-shadow: 0 4px 16px rgba(46,230,166,.25);
+}
+.offline-badge{
+  background: #0a3a1a;
+  border: 1px solid #2ee6a6;
+  color: #2ee6a6;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.offline-badge[data-online="0"]{
+  background: #0a3a1a;
+}
+.offline-card{
+  border-color: rgba(46,230,166,.35) !important;
+}
+.offline-card-badge{
+  background: rgba(46,230,166,.14);
+  border: 1px solid rgba(46,230,166,.35);
+  color: #2ee6a6;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+.offline-status div{
+  padding: 2px 0;
+}
+.offline-guide-hero{
+  background: linear-gradient(135deg, rgba(46,230,166,.08), var(--panel) 60%);
+  border: 1px solid rgba(46,230,166,.2);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+html.lp-perf .offline-banner{ animation:none; }

@@ -1401,6 +1401,30 @@
   };
   for(var _k22 in EXTRA_V22){ if(Object.prototype.hasOwnProperty.call(EXTRA_V22, _k22)) EXACT[_k22] = EXTRA_V22[_k22]; }
 
+  /* v24.7: offline / national internet */
+  var EXTRA_V247 = {
+    "📴 آفلاین و اینترنت ملی": "📴 Offline & national internet",
+    "این برنامه از اول <b>بدون سرور</b> است — همه‌ی داده‌ها فقط در حافظه همین گوشی (localStorage) ذخیره می‌شوند. بعد از <b>یک بار لود کامل</b>، برای همیشه بدون اینترنت کار می‌کند. در حالت اینترنت ملی (فقط سایت‌های ایرانی) کافیست از آیکون نصب‌شده بازش کنی؛ نیازی به دامنه ایرانی یا VPN نیست.": "This app is server-free — all data lives only in this phone's storage (localStorage). After <b>one full load</b>, it works forever without internet. In national-internet mode (only Iranian sites), just open it from the installed icon; no Iranian domain or VPN is needed.",
+    "✅ ذخیره آفلاین": "✅ Save offline",
+    "🧪 تست آفلاین": "🧪 Test offline",
+    "📌 راهنمای نصب": "📌 Install guide",
+    "📲 نصب روی گوشی": "📲 Install on phone",
+    "✅ نصب‌شده": "✅ Installed",
+    "📴 حالت آفلاین — برنامه از حافظه گوشی اجرا می‌شود و اینترنت لازم نیست ✅": "📴 Offline — running from phone storage, no internet needed ✅",
+    "📴 آفلاین ✅": "📴 Offline ✅",
+    "💾 حافظه دائمی شد — داده‌ها با پاک‌سازی خودکار حذف نمی‌شوند": "💾 Persistent storage granted — data won't be cleared automatically",
+    "🌐 اینترنت وصل شد — ولی برنامه بدون آن هم کار می‌کند": "🌐 Online — but the app works without it too",
+    "📴 حالت آفلاین — همه‌چیز از حافظه گوشی می‌آید، اینترنت لازم نیست": "📴 Offline — everything comes from phone storage, no internet needed",
+    "✅ ذخیره آفلاین تایید شد — یک بار لود کافیست، بعد بدون اینترنت هم باز می‌شود": "✅ Offline saved — one load is enough, then it opens without internet",
+    "📴 الان آفلاینی و برنامه دارد از حافظه اجرا می‌شود — همه‌چیز درست است ✅": "📴 You're offline and the app is running from storage — everything is fine ✅",
+    "🧪 برای تست: اینترنت را خاموش کن و برنامه را ببند/باز کن — باید بدون خطا بالا بیاید": "🧪 To test: turn off internet and reopen the app — it should load without error",
+    "📌 برای نصب: منوی مرورگر (⋮) ← افزودن به صفحه اصلی / Install app": "📌 To install: browser menu (⋮) → Add to Home Screen / Install app",
+    "✅ همین الان در حالت نصب‌شده هستی — آفلاین کامل است": "✅ You're already installed — fully offline",
+    "🎉 نصب شد! حالا حتی بدون اینترنت از آیکون گوشی باز می‌شود": "🎉 Installed! Now it opens from the home icon even without internet",
+    "ℹ️ نصب بعداً هم از منوی مرورگر ممکن است": "ℹ️ You can still install later from the browser menu"
+  };
+  for(var _k247 in EXTRA_V247){ if(Object.prototype.hasOwnProperty.call(EXTRA_V247, _k247)) EXACT[_k247] = EXTRA_V247[_k247]; }
+
   /* ---------- digits ---------- */
   var FA_D = '۰۱۲۳۴۵۶۷۸۹';
   function latinDigits(s){
