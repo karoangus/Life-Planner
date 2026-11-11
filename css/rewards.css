@@ -1,0 +1,78 @@
+/* Life Planner v24.8 — recurring personal rewards */
+:root{--reward-green:#39e59a;--reward-green-rgb:57,229,154;}
+.reward-ready-glow{position:fixed;inset:0;z-index:190;pointer-events:none;opacity:0;box-shadow:inset 0 0 90px 12px rgba(var(--reward-green-rgb),.25);transition:opacity .6s ease;}
+html.lp-reward-due .reward-ready-glow{opacity:.58;}
+html.lp-reward-due .bottom-nav{box-shadow:0 -8px 35px rgba(var(--reward-green-rgb),.1);}
+.reward-intro{display:flex;align-items:flex-start;gap:14px;padding:17px 19px;margin-bottom:18px;border:1px solid rgba(var(--reward-green-rgb),.18);border-radius:18px;background:linear-gradient(120deg,rgba(var(--reward-green-rgb),.08),var(--refresh-glass));}
+.reward-intro-icon{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:13px;background:rgba(var(--reward-green-rgb),.12);font-size:21px;}
+.reward-intro b{font-size:13px;line-height:1.8;}
+.reward-intro p{margin:4px 0 0;color:var(--txt-dim);font-size:11.5px;line-height:1.9;}
+.reward-summary{grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.reward-summary>div{display:flex;flex-direction:column;align-items:center;gap:4px;padding:13px 8px;border:1px solid var(--refresh-line);border-radius:15px;background:var(--refresh-soft);}
+.reward-summary strong{font-size:21px;color:var(--txt);}
+.reward-summary span{font-size:10px;color:var(--txt-dim);}
+.reward-summary .ready strong{color:var(--reward-green);}
+.reward-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:16px;}
+.personal-reward-card{min-width:0;padding:19px;border:1px solid var(--refresh-line);border-radius:20px;background:var(--refresh-glass);box-shadow:inset 0 1px rgba(255,255,255,.05),0 18px 42px -36px rgba(0,0,0,.72);}
+.personal-reward-card.is-ready{border-color:rgba(var(--reward-green-rgb),.4);background:linear-gradient(135deg,rgba(var(--reward-green-rgb),.1),var(--refresh-glass));box-shadow:0 10px 35px rgba(var(--reward-green-rgb),.07),inset 0 1px rgba(255,255,255,.07);}
+.personal-reward-head{display:flex;align-items:flex-start;gap:11px;}
+.personal-reward-icon{display:grid;place-items:center;width:43px;height:43px;flex:none;border-radius:14px;background:rgba(var(--reward-green-rgb),.1);font-size:22px;}
+.personal-reward-heading{flex:1;min-width:0;}
+.personal-reward-heading h2{margin:1px 0 5px;font-size:15px;line-height:1.6;overflow-wrap:anywhere;}
+.reward-frequency{color:var(--reward-green);font-size:10.5px;font-weight:750;}
+.personal-reward-tools{display:flex;gap:5px;direction:ltr;}
+.personal-reward-tools .icon-btn{width:32px;height:32px;min-height:32px;font-size:12px;border-radius:10px;}
+.personal-reward-note{margin:14px 0 0;padding:10px 12px;border-radius:11px;background:var(--refresh-soft);color:var(--txt-dim);font-size:12px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere;}
+.reward-clock{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;direction:rtl;margin:17px 0 12px;}
+.reward-time-unit{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 3px 8px;border:1px solid var(--refresh-line);border-radius:12px;background:rgba(0,0,0,.08);}
+.reward-time-unit strong{font-size:clamp(17px,2.2vw,23px);line-height:1.1;font-variant-numeric:tabular-nums;color:var(--txt);}
+.reward-time-unit span{font-size:9px;color:var(--txt-dim2);}
+html[data-theme="light"] .reward-time-unit{background:rgba(255,255,255,.42);}
+.reward-progress{height:4px;margin:12px 0;border-radius:99px;background:var(--track);overflow:hidden;}
+.reward-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#20bd7c,var(--reward-green));transition:width 1s linear;}
+.personal-reward-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--txt-dim2);font-size:10px;}
+.reward-waiting{flex:none;color:var(--txt-dim);}
+.reward-claim{border-color:rgba(var(--reward-green-rgb),.35);background:linear-gradient(135deg,#25c981,var(--reward-green));color:#042317;box-shadow:0 8px 22px rgba(var(--reward-green-rgb),.18);}
+.reward-ready-message{display:flex;flex-direction:column;align-items:center;gap:5px;margin:17px 0 13px;padding:16px;border-radius:14px;background:rgba(var(--reward-green-rgb),.08);text-align:center;}
+.reward-ready-message b{color:var(--reward-green);font-size:17px;}
+.reward-ready-message span{color:var(--txt-dim);font-size:11px;}
+.personal-reward-card.is-ready .personal-reward-foot>.btn{width:100%;justify-content:center;}
+.personal-reward-card.is-ready .personal-reward-foot{flex-wrap:wrap;}
+.reward-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;padding:58px 20px;border:1px dashed var(--line2);border-radius:20px;text-align:center;}
+.reward-empty>span{font-size:42px;filter:grayscale(.25);}
+.reward-empty h2{margin:14px 0 5px;font-size:17px;}
+.reward-empty p{max-width:390px;margin:0 0 20px;color:var(--txt-dim);font-size:12px;line-height:1.9;}
+.reward-optional{color:var(--txt-dim2);font-size:10px;font-weight:500;}
+.reward-modal-hint{margin:5px 0 0;color:var(--txt-dim2);font-size:10.5px;line-height:1.8;}
+.dashboard-rewards{margin-bottom:16px;}
+.dashboard-reward-ready{padding:18px;border:1px solid rgba(var(--reward-green-rgb),.42);border-radius:20px;background:linear-gradient(120deg,rgba(var(--reward-green-rgb),.13),var(--refresh-glass));box-shadow:0 12px 38px rgba(var(--reward-green-rgb),.08);}
+.dashboard-reward-kicker{margin-bottom:12px;color:var(--reward-green);font-size:16px;font-weight:900;}
+.dashboard-reward-ready-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid rgba(var(--reward-green-rgb),.12);}
+.dashboard-reward-ready-row>div{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.dashboard-reward-ready-row b{font-size:14px;overflow-wrap:anywhere;}
+.dashboard-reward-ready-row span{color:var(--txt-dim);font-size:11px;line-height:1.7;overflow-wrap:anywhere;}
+.dashboard-reward-ready-row .btn{flex:none;justify-content:center;}
+.dashboard-reward-manage{display:block;margin:8px 0 0 auto;padding:4px;border:0;background:none;color:var(--txt-dim);font:inherit;font-size:10px;cursor:pointer;}
+.dashboard-reward-next{padding:15px 18px;border:1px solid rgba(var(--reward-green-rgb),.2);border-radius:20px;background:linear-gradient(110deg,rgba(var(--reward-green-rgb),.07),var(--refresh-glass));}
+.dashboard-reward-next-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.dashboard-reward-next-head>div{display:flex;flex-direction:column;gap:3px;}
+.dashboard-reward-next-head span{color:var(--reward-green);font-size:10px;font-weight:750;}
+.dashboard-reward-next-head b{font-size:13px;}
+.dashboard-reward-next .reward-clock{max-width:440px;margin:12px 0 0;}
+.dashboard-reward-next .reward-time-unit{padding:7px 3px 6px;}
+.dashboard-reward-next .reward-time-unit strong{font-size:17px;}
+@media(max-width:600px){
+  .reward-intro{padding:14px;gap:11px;}
+  .reward-list{grid-template-columns:1fr;gap:12px;}
+  .personal-reward-card{padding:15px;}
+  .personal-reward-tools{gap:3px;}
+  .personal-reward-tools .icon-btn{width:29px;height:29px;min-height:29px;}
+  .dashboard-reward-ready-row{align-items:stretch;flex-direction:column;}
+  .dashboard-reward-ready-row .btn{width:100%;}
+  .dashboard-reward-kicker{font-size:15px;}
+  .reward-clock{gap:5px;}
+  .reward-time-unit strong{font-size:18px;}
+}
+html.lp-perf .reward-ready-glow{transition:none;opacity:.35;}
+html.lp-perf .reward-progress i{transition:none;}
+@media(prefers-reduced-motion:reduce){.reward-ready-glow,.reward-progress i{transition:none;}}

@@ -8,13 +8,14 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=24.7">
-<link rel="stylesheet" href="css/design-system.css?v=24.7">
-<link rel="stylesheet" href="css/v20.css?v=24.7">
-<link rel="stylesheet" href="css/v213.css?v=24.7">
-<link rel="stylesheet" href="css/v22.css?v=24.7">
-<link rel="stylesheet" href="css/ui-refresh.css?v=24.7">
-<link rel="stylesheet" href="css/offline.css?v=24.7">
+<link rel="stylesheet" href="css/app.css?v=24.8">
+<link rel="stylesheet" href="css/design-system.css?v=24.8">
+<link rel="stylesheet" href="css/v20.css?v=24.8">
+<link rel="stylesheet" href="css/v213.css?v=24.8">
+<link rel="stylesheet" href="css/v22.css?v=24.8">
+<link rel="stylesheet" href="css/ui-refresh.css?v=24.8">
+<link rel="stylesheet" href="css/offline.css?v=24.8">
+<link rel="stylesheet" href="css/rewards.css?v=24.8">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -30,6 +31,7 @@ try{
 
 </head>
 <body>
+<div class="reward-ready-glow" id="rewardReadyGlow" aria-hidden="true"></div>
 
 <div class="crisis-banner" id="crisisBanner" style="display:none;">
   🚨 وضعیت بحرانیه! <span id="crisisCountdown" class="num">۶۰:۰۰</span> تا از دست دادن فرصت
@@ -136,6 +138,9 @@ try{
           </div>
         </div>
       </div>
+
+      <!-- v24.8: personal rewards — ready celebrations and the next countdown. -->
+      <section id="dashboardRewards" class="dashboard-rewards" style="display:none;"></section>
 
       <!-- ░░ MOSAIC ░░ کاشی‌های داشبورد -->
       <!-- v16: the lp-sk-* blocks below are boot skeletons. They are pure
@@ -273,6 +278,20 @@ try{
       <!-- v21.4 -->
       <div class="guide-slot" id="guideSlot-goals"></div>
       <div class="card"><div id="goalList"></div></div>
+    </div>
+
+    <!-- PERSONAL REWARDS (v24.8) -->
+    <div class="view" id="view-rewards">
+      <div class="topbar">
+        <div><h1>🎁 جایزه</h1><div class="sub">به خودت قول تفریح و استراحت بده</div></div>
+        <button class="btn" type="button" onclick="openRewardModal()">➕ جایزه جدید</button>
+      </div>
+      <div class="reward-intro">
+        <span class="reward-intro-icon">⏳</span>
+        <div><b>جایزه‌ات را مشخص کن؛ شمارش معکوس با ماست.</b><p>هر هفته، هر ماه یا بعد از چند ساعت و روز. وقتی زمانش رسید، جایزه را بگیر تا چرخه‌ی بعدی خودکار شروع شود.</p></div>
+      </div>
+      <div class="reward-summary" id="rewardSummary" style="display:none;"></div>
+      <div id="rewardList" class="reward-list"></div>
     </div>
 
     <!-- NOTES -->
@@ -1036,7 +1055,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.7</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.8</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1064,6 +1083,23 @@ try{
     <button class="btn ghost" type="button" onclick="editDailyChecklistFromDetails()">✏️ ویرایش</button>
     <button class="btn danger" type="button" onclick="deleteDailyChecklistFromDetails()">🗑️ حذف</button>
   </div>
+</div></div>
+<div class="modal-bg" id="rewardModalBg"><div class="modal reward-modal" role="dialog" aria-modal="true" aria-labelledby="rewardModalTitle">
+  <h2 id="rewardModalTitle">🎁 جایزه جدید</h2>
+  <input type="hidden" id="rewardEditId" value="">
+  <div class="field"><label for="rewardTitle">اسم جایزه</label><input id="rewardTitle" type="text" maxlength="100" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" placeholder="مثلاً: تفریح آخر هفته"></div>
+  <div class="field"><label for="rewardNote">جایزه چیه؟ <span class="reward-optional">(اختیاری)</span></label><textarea id="rewardNote" maxlength="500" rows="3" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" placeholder="مثلاً: پلی دادن با کامپیوتر"></textarea></div>
+  <div class="field"><label for="rewardFrequency">تکرار جایزه</label><select id="rewardFrequency" onchange="syncRewardCustomField()">
+    <option value="weekly">هفتگی — هر ۷ روز</option>
+    <option value="monthly">ماهانه — هر ماه</option>
+    <option value="custom">دلخواه — ساعتی یا روزانه</option>
+  </select></div>
+  <div class="row2 reward-custom-fields" id="rewardCustomFields" style="display:none;">
+    <div class="field"><label for="rewardCustomValue">هر چند واحد؟</label><input id="rewardCustomValue" type="number" min="1" max="8760" step="1" value="3" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="field"><label for="rewardCustomUnit">واحد زمان</label><select id="rewardCustomUnit"><option value="hours">ساعت</option><option value="days">روز</option></select></div>
+  </div>
+  <p class="reward-modal-hint" id="rewardModalHint">شمارش معکوس از لحظه‌ی تأیید شروع می‌شود.</p>
+  <div class="modal-actions"><button class="btn ghost" type="button" onclick="closeModal('rewardModalBg')">انصراف</button><button class="btn" type="button" onclick="saveReward()">✅ تأیید و شروع</button></div>
 </div></div>
 <div class="modal-bg" id="taskModalBg"><div class="modal">
   <h2>✅ تسک جدید</h2>
@@ -1584,22 +1620,24 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=24.7"></script>
-<script src="js/enhancements.js?v=24.7"></script>
-<script src="js/sw-register.js?v=24.7"></script>
+<script src="js/core.js?v=24.8"></script>
+<script src="js/enhancements.js?v=24.8"></script>
+<script src="js/sw-register.js?v=24.8"></script>
 
-<script src="js/pomodoro.js?v=24.7"></script>
+<script src="js/pomodoro.js?v=24.8"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=24.7"></script>
-<script src="js/v16.js?v=24.7"></script>
-<script src="js/v162.js?v=24.7"></script>
-<script src="js/v21.js?v=24.7"></script>
+<script src="js/lang.js?v=24.8"></script>
+<script src="js/v16.js?v=24.8"></script>
+<script src="js/v162.js?v=24.8"></script>
+<script src="js/v21.js?v=24.8"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=24.7"></script>
+<script src="js/v213.js?v=24.8"></script>
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
-<script src="js/v22.js?v=24.7"></script>
+<script src="js/v22.js?v=24.8"></script>
+<!-- v24.8: recurring personal rewards + dashboard countdown -->
+<script src="js/rewards.js?v=24.8"></script>
 <!-- v24.7: offline / national-internet persistence + PWA install -->
-<script src="js/offline.js?v=24.7"></script>
+<script src="js/offline.js?v=24.8"></script>
 
 </body>
 </html>

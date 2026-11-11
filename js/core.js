@@ -66,7 +66,7 @@ function normalizeDailyChecklists(value){
   return clean;
 }
 function loadStore(){
-  let db = { tasks:[], habits:[], goals:[], notes:[], events:[], dayPlans:{}, dailyChecklists:{}, xp:0, level:1, history:{}, quest:null, stats:null };
+  let db = { tasks:[], habits:[], goals:[], notes:[], events:[], rewards:[], dayPlans:{}, dailyChecklists:{}, xp:0, level:1, history:{}, quest:null, stats:null };
   try{
     const raw = localStorage.getItem(STORE_KEY);
     if(raw){ const parsed = JSON.parse(raw); db = Object.assign(db, parsed); }
@@ -77,6 +77,8 @@ function loadStore(){
   if(!Array.isArray(db.goals))   db.goals   = [];
   if(!Array.isArray(db.notes))   db.notes   = [];
   if(!Array.isArray(db.events))  db.events  = [];
+  /* v24.8 — personal recurring rewards. Older stores/backups start empty. */
+  if(!Array.isArray(db.rewards)) db.rewards = [];
   if(typeof db.history !== 'object' || Array.isArray(db.history)) db.history = {};
   if(typeof db.xp    !== 'number') db.xp    = 0;
   if(typeof db.level !== 'number' || db.level < 1) db.level = 1;
@@ -299,6 +301,7 @@ const PINNED_NAV_OPTIONS = [
   {id:'daily-checklist', label:'چک‌لیست روزانه', icon:'☑️'},
   {id:'habits', label:'عادت‌ها', icon:'🔥'},
   {id:'goals', label:'اهداف', icon:'🎯'},
+  {id:'rewards', label:'جایزه', icon:'🎁'},
   {id:'calendar', label:'تقویم هفتگی', icon:'📅'},
   {id:'notes', label:'یادداشت‌ها', icon:'📝'},
   {id:'pomodoro', label:'پومودورو', icon:'🍅'},
@@ -6219,6 +6222,7 @@ document.getElementById('importFile').onchange = (e)=>{
         toast('⚠️ فایل نامعتبر است — بک‌آپ لایف پلنر نیست'); return;
       }
       DB = parsed;
+      DB.rewards = Array.isArray(DB.rewards) ? DB.rewards : [];
       DB.dailyChecklists = normalizeDailyChecklists(DB.dailyChecklists);
       const restoredUI = (parsed.uiSettings && typeof parsed.uiSettings==='object') ? parsed.uiSettings : null;
       if(restoredUI){
@@ -6313,6 +6317,7 @@ function renderDashboard(){
   const g=document.getElementById('greetTitle'); if(g) g.textContent=greet;
   const ts=document.getElementById('todayStr'); if(ts) ts.textContent=new Date().toLocaleDateString('fa-IR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
   renderMotivation();
+  if(typeof window.renderDashboardRewards==='function') window.renderDashboardRewards();
 }
 
 /* ============ RENDER ALL ============ */
@@ -6331,6 +6336,7 @@ function renderView(v){
     calendar:  ()=>renderCalendar(),
     habits:    ()=>renderHabits(),
     goals:     ()=>renderGoals(),
+    rewards:   ()=>{ if(typeof window.renderRewards==='function') window.renderRewards(); },
     notes:     ()=>renderNotes(),
     profile:   ()=>renderProfile(),
     pomodoro:  ()=>{ renderPomoUI(); renderPomoStats(); if(pomoTab==='stats') renderPomoChart(); },
@@ -6353,6 +6359,7 @@ function renderAll(){
     ['Daily checklist', ()=>{ if(viewActive('daily-checklist')) renderDailyChecklist(); }],
     ['Habits', ()=>{ if(viewActive('habits')) renderHabits(); }],
     ['Goals', ()=>{ if(viewActive('goals')) renderGoals(); }],
+    ['Rewards', ()=>{ if(viewActive('rewards') && typeof window.renderRewards==='function') window.renderRewards(); }],
     ['Notes', ()=>{ if(viewActive('notes')) renderNotes(); }],
     ['Calendar', ()=>{ if(viewActive('calendar') && !lpGestureBusy()) renderCalendar(); }],
     ['Dashboard', ()=>{ if(onDashboard) renderDashboard(); }],
@@ -6419,7 +6426,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.7';
+const LP_APP_VERSION='24.8';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
