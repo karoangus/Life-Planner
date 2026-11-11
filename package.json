@@ -1,10 +1,10 @@
 {
   "name": "life-planner",
-  "version": "24.7.0",
+  "version": "24.8.0",
   "private": true,
   "description": "برنامه‌ریز هوشمند زندگی — Smart Life Planner (PWA)",
   "scripts": {
-    "test": "node tests/app.test.mjs && node tests/calendar-bites.test.mjs",
+    "test": "node tests/app.test.mjs && node tests/rewards.test.mjs && node tests/calendar-bites.test.mjs",
     "test:calendar": "node tests/calendar-bites.test.mjs"
   },
   "devDependencies": {

@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-24.7-00e5ff?style=for-the-badge&logoColor=white" alt="Version 24.7" />
+  <img src="https://img.shields.io/badge/نسخه-24.8-00e5ff?style=for-the-badge&logoColor=white" alt="Version 24.8" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -330,6 +330,13 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 24.8 — «جایزه، سر وقت خودش»
+
+- 🎁 **بخش تازه‌ی «جایزه»:** برای هر تفریح یا استراحت یک اسم و یادداشت مشخص کن و تکرار هفتگی، ماهانه یا دلخواه (چند ساعت / چند روز) را انتخاب کن. شمارش معکوس روز، ساعت، دقیقه و ثانیه از لحظه‌ی تأیید شروع می‌شود.
+- ⏰ **یادآوری در داشبورد:** جایزه‌ی بعدی همیشه در داشبورد دیده می‌شود؛ وقتی زمانش برسد، پیام «زمان جایزه‌ات رسیده» و یک هاله‌ی سبز ملایم روی همان تم فعلی ظاهر می‌شود. در صورت داشتن اجازه‌ی اعلان، اعلان سیستم هم یک بار ارسال می‌شود.
+- 💚 **چرخه‌ی خودکار:** با دکمه‌ی «جایزه‌ام رو گرفتم»، موعد بعدی از همان لحظه شروع می‌شود. ویرایش، حذف، آمار دریافت‌ها، ذخیره‌ی Local-First و قرار گرفتن جایزه‌ها در فایل پشتیبان هم پشتیبانی می‌شود.
+- 🧩 فایل‌های `js/rewards.js` و `css/rewards.css` به SHELL آفلاین اضافه شدند؛ نسخه `24.8` و `const CACHE_NAME = 'life-planner-cache-v106';`.
 
 ### ✨ نسخه 24.7 — «آفلاینِ واقعی برای اینترنت ملی»
 
