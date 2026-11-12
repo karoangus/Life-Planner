@@ -2026,18 +2026,18 @@ body.dplan-dragging{cursor:grabbing; user-select:none;}
   padding:6px 2px 8px;
 }
 
-/* Calendar bite markers. --bite-color / --bite-soft come from LP_EVENT_BITES
-   so the options and the event frame cannot drift apart. The block body keeps
-   its own color. Text stays on theme colors for readability. */
+/* Calendar difficulty frames. --difficulty-color / --difficulty-soft come from
+   LP_EVENT_DIFFICULTIES so the options and the event frame cannot drift apart.
+   The block body keeps its own color; without a selection, the block stays normal. */
 .lp-event-traits .lp-trait-group{gap:6px}
-.lp-event-traits .chip-opt{font-family:inherit;cursor:pointer}
-.lp-bite-group .chip-opt:not([data-v=""]){border-color:var(--bite-color)}
-.lp-bite-group .chip-opt.sel:not([data-v=""]){border-color:var(--bite-color)!important;color:var(--txt);background:var(--bite-soft);box-shadow:0 0 0 1px var(--bite-color)}
+.lp-event-traits .chip-opt{font-family:inherit;cursor:pointer;background:transparent}
+.lp-difficulty-group .chip-opt:not([data-v=""]){border-color:var(--difficulty-color)}
+.lp-difficulty-group .chip-opt.sel:not([data-v=""]){border-color:var(--difficulty-color)!important;color:var(--txt);background:var(--difficulty-soft);box-shadow:0 0 0 1px var(--difficulty-color)}
 .lp-trait-hint{margin-top:7px;color:var(--txt-dim2);font-size:10.5px;line-height:1.7}
-.ev-block.ev-bite-heavy,.ev-block.ev-bite-normal,.ev-block.ev-bite-baklava{border-width:3px;border-style:solid}
-.lp-bite-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px;vertical-align:middle}
-/* v24.5: the bite emoji badge (.ev-traits/.ev-trait) was removed — the frame
-   carries the bite; the summary below still names it inside the event sheet. */
+.ev-block.ev-difficulty-easy,.ev-block.ev-difficulty-medium,.ev-block.ev-difficulty-hard{border-width:3px;border-style:solid}
+.lp-difficulty-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px;vertical-align:middle}
+/* v24.5+: the frame alone carries the difficulty; the summary below still
+   names it inside the event details sheet. */
 .lp-event-trait-summary{margin-top:5px;color:var(--txt);font-size:11px}
 
 /* v21.8 — buttery page scrolling and calendar block movement.

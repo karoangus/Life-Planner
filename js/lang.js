@@ -1363,20 +1363,20 @@
   };
   for(var _k215 in EXTRA_V215){ if(Object.prototype.hasOwnProperty.call(EXTRA_V215, _k215)) EXACT[_k215] = EXTRA_V215[_k215]; }
 
-  /* v23.1: the calendar's bite-only picker and its shared color hint. */
-  var EXTRA_V231 = {
-    "اندازهٔ لقمه (اختیاری)": "Bite size (optional)",
-    "اندازه لقمه": "Bite size",
+  /* v24.9: calendar block difficulty picker replacing the old bite-size picker. */
+  var EXTRA_V249 = {
+    "سختی (اختیاری)": "Difficulty (optional)",
+    "سختی": "Difficulty",
     "بدون انتخاب": "No selection",
-    "لقمه سنگین": "Heavy bite",
-    "لقمه معمولی": "Normal bite",
-    "لقمه باقلوا": "Baklava bite",
-    "🍲 لقمه سنگین": "🍲 Heavy bite",
-    "🍽️ لقمه معمولی": "🍽️ Normal bite",
-    "🧆 لقمه باقلوا": "🧆 Baklava bite",
-    "لقمه فقط کادر رویداد را رنگی می‌کند؛ رنگ خود بلوک را جدا انتخاب کن.": "The bite only colors the event frame; choose the block color separately."
+    "آسون": "Easy",
+    "متوسط": "Medium",
+    "سخت": "Hard",
+    "سختی: آسون": "Difficulty: Easy",
+    "سختی: متوسط": "Difficulty: Medium",
+    "سختی: سخت": "Difficulty: Hard",
+    "سختی فقط کادر دور بلوک را سبز، زرد یا قرمز می‌کند؛ بدون انتخاب، بلوک عادی می‌ماند.": "Difficulty only colors the block frame green, yellow, or red; with no selection, the block stays normal."
   };
-  for(var _k231 in EXTRA_V231){ if(Object.prototype.hasOwnProperty.call(EXTRA_V231, _k231)) EXACT[_k231] = EXTRA_V231[_k231]; }
+  for(var _k249 in EXTRA_V249){ if(Object.prototype.hasOwnProperty.call(EXTRA_V249, _k249)) EXACT[_k249] = EXTRA_V249[_k249]; }
 
   /* v22: «🌌 شفق منشوری» (the 2,000 XP theme) and the «💧 لیکویید گلس»
      switch. Icon-prefixed cores are handled by compose(), so plain cores
