@@ -4213,43 +4213,43 @@ function renderNotes(){
 const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
 window.__editingEventId = null;
 window.__eventActionCtx = null; // {eventId, dayIdx}
-/* One source of truth for bite labels, icons and frame colors. The picker and
-   the calendar frame use these colors; the block body keeps the user's own
-   custom/category/theme color. Only baklava's orange is warmer/redder. */
-const LP_EVENT_BITES={
-  heavy:{icon:'🍲',label:'لقمه سنگین',color:'#16a34a'},
-  normal:{icon:'🍽️',label:'لقمه معمولی',color:'#eab308'},
-  baklava:{icon:'🧆',label:'لقمه باقلوا',color:'#f4633a'}
+/* One source of truth for block difficulty labels and frame colors.
+   No selection leaves the block completely normal; easy/medium/hard only
+   color the frame green, yellow or red while the block body keeps its own
+   custom/category/theme color. */
+const LP_EVENT_DIFFICULTIES={
+  easy:{label:'آسون',color:'#16a34a'},
+  medium:{label:'متوسط',color:'#eab308'},
+  hard:{label:'سخت',color:'#ef4444'}
 };
-function lpEventBite(ev){
-  return Object.prototype.hasOwnProperty.call(LP_EVENT_BITES,ev?.bite) ? LP_EVENT_BITES[ev.bite] : null;
+function lpEventDifficulty(ev){
+  return Object.prototype.hasOwnProperty.call(LP_EVENT_DIFFICULTIES,ev?.difficulty) ? LP_EVENT_DIFFICULTIES[ev.difficulty] : null;
 }
-function lpSetEventBite(value=''){
-  document.querySelectorAll('#eBite .chip-opt').forEach(chip=>{
+function lpSetEventDifficulty(value=''){
+  document.querySelectorAll('#eDifficulty .chip-opt').forEach(chip=>{
     const selected=chip.dataset.v===(value||'');
     chip.classList.toggle('sel',selected);
     chip.setAttribute('aria-pressed',String(selected));
   });
   renderEventColorRow();
 }
-function lpGetEventBite(){ return document.querySelector('#eBite .chip-opt.sel')?.dataset.v||null; }
-function lpFillEventBite(ev={}){ lpSetEventBite(ev.bite); }
-/* v24.5 — the bite is told by the block's FRAME only. The little emoji badge
-   that used to hang in the block's corner is gone (same for the reminder dot
-   and the description glyph), so nothing competes with the event name. The
-   sheet opened by tapping the block still spells the bite out in words. */
-const lpBiteGroup=document.getElementById('eBite');
-if(lpBiteGroup){
-  lpBiteGroup.querySelectorAll('.chip-opt').forEach(chip=>{
-    const bite=lpEventBite({bite:chip.dataset.v});
-    if(bite){
-      chip.style.setProperty('--bite-color',bite.color);
-      chip.style.setProperty('--bite-soft',lpHexToRgba(bite.color,.16));
+function lpGetEventDifficulty(){ return document.querySelector('#eDifficulty .chip-opt.sel')?.dataset.v||null; }
+function lpFillEventDifficulty(ev={}){ lpSetEventDifficulty(ev.difficulty); }
+/* v24.5+ — the difficulty is told by the block's FRAME only. Nothing hangs in
+   the block's corners so nothing competes with the event name; the sheet
+   opened by tapping the block still spells the difficulty out in words. */
+const lpDifficultyGroup=document.getElementById('eDifficulty');
+if(lpDifficultyGroup){
+  lpDifficultyGroup.querySelectorAll('.chip-opt').forEach(chip=>{
+    const diff=lpEventDifficulty({difficulty:chip.dataset.v});
+    if(diff){
+      chip.style.setProperty('--difficulty-color',diff.color);
+      chip.style.setProperty('--difficulty-soft',lpHexToRgba(diff.color,.16));
     }
   });
-  lpBiteGroup.addEventListener('click',e=>{
+  lpDifficultyGroup.addEventListener('click',e=>{
     const chip=e.target.closest('.chip-opt');
-    if(chip) lpSetEventBite(chip.dataset.v);
+    if(chip) lpSetEventDifficulty(chip.dataset.v);
   });
 }
 function openEventModal(){
@@ -4265,7 +4265,7 @@ function openEventModal(){
   document.getElementById('eHourStart').value='09:00';
   document.getElementById('eHourEnd').value='12:00';
   document.getElementById('eReminder').checked=false;
-  lpFillEventBite();
+  lpFillEventDifficulty();
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.remove('sel'));
   refreshEventCatChips();
   renderEventColorRow();
@@ -4330,7 +4330,7 @@ async function saveEvent(){
 
   const cat=window.__eventCategoryId||null;
   const color=window.__eventColorPicked||null;
-  const bite=lpGetEventBite();
+  const difficulty=lpGetEventDifficulty();
 
   // v12.1 — "edit only this day" mode: detach this occurrence from the series
   // and save it as its own standalone event. The rest of the series is untouched.
@@ -4349,7 +4349,7 @@ async function saveEvent(){
     if(remainderDays.length){ ev.days=remainderDays; delete ev.day; }
     else { DB.events=DB.events.filter(x=>x.id!==ev.id); }
     DB.events.push({
-      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,bite,
+      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,difficulty,
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
     window.__editingEventId=null;
@@ -4374,14 +4374,15 @@ async function saveEvent(){
     if(ev){
       ev.title=title;ev.days=days;ev.startMin=startMin;ev.endMin=endMin;ev.reminder=reminder;
       ev.startHour=Math.floor(startMin/60);ev.endHour=Math.min(24,Math.floor(endMin/60));
-      ev.cat=cat;ev.color=color;ev.desc=desc;ev.bite=bite;
-      delete ev.energy; // retire the old field when this event is edited; other data stays intact
+      ev.cat=cat;ev.color=color;ev.desc=desc;ev.difficulty=difficulty;
+      delete ev.bite; // retire the old bite field when this event is edited; other data stays intact
+      delete ev.energy; // retire the old energy field when this event is edited; other data stays intact
       delete ev.day;
     }
     toast('✏️ رویداد ویرایش شد');
   }else{
     DB.events.push({
-      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,bite,
+      id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,difficulty,
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
     toast(reminder?'📅 رویداد اضافه شد؛ یادآورش فعاله':'📅 رویداد اضافه شد');
@@ -4497,8 +4498,8 @@ function onEventBlockClick(eventId, dayIdx){
     const dur=d>=60?`${Math.floor(d/60)} ساعت${d%60?` و ${d%60} دقیقه`:''}`:`${d} دقیقه`;
     const cat=ev.cat?categoryById(ev.cat):null;
     meta.innerHTML=`🕒 <b style="color:var(--neon);direction:ltr;display:inline-block">${formatTimeMinutes(s%1440)} → ${formatTimeMinutes(e%1440)}</b> · ⏱️ ${dur}${cat?` · 🏷️ ${esc(cat.name)}`:''}`;
-    const bite=lpEventBite(ev);
-    if(bite) meta.innerHTML+=`<div class="lp-event-trait-summary"><span class="lp-bite-dot" style="background:${bite.color}" aria-hidden="true"></span>${bite.icon} ${bite.label}</div>`;
+    const difficulty=lpEventDifficulty(ev);
+    if(difficulty) meta.innerHTML+=`<div class="lp-event-trait-summary"><span class="lp-difficulty-dot" style="background:${difficulty.color}" aria-hidden="true"></span>سختی: ${difficulty.label}</div>`;
   }
   // v16.6: the block's optional description, shown only when one was written
   const descEl=document.getElementById('eventActionDesc');
@@ -4523,7 +4524,7 @@ function startEditEvent(){
   document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
   document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
   document.getElementById('eReminder').checked=!!ev.reminder;
-  lpFillEventBite(ev);
+  lpFillEventDifficulty(ev);
   const days=eventDays(ev);
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',days.includes(+o.dataset.v)));
   window.__eventCategoryId=ev.cat||null;
@@ -4550,7 +4551,7 @@ function startEditEventThisDay(){
   document.getElementById('eHourStart').value=formatTimeMinutes(eventStartMinutes(ev)%1440);
   document.getElementById('eHourEnd').value=formatTimeMinutes(eventEndMinutes(ev)%1440);
   document.getElementById('eReminder').checked=!!ev.reminder;
-  lpFillEventBite(ev);
+  lpFillEventDifficulty(ev);
   document.querySelectorAll('#eDays .chip-opt').forEach(o=>o.classList.toggle('sel',+o.dataset.v===ctx.dayIdx));
   window.__eventCategoryId=ev.cat||null;
   window.__eventColorPicked=ev.color||null;
@@ -4609,7 +4610,7 @@ function wireColorRow(boxId, onPick){
 }
 function renderEventColorRow(){
   const box=document.getElementById('eColorRow'); if(!box) return;
-  // The bite only colors the frame, so the body color picker stays available.
+  // Difficulty only colors the frame, so the body color picker stays available.
   const field=document.getElementById('eColorField');
   if(field) field.hidden=false;
   box.innerHTML=lpColorRowHtml(window.__eventColorPicked,'پیش‌فرض (رنگ دسته)');
@@ -5245,7 +5246,8 @@ function lpRelocateEventOccurrence(ev,fromDay,toDay,startMin,endMin){
     ev.days=days.filter(day=>day!==fromDay); delete ev.day;
     const copy={...JSON.parse(JSON.stringify(ev)),id:uid(),days:[toDay],startMin,endMin,
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))};
-    delete copy.energy; // split occurrences no longer carry the retired energy field
+    delete copy.bite;
+    delete copy.energy; // split occurrences no longer carry retired fields
     DB.events.push(copy); return copy;
   }
   ev.days=[toDay]; delete ev.day; ev.startMin=startMin; ev.endMin=endMin;
@@ -5327,7 +5329,7 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
     const newId=uid();
     DB.events.push({
       id:newId, title:ev.title, desc:eventDesc(ev), days:[toDay], startMin:ns, endMin:ne,
-      reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null, bite:ev.bite||null,
+      reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null, difficulty:ev.difficulty||null,
       startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
     if(undo) undo.removedIds.push(newId); // undoing the move must take the split day back
@@ -5705,7 +5707,7 @@ function lpApplyEventResize(evRef, dayIdx, shift, gridFrom, gridTo, edge){
     const newId=uid();
     DB.events.push({
       id:newId, title:ev.title, desc:eventDesc(ev), days:[dayIdx], startMin:ns, endMin:ne,
-      reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null, bite:ev.bite||null,
+      reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null, difficulty:ev.difficulty||null,
       startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
     if(undo) undo.removedIds.push(newId); // undoing must take the split day back
@@ -5882,11 +5884,11 @@ function renderCalendar(){
       if(e.reminder) hint.push('یادآور فعال');
       if(eventDesc(e)) hint.push('توضیح دارد');
       el.title=`${e.title} — ${dayNames[d]} ${calClockLabel(s)} تا ${calClockLabel(en)}${hint.length?` · ${hint.join(' · ')}`:''} · لبه را نگه دار و بکش تا زمانش عوض شود؛ وسط را بکش تا جابه‌جا شود`;
-      const bite=lpEventBite(e);
+      const difficulty=lpEventDifficulty(e);
       el.innerHTML=`<span class="ev-title">${esc(e.title)}</span>`;
-      if(bite){
-        el.classList.add(`ev-bite-${e.bite}`);
-        el.setAttribute('aria-label',`${e.title} — ${bite.label}`);
+      if(difficulty){
+        el.classList.add(`ev-difficulty-${e.difficulty}`);
+        el.setAttribute('aria-label',`${e.title} — سختی: ${difficulty.label}`);
       }
       const ecol=eventColor(e);
       if(ecol){
@@ -5895,9 +5897,9 @@ function renderCalendar(){
         // v24.5: keep the glassy top highlight the stylesheet gives every block
         el.style.boxShadow=`inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px ${lpHexToRgba(ecol,.28)}, 0 2px 10px ${lpHexToRgba(ecol,.22)}`;
       }
-      if(bite){
+      if(difficulty){
         // A simple, slightly stronger frame; never repaint the block body.
-        el.style.borderColor=bite.color;
+        el.style.borderColor=difficulty.color;
         if(!ecol) el.style.boxShadow='none';
       }
       attachEventDrag(el,e,d,shift);
@@ -6426,7 +6428,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.8';
+const LP_APP_VERSION='24.9';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

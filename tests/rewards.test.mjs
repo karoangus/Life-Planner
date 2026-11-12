@@ -84,7 +84,8 @@ const sw = fs.readFileSync(path.join(ROOT,'sw.js'),'utf8');
 check('rewards have a real view, dashboard slot and creation modal',index.includes('id="view-rewards"') && index.includes('id="dashboardRewards"') && index.includes('id="rewardModalBg"'));
 check('rewards are available in app navigation',core.includes("{id:'rewards', label:'جایزه', icon:'🎁'}"));
 check('old stores and backups get an empty rewards collection',core.includes('if(!Array.isArray(db.rewards)) db.rewards = [];') && core.includes('DB.rewards = Array.isArray(DB.rewards) ? DB.rewards : [];'));
-check('new reward assets are precached for offline use',index.includes('js/rewards.js?v=24.8') && index.includes('css/rewards.css?v=24.8') && sw.includes('`./js/rewards.js?v=${VERSION}`') && sw.includes('`./css/rewards.css?v=${VERSION}`'));
+const ver = JSON.parse(fs.readFileSync(path.join(ROOT,'app-version.json'),'utf8')).version;
+check('new reward assets are precached for offline use',index.includes(`js/rewards.js?v=${ver}`) && index.includes(`css/rewards.css?v=${ver}`) && sw.includes('`./js/rewards.js?v=${VERSION}`') && sw.includes('`./css/rewards.css?v=${VERSION}`'));
 
 console.log(failures===0?'\nALL REWARD TESTS PASSED':`\n${failures} REWARD TEST(S) FAILED`);
 process.exit(failures===0?0:1);
