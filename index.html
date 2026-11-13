@@ -8,14 +8,14 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=24.10">
-<link rel="stylesheet" href="css/design-system.css?v=24.10">
-<link rel="stylesheet" href="css/v20.css?v=24.10">
-<link rel="stylesheet" href="css/v213.css?v=24.10">
-<link rel="stylesheet" href="css/v22.css?v=24.10">
-<link rel="stylesheet" href="css/ui-refresh.css?v=24.10">
-<link rel="stylesheet" href="css/offline.css?v=24.10">
-<link rel="stylesheet" href="css/rewards.css?v=24.10">
+<link rel="stylesheet" href="css/app.css?v=24.11">
+<link rel="stylesheet" href="css/design-system.css?v=24.11">
+<link rel="stylesheet" href="css/v20.css?v=24.11">
+<link rel="stylesheet" href="css/v213.css?v=24.11">
+<link rel="stylesheet" href="css/v22.css?v=24.11">
+<link rel="stylesheet" href="css/ui-refresh.css?v=24.11">
+<link rel="stylesheet" href="css/offline.css?v=24.11">
+<link rel="stylesheet" href="css/rewards.css?v=24.11">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -280,12 +280,16 @@ try{
       <div class="card"><div id="goalList"></div></div>
     </div>
 
-    <!-- PERSONAL REWARDS (v24.8) -->
+    <!-- PERSONAL REWARDS (v24.8; guide added in v24.11) -->
     <div class="view" id="view-rewards">
       <div class="topbar">
         <div><h1>🎁 جایزه</h1><div class="sub">به خودت قول تفریح و استراحت بده</div></div>
-        <button class="btn" type="button" onclick="openRewardModal()">➕ جایزه جدید</button>
+        <div class="top-actions">
+          <button class="guide-btn" type="button" onclick="openGuide('rewards')" title="راهنمای جایزه" aria-label="راهنمای جایزه">❓</button>
+          <button class="btn" type="button" onclick="openRewardModal()">➕ جایزه جدید</button>
+        </div>
       </div>
+      <div class="guide-slot" id="guideSlot-rewards"></div>
       <div class="reward-intro">
         <span class="reward-intro-icon">⏳</span>
         <div><b>جایزه‌ات را مشخص کن؛ شمارش معکوس با ماست.</b><p>هر هفته، هر ماه یا بعد از چند ساعت و روز. وقتی زمانش رسید، جایزه را بگیر تا چرخه‌ی بعدی خودکار شروع شود.</p></div>
@@ -906,32 +910,52 @@ try{
       <div id="bossContent"></div>
     </div>
 
-    <!-- YOU VS YOU -->
+    <!-- YOU VS YOU (v24.11: manual yesterday stats + auto overall records) -->
     <div class="view" id="view-yvy">
       <div class="topbar">
-        <div><h1>🪞 You VS You</h1><div class="sub">رقابت با نسخه‌ی قبلی خودت</div></div>
+        <div><h1>🪞 You VS You</h1><div class="sub">رقابت با دیروزِ خودت</div></div>
         <button class="guide-btn" type="button" onclick="openGuide('yvy')" title="راهنمای رقابت با خود" aria-label="راهنمای رقابت با خود">❓</button>
       </div>
       <div class="guide-slot" id="guideSlot-yvy"></div>
 
       <div class="yvy-hero">
-        <div class="yvy-quote">رقیب تو دیروزت بود.</div>
-        <div class="yvy-subquote">امروز می‌تونی ازش بهتر باشی؟</div>
+        <div class="yvy-quote">دیروز... از آن خط بگذر یا او از تو می‌گذرد</div>
       </div>
 
-      <div class="card yvy-featured-card" style="margin-top:16px;">
-        <div class="card-head"><h3>🎯 امروز در برابر بهترین رکوردت</h3></div>
-        <div id="yvyFeatured"></div>
+      <div class="chip-group yvy-tabs" id="yvyTabs" role="tablist" aria-label="تب‌های You VS You">
+        <button class="chip-opt sel" type="button" role="tab" aria-selected="true" data-yvy-tab="view" onclick="setYVYTab('view')">📅 دیروز</button>
+        <button class="chip-opt" type="button" role="tab" aria-selected="false" data-yvy-tab="entry" onclick="setYVYTab('entry')">✍️ ثبت آمار دیروز</button>
       </div>
 
-      <div class="card" style="margin-top:16px;">
-        <div class="card-head"><h3>🏅 رکوردهای شخصی</h3></div>
-        <div id="yvyRecordsList"></div>
+      <div id="yvyPaneView">
+        <div class="card" style="margin-top:16px;">
+          <div class="card-head"><h3>📅 آمار دیروز</h3><span class="muted num" id="yvyYesterdayDate"></span></div>
+          <div class="grid g3" id="yvyYesterdayCards"></div>
+          <div class="muted yvy-empty-note" id="yvyEmptyNote" style="display:none;">هنوز برای دیروز چیزی ثبت نشده — از تب «✍️ ثبت آمار دیروز» وارد کن.</div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="card-head"><h3>🏆 رکورد کلی</h3></div>
+          <div id="yvyOverallRecords"></div>
+        </div>
       </div>
 
-      <div class="card" style="margin-top:16px;">
-        <div class="card-head"><h3>📊 این هفته در برابر هفته‌ی قبل</h3></div>
-        <div id="yvyWeekCompare"></div>
+      <div id="yvyPaneEntry" style="display:none;">
+        <div class="card" style="margin-top:16px;">
+          <div class="card-head"><h3>✍️ ثبت آمار دیروز</h3><span class="muted num" id="yvyEntryDate"></span></div>
+          <p class="muted yvy-entry-note">این آمار فقط دستی ثبت می‌شود و برای دیروز است؛ رکوردهای کلی خودکار از همین ثبت‌ها حساب می‌شوند.</p>
+          <div class="field"><label>📚 مطالعه</label>
+            <div class="row2">
+              <input type="number" id="yvyStudyH" min="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="ساعت" aria-label="ساعت مطالعه">
+              <input type="number" id="yvyStudyM" min="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="دقیقه" aria-label="دقیقه مطالعه">
+            </div>
+          </div>
+          <div class="field"><label>📈 پیشروی برنامه روزانه (٪)</label><input type="number" id="yvyPlanPct" min="0" max="100" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="۰ تا ۱۰۰"></div>
+          <div class="field"><label>📖 تعداد مباحث تمام‌شده</label><input type="number" id="yvyTopics" min="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="تعداد"></div>
+          <button class="btn" type="button" style="width:100%;justify-content:center;" onclick="saveYVYEntry()">💾 ذخیره</button>
+          <button class="btn ghost" type="button" id="yvyClearBtn" style="width:100%;justify-content:center;margin-top:10px;display:none;" onclick="clearYVYEntry()">🗑️ پاک کردن ثبت دیروز</button>
+          <p class="muted yvy-entry-note" style="margin-bottom:0;">ذخیره‌ی دوباره، ثبت قبلی دیروز را ویرایش می‌کند.</p>
+        </div>
       </div>
     </div>
 
@@ -1029,10 +1053,10 @@ try{
       </div>
 
       <!-- v21.3: the section guides also live here, so they can be found
-           without hunting for a ❓ in each section (now fifteen in total). -->
+           without hunting for a ❓ in each section (now sixteen in total). -->
       <div class="card settings-card">
         <div class="card-head"><h3>❓ راهنمای بخش‌ها</h3></div>
-        <p class="muted settings-help">راهنمای کوتاهِ پانزده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.</p>
+        <p class="muted settings-help">راهنمای کوتاهِ شانزده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.</p>
         <div class="settings-actions">
           <button class="btn ghost" type="button" onclick="openGuide('dashboard')">🏠 داشبورد</button>
           <button class="btn ghost" type="button" onclick="openGuide('tasks')">✅ تسک‌ها</button>
@@ -1040,6 +1064,7 @@ try{
           <button class="btn ghost" type="button" onclick="openGuide('calendar')">📅 تقویم</button>
           <button class="btn ghost" type="button" onclick="openGuide('habits')">🔥 عادت‌ها</button>
           <button class="btn ghost" type="button" onclick="openGuide('goals')">🎯 اهداف</button>
+          <button class="btn ghost" type="button" onclick="openGuide('rewards')">🎁 جایزه</button>
           <button class="btn ghost" type="button" onclick="openGuide('notes')">📝 یادداشت‌ها</button>
           <button class="btn ghost" type="button" onclick="openGuide('pomodoro')">🍅 پومودورو</button>
           <button class="btn ghost" type="button" onclick="openGuide('shop')">🛍️ XP Shop</button>
@@ -1054,7 +1079,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.10</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.11</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1415,6 +1440,8 @@ try{
     <!-- v21.4: habits, goals and notes joined the same guide -->
     <div class="chip-opt" data-g="habits" role="tab" tabindex="0" aria-selected="false">🔥 عادت‌ها</div>
     <div class="chip-opt" data-g="goals" role="tab" tabindex="0" aria-selected="false">🎯 اهداف</div>
+    <!-- v24.11: the rewards section (v24.8) finally got its own guide -->
+    <div class="chip-opt" data-g="rewards" role="tab" tabindex="0" aria-selected="false">🎁 جایزه</div>
     <div class="chip-opt" data-g="notes" role="tab" tabindex="0" aria-selected="false">📝 یادداشت‌ها</div>
     <!-- v21.7: the four remaining sections joined the same guide -->
     <div class="chip-opt" data-g="pomodoro" role="tab" tabindex="0" aria-selected="false">🍅 پومودورو</div>
@@ -1428,11 +1455,12 @@ try{
   </div>
 
   <section class="guide-panel sel" data-g="dashboard" role="tabpanel">
-    <p class="guide-lead">داشبورد یعنی «امروز چه‌کار داری؟» — همین سه کارت، نه چیز دیگر.</p>
+    <p class="guide-lead">داشبورد یعنی «امروز چه‌کار داری؟» — جمله‌ی امروز، مأموریت، برنامه‌ی امروز و جایزه‌ات.</p>
     <div class="guide-rows">
-      <div class="guide-row"><span class="guide-ic">👋</span><div class="guide-row-txt"><b>سلام و جمله‌ی امروز</b><span>تاریخ امروز و یک جمله‌ی انگیزشی؛ با «تغییر حال‌وهوا» فقط لحن جمله عوض می‌شود.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">👋</span><div class="guide-row-txt"><b>سلام و جمله‌ی امروز</b><span>تاریخ امروز و یک جمله‌ی انگیزشی؛ با «تغییر حال‌وهوا» لحن جمله عوض می‌شود و با «پیام سفارشی» جمله‌ی خودت را می‌نویسی.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🎯</span><div class="guide-row-txt"><b>مأموریت روزانه</b><span>یک کار کوچک با جایزه‌ی XP: «انجامش دادم» جایزه می‌دهد و «ردش کن» کمی XP کم می‌کند. با تیک «مرخصی» هیچ مأموریتی نمی‌آید.</span></div></div>
       <div class="guide-row"><span class="guide-ic">📋</span><div class="guide-row-txt"><b>برنامه‌ی امروز</b><span>تسک‌هایی که امروز پیش رو داری. دایره‌ی کنار هر کدام را بزن تا انجام شود و XP بگیری.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🎁</span><div class="guide-row-txt"><b>جایزه</b><span>جایزه‌ی بعدی با شمارش معکوس زنده دیده می‌شود؛ وقتی زمانش برسد کارت آماده می‌شود و با «جایزه‌ام رو گرفتم» چرخه‌ی بعدی خودکار شروع می‌شود. مدیریت کامل در بخش «🎁 جایزه» است.</span></div></div>
       <div class="guide-row"><span class="guide-ic">📥</span><div class="guide-row-txt"><b>اینباکس سریع</b><span>دکمه‌ی 📥 بالا برای فکرهای یکهویی است: فقط بنویس، بعداً در بخش تسک‌ها مرتبش کن.</span></div></div>
     </div>
   </section>
@@ -1464,6 +1492,7 @@ try{
       <div class="guide-row"><span class="guide-ic">➕</span><div class="guide-row-txt"><b>رویداد جدید</b><span>بالا «رویداد جدید» را بزن؛ عنوان، روز و ساعت کافی است.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🖐️</span><div class="guide-row-txt"><b>جابه‌جایی و تغییر مدت</b><span>رویداد را بکش تا جابه‌جا شود؛ لبهٔ بالا یا پایینش را یک لحظه نگه دار و بعد بکش تا مدتش کم‌وزیاد شود. روی خانه‌ی خالی بزن تا رویداد جدید بسازی.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🕒</span><div class="guide-row-txt"><b>🕒 الان</b><span>«🕒 الان» شبکه را به ساعت فعلی می‌برد؛ تقویم همیشه همان هفته‌ی جاری را نشان می‌دهد و دیگر دکمه‌ای برای رفتن به هفته‌ی قبل یا بعد ندارد.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🎚️</span><div class="guide-row-txt"><b>سختی بلوک</b><span>در فرم رویداد، سختی را انتخاب کن: آسون (کادر سبز)، متوسط (زرد)، سخت (قرمز)؛ بدون انتخاب بلوک عادی می‌ماند. رنگ بدنهٔ بلوک همان رنگ دسته یا انتخابی‌ات است.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🏷️</span><div class="guide-row-txt"><b>دسته‌ها و رنگ‌ها</b><span>با 🏷️ برای رویدادها دسته و رنگ بساز تا یک هفته‌ی شلوغ خوانا بماند.</span></div></div>
     </div>
     <p class="muted guide-note">🌙 ساعت‌های بعد از نیمه‌شب، پایینِ ستونِ همان شب می‌نشینند.</p>
@@ -1492,6 +1521,17 @@ try{
     </div>
   </section>
 
+  <!-- v24.11: the rewards section (v24.8) finally got its own guide -->
+  <section class="guide-panel" data-g="rewards" role="tabpanel">
+    <p class="guide-lead">برای تفریح و استراحتت یک جایزه مشخص کن؛ شمارش معکوس با ماست.</p>
+    <div class="guide-rows">
+      <div class="guide-row"><span class="guide-ic">🎁</span><div class="guide-row-txt"><b>جایزه جدید</b><span>«➕ جایزه جدید» را بزن؛ اسم جایزه اجباری است و توضیح اختیاری. شمارش معکوس از لحظه‌ی تأیید شروع می‌شود.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🔁</span><div class="guide-row-txt"><b>تکرار</b><span>تکرار را انتخاب کن: هفتگی (هر ۷ روز)، ماهانه (هر ماه تقویمی) یا دلخواه (هر چند ساعت/روز). با ویرایش، شمارش از نو شروع می‌شود.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🎉</span><div class="guide-row-txt"><b>گرفتن جایزه</b><span>وقتی زمان برسد کارت آماده می‌شود و اعلان می‌آید؛ «🎉 جایزه‌ام رو گرفتم» چرخه‌ی بعدی را خودکار شروع می‌کند. جایزه‌ی بعدی همیشه در داشبورد هم دیده می‌شود.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">✏️</span><div class="guide-row-txt"><b>ویرایش و حذف</b><span>با ✏️ اسم، توضیح و تکرار عوض می‌شود و شمارش از نو شروع می‌شود؛ 🗑️ با تأیید حذف می‌کند. بالای لیست هم تعداد فعال، آماده و گرفته‌شده را می‌بینی.</span></div></div>
+    </div>
+  </section>
+
   <section class="guide-panel" data-g="notes" role="tabpanel">
     <p class="guide-lead">دفترچه‌ی شخصی تو: بنویس، برچسب بزن و هر وقت خواستی پیدایش کن.</p>
     <div class="guide-rows">
@@ -1511,6 +1551,7 @@ try{
       <div class="guide-row"><span class="guide-ic">🍅</span><div class="guide-row-txt"><b>دور و استراحت</b><span>بالای تایمر «دور ۱ • جلسه ۱ از ۴» و نقطه‌ها هستند. بعد از هر فوکوس نوبت استراحت است و بعد از آخرین جلسه‌ی دور، استراحت طولانی — «⏭️ جلسه بعدی» مرحله را دستی جلو می‌برد.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🎧</span><div class="guide-row-txt"><b>حالت‌ها، تسک و صدا</b><span>پنج حالت آماده (کلاسیک، کوتاه، دیپ فوکوس، مطالعه و سفارشیِ ساختنی)، انتخاب تسک برای جلسه، هشت صدای محیط با اسلایدر بلندی، و «🧠 حالت تمرکز تمام‌صفحه» برای وقتی که فقط تایمر را می‌خواهی.</span></div></div>
       <div class="guide-row"><span class="guide-ic">📊</span><div class="guide-row-txt"><b>آمار و XP</b><span>تب «📊 آمار پومو» فوکوس امروز، هدف روزانه، هفت روز اخیر، نمودار روند، جمع‌بندی کلی و ۱۰ جلسه‌ی آخر را نشان می‌دهد. هر دقیقه (فوکوس یا استراحت) ۲ XP می‌دهد و پر کردن هدف روزانه ۳۰ XP.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📝</span><div class="guide-row-txt"><b>ثبت داده</b><span>اگر بیرون از تایمر مطالعه یا استراحت کردی، در تب «📝 ثبت داده» دستی ثبتش کن تا آمار روزت از قلم نیفتد؛ نوع، مدت، تاریخ و تسک مرتبط را انتخاب می‌کنی.</span></div></div>
     </div>
     <p class="muted guide-note">🔔 اعلان‌ها فقط سه‌جا می‌آیند: شروع جلسه، پایان جلسه و پایان دور — کلید روشن/خاموششان در تب «⚙️ تنظیمات» است.</p>
   </section>
@@ -1548,12 +1589,12 @@ try{
   </section>
 
   <section class="guide-panel" data-g="yvy" role="tabpanel">
-    <p class="guide-lead">رکوردها و عملکرد امروزت را با گذشته مقایسه کن.</p>
+    <p class="guide-lead">دیروزت را با خودت بسنج: سه عدد دستی برای دیروز، و دو رکورد کلی که خودکار از همان‌ها ساخته می‌شوند.</p>
     <div class="guide-rows">
-      <div class="guide-row"><span class="guide-ic">🎯</span><div class="guide-row-txt"><b>امروز و رکورد</b><span>پیشرفت امروزت را نسبت به بهترین رکورد قبلی ببین.</span></div></div>
-      <div class="guide-row"><span class="guide-ic">🏅</span><div class="guide-row-txt"><b>رکوردهای شخصی</b><span>بهترین رکورد روزانه‌ی XP، تسک، مطالعه، پومودورو و کوئست را ببین.</span></div></div>
-      <div class="guide-row"><span class="guide-ic">📊</span><div class="guide-row-txt"><b>مقایسه‌ی هفتگی</b><span>آمار این هفته و هفته‌ی قبل کنار هم هستند.</span></div></div>
-      <div class="guide-row"><span class="guide-ic">🏆</span><div class="guide-row-txt"><b>رکورد جدید</b><span>وقتی رکوردی را بشکنی پیام تبریک می‌بینی.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📅</span><div class="guide-row-txt"><b>آمار دیروز</b><span>سه کارت بالا فقط آمار دیروز را نشان می‌دهند: مطالعه، پیشروی برنامه‌ی روزانه و تعداد مباحث تمام‌شده. اگر هنوز ثبت نشده، صفر می‌بینی.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">✍️</span><div class="guide-row-txt"><b>ثبت آمار</b><span>در تب «✍️ ثبت آمار دیروز» مطالعه را با ساعت و دقیقه، پیشروی را با درصد و مباحث را با تعداد وارد می‌کنی و ذخیره می‌زنی. فقط دستی ثبت می‌شود و همیشه برای دیروز است؛ ذخیره‌ی دوباره ویرایشش می‌کند.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🏆</span><div class="guide-row-txt"><b>رکورد کلی</b><span>دو رکورد کلی خودکار از همه‌ی ثبت‌ها حساب می‌شوند: بیشترین زمان مطالعه در یک روز و بیشترین تعداد مباحث تمام‌شده در یک روز — با تاریخی که رکورد در آن ثبت شده.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">🗂️</span><div class="guide-row-txt"><b>دو تب</b><span>بخش دو تب دارد: «📅 دیروز» برای دیدن آمار و «✍️ ثبت آمار دیروز» برای وارد کردن دستی.</span></div></div>
     </div>
   </section>
 
@@ -1583,6 +1624,7 @@ try{
       <div class="guide-row"><span class="guide-ic">🌐</span><div class="guide-row-txt"><b>زبان و اندازه</b><span>زبان، اندازه‌ی فونت و اندازه‌ی رابط را جداگانه تنظیم کن.</span></div></div>
       <div class="guide-row"><span class="guide-ic">🎨</span><div class="guide-row-txt"><b>ظاهر و سرعت</b><span>تم، لیکویید گلس و حالت پرفورمنس را انتخاب کن.</span></div></div>
       <div class="guide-row"><span class="guide-ic">📱</span><div class="guide-row-txt"><b>نوار پایین</b><span>میان‌برهای نوار پایین را انتخاب و مرتب کن.</span></div></div>
+      <div class="guide-row"><span class="guide-ic">📴</span><div class="guide-row-txt"><b>آفلاین و اینترنت ملی</b><span>کارت «📴 آفلاین و اینترنت ملی» وضعیت ذخیره‌ی آفلاین، تست آفلاین و نصب روی گوشی را دارد؛ بعد از یک بار لود، برنامه برای همیشه بدون اینترنت کار می‌کند.</span></div></div>
       <div class="guide-row"><span class="guide-ic">💾</span><div class="guide-row-txt"><b>پشتیبان و راهنما</b><span>پشتیبان را خروجی بگیر یا بازیابی کن؛ راهنماها را هم اینجا پیدا می‌کنی.</span></div></div>
     </div>
   </section>
@@ -1619,24 +1661,24 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=24.9"></script>
-<script src="js/enhancements.js?v=24.9"></script>
-<script src="js/sw-register.js?v=24.9"></script>
+<script src="js/core.js?v=24.11"></script>
+<script src="js/enhancements.js?v=24.11"></script>
+<script src="js/sw-register.js?v=24.11"></script>
 
-<script src="js/pomodoro.js?v=24.9"></script>
+<script src="js/pomodoro.js?v=24.11"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=24.9"></script>
-<script src="js/v16.js?v=24.9"></script>
-<script src="js/v162.js?v=24.9"></script>
-<script src="js/v21.js?v=24.9"></script>
+<script src="js/lang.js?v=24.11"></script>
+<script src="js/v16.js?v=24.11"></script>
+<script src="js/v162.js?v=24.11"></script>
+<script src="js/v21.js?v=24.11"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=24.9"></script>
+<script src="js/v213.js?v=24.11"></script>
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
-<script src="js/v22.js?v=24.9"></script>
+<script src="js/v22.js?v=24.11"></script>
 <!-- v24.8: recurring personal rewards + dashboard countdown -->
-<script src="js/rewards.js?v=24.10"></script>
+<script src="js/rewards.js?v=24.11"></script>
 <!-- v24.7: offline / national-internet persistence + PWA install -->
-<script src="js/offline.js?v=24.10"></script>
+<script src="js/offline.js?v=24.11"></script>
 
 </body>
 </html>

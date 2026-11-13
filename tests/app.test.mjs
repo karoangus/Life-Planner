@@ -1156,9 +1156,9 @@ if (!useFallback) {
   });
   check('v21.3 every simplified section has its own ❓ and one guide modal explains them all',
     v213.helpButtons === 11 && v213.slotAnchors === 10 &&
-    v213.panels === 'dashboard,tasks,daily-checklist,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
+    v213.panels === 'dashboard,tasks,daily-checklist,calendar,habits,goals,rewards,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
     /* v23.5: the tasks guide explains the new boss tab and the boss guide points at it */
-    v213.rowsPerPanel === '4,5,4,4,4,4,4,4,4,4,5,4,4,4,4', JSON.stringify(v213));
+    v213.rowsPerPanel === '5,5,4,5,4,4,4,4,5,4,4,5,4,4,4,5', JSON.stringify(v213));
   check('v21.3 the calendar intro is one quiet line and the guide kept the full gestures',
     v213.introChars < 90 && v213.guideKeepsGestures, JSON.stringify(v213));
   check('v21.3 opening the guide shows exactly one panel with the right action',
@@ -1293,7 +1293,8 @@ if (!useFallback) {
     const out = {};
     out.slot = document.getElementById('guideSlot-dashboard').innerHTML;
     out.settingsCard = [...document.querySelectorAll('#view-settings .settings-card')]
-      .some(c => c.textContent.includes('راهنمای بخش‌ها') && c.querySelectorAll('[onclick^="openGuide("]').length === 14);
+      /* v24.11: the rewards section joined the card, so it lists sixteen guides */
+      .some(c => c.textContent.includes('راهنمای بخش‌ها') && c.querySelectorAll('[onclick^="openGuide("]').length === 16);
     /* «نمایش دوباره» brings the automatic guides back */
     window.lpResetGuides();
     out.resetState = JSON.parse(localStorage.getItem('lifePlannerGuides_v213'));
@@ -1352,7 +1353,7 @@ if (!useFallback) {
     v214.goals === 'goals|📖 راهنمای اهداف|➕ هدف جدید' &&
     v214.notes === 'notes|📖 راهنمای یادداشت‌ها|➕ یادداشت جدید', JSON.stringify(v214));
   check('v21.4 six tabs, one visible panel, and the action opens that section’s sheet',
-    v214.tabs === 'dashboard,tasks,daily-checklist,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' && v214.visiblePanels === 1 &&
+    v214.tabs === 'dashboard,tasks,daily-checklist,calendar,habits,goals,rewards,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' && v214.visiblePanels === 1 &&
     v214.ctaClosedGuide && v214.ctaOpenedSheet, JSON.stringify(v214));
   check('v21.4 switching tab follows panel, title and action together, and reading marks it seen',
     v214.afterTab === 'notes|📖 راهنمای یادداشت‌ها|➕ یادداشت جدید' && v214.readingMarksSeen,
@@ -1396,16 +1397,23 @@ if (!useFallback) {
     v214hint.habitsGone && v214hint.habitsStored && v214hint.goalsGoneAfterWalk && v214hint.goalsStored &&
     v214hint.notesGoneAfterRead && v214hint.notesStored && v214hint.neverNags, JSON.stringify(v214hint));
 
-  /* the five behaviours that were made honest */
-  const v214fix = await page.evaluate(() => {
-    const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    const today = iso(new Date());
+  /* the five behaviours that were made honest. These sections are read by their
+     own Persian labels, so the language the previous block left behind (English)
+     is put back to Persian first — the whole selection, not just the key. */
+  await page.evaluate(() => localStorage.setItem('lifePlannerLang_v1', 'fa'));
+  await page.reload({ waitUntil: 'load', timeout: 30000 });
+  await new Promise(r => setTimeout(r, 700));
+  const v214fix = await page.evaluate(async () => {
+    /* the section cards paint after their skeleton, so give them a tick */
+    const wait = () => new Promise(r => setTimeout(r, 200));
+    /* the same local-date helper the app itself stores habit logs with */
+    const today = dateToLocalISO(new Date());
     const out = {};
 
     /* (1) v24.1: there is only ONE week now. The week switcher was removed,
        so the habit grid and the calendar can never drift apart. */
     DB.habits = [{ id: 'v214-habit', name: 'آزمون v21.4', icon: '📚', log: {} }];
-    window.showView('habits');
+    window.showView('habits'); await wait();
     const cells = () => [...document.querySelectorAll('#habitList .week-dots .wd')];
     out.cells = cells().length;
     out.days = cells().map(c => c.textContent).join('');
@@ -1430,6 +1438,7 @@ if (!useFallback) {
     out.xpReTick = (DB.stats.totalXPEarned || 0) - earned0 - afterFirst;
     out.rewardFlag = DB.habits[0].rewardDate === today;
     out.stillTicked = DB.habits[0].log[today] === true;
+    await wait();                       /* the card repaints one frame later */
     out.streakText = document.querySelector('#habitList .habit-streak').textContent.trim();
     out.streakFaDigits = /[۰-۹]/.test(out.streakText);
     out.bestStreak = DB.stats.bestStreak;
@@ -1442,7 +1451,7 @@ if (!useFallback) {
 
     /* (4) goals: Persian digits on the card, and the same question before deleting */
     DB.goals = [{ id: 'v214-goal', title: 'آزمون v21.4', level: 'weekly', progress: 45 }];
-    window.showView('goals');
+    window.showView('goals'); await wait();
     out.goalPct = document.querySelector('#goalList .num').textContent.trim();
     out.goalFaDigits = /[۰-۹]/.test(out.goalPct);
     out.goalBar = document.querySelector('#goalList .bar-fill').style.width;
@@ -1451,7 +1460,7 @@ if (!useFallback) {
     out.goalToast = document.getElementById('toast').textContent;
 
     /* (5) the ▦ button tells you which view you are in */
-    window.showView('notes');
+    window.showView('notes'); await wait();
     const vt = document.getElementById('noteViewToggle');
     const snap = () => [vt.textContent, vt.title, vt.getAttribute('aria-pressed'),
       document.getElementById('noteGrid').classList.contains('notes-list')].join('|');
@@ -1557,9 +1566,9 @@ if (!useFallback) {
     v215.skills === 'skills|📖 راهنمای درخت مهارت|🛍️ برو به XP Shop' &&
     v215.bossIdle === 'boss|📖 راهنمای باس هفتگی|⚔️ ساخت باس', JSON.stringify(v215));
   check('v21.7 ten tabs, four rows each, and only one panel on screen',
-    v215.tabs === 'dashboard,tasks,daily-checklist,calendar,habits,goals,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
+    v215.tabs === 'dashboard,tasks,daily-checklist,calendar,habits,goals,rewards,notes,pomodoro,shop,skills,boss,yvy,city,profile,settings' &&
     /* v23.5: the tasks guide gained a row for the new boss tab, the boss guide one more */
-    v215.rowsPerPanel === '4,5,4,4,4,4,4,4,4,4,5,4,4,4,4' && v215.visiblePanels === 1, JSON.stringify(v215));
+    v215.rowsPerPanel === '5,5,4,5,4,4,4,4,5,4,4,5,4,4,4,5' && v215.visiblePanels === 1, JSON.stringify(v215));
   check('v21.7 each action lands in the real thing, and the shop one spends nothing',
     v215.pomoCtaStarted && v215.pomoCtaClosedGuide && v215.shopCtaOpenedOdds && v215.shopCtaSpentNothing &&
     v215.oddsListed && v215.skillsCtaWentToShop && v215.skillsCtaClosedGuide, JSON.stringify(v215));
@@ -2021,7 +2030,9 @@ if (!useFallback) {
       const hint = !!slot.querySelector('.guide-hint');
       window.openGuide(section);
       const panel = document.querySelector('#guideModalBg .guide-panel.sel');
-      const opened = panel.dataset.g === section && panel.querySelectorAll('.guide-row').length === 4;
+      /* v24.11: settings grew a fifth row for the offline card */
+      const wantRows = section === 'settings' ? 5 : 4;
+      const opened = panel.dataset.g === section && panel.querySelectorAll('.guide-row').length === wantRows;
       const retired = !slot.querySelector('.guide-hint');
       document.getElementById('guideCta').click(); await wait();
       out[section] = hint && opened && retired && document.getElementById('view-' + section).classList.contains('active');
@@ -2029,8 +2040,12 @@ if (!useFallback) {
       if (section === 'settings') out.settingsAction = document.getElementById('pinnedNavModalBg').classList.contains('open');
       document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
     }
+    /* v24.11: the personal-records list is gone; the YVY section now shows
+       yesterday's three cards and the two automatic all-time records. */
     window.showView('yvy'); await wait();
-    out.records = document.querySelectorAll('#yvyRecordsList .yvy-record-row').length === 5 && !document.getElementById('yvyRecordsList').textContent.includes('استریک');
+    out.records = document.querySelectorAll('#yvyYesterdayCards .yvy-stat-card').length === 3 &&
+      document.querySelectorAll('#yvyOverallRecords .yvy-record-row').length === 2 &&
+      !document.getElementById('view-yvy').textContent.includes('استریک');
     window.showView('profile'); await wait();
     out.profileKept = !!document.getElementById('pfBestStreak') && !document.getElementById('cityEntryIcon');
     window.showView('city'); await wait();
@@ -2335,6 +2350,135 @@ if (!useFallback) {
     v235boss.idleClass && v235boss.idleMessage && v235boss.idleNoRows && v235boss.idleStartsFight &&
     v235boss.afterFightEmpty && v235boss.badgeAfter === '۰' && v235boss.everydayHasThemBack &&
     v235boss.triggerWhileAway && v235boss.triggerNotOnTop, JSON.stringify(v235boss));
+
+  /* v24.11: You VS You is manual-only — three yesterday cards, an entry tab and
+     two automatic all-time records built from those entries. */
+  const v2411 = await page.evaluate(async () => {
+    const wait = () => new Promise(r => setTimeout(r, 150));
+    const out = {};
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    const before = JSON.stringify(DB.yvyDaily || {});
+    DB.yvyDaily = {};
+
+    window.showView('yvy'); await wait();
+    /* the old records / week-compare blocks are gone for good */
+    out.oldGone = !document.getElementById('yvyFeatured') && !document.getElementById('yvyRecordsList') &&
+      !document.getElementById('yvyWeekCompare') && !document.getElementById('view-yvy').textContent.includes('این هفته در برابر هفته');
+    out.hero = document.querySelector('#view-yvy .yvy-quote').textContent.includes('از آن خط بگذر');
+    out.tabs = [...document.querySelectorAll('#yvyTabs .chip-opt')].map(b => b.dataset.yvyTab).join(',');
+
+    /* an empty account still shows yesterday's three cards, all at zero */
+    out.emptyCards = document.querySelectorAll('#yvyYesterdayCards .yvy-stat-card').length === 3 &&
+      document.getElementById('yvyEmptyNote').style.display !== 'none';
+    out.records = document.querySelectorAll('#yvyOverallRecords .yvy-record-row').length === 2 &&
+      document.getElementById('yvyOverallRecords').textContent.includes('بیشترین زمان مطالعه در یک روز') &&
+      document.getElementById('yvyOverallRecords').textContent.includes('بیشترین تعداد مباحث تمام‌شده در یک روز');
+
+    /* the entry tab is the only way in: hours + minutes, percent, topics */
+    window.setYVYTab('entry'); await wait();
+    out.entryVisible = document.getElementById('yvyPaneEntry').style.display !== 'none' &&
+      document.getElementById('yvyPaneView').style.display === 'none' &&
+      document.querySelector('#yvyTabs .chip-opt.sel').dataset.yvyTab === 'entry';
+
+    /* nothing saved yet → the form refuses an empty save */
+    window.saveYVYEntry(); await wait();
+    out.refusedEmpty = !DB.yvyDaily || Object.keys(DB.yvyDaily).length === 0;
+
+    /* a real save lands on YESTERDAY's ISO date, not today's */
+    const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return dateToLocalISO(d); })();
+    document.getElementById('yvyStudyH').value = '2';
+    document.getElementById('yvyStudyM').value = '30';
+    document.getElementById('yvyPlanPct').value = '75';
+    document.getElementById('yvyTopics').value = '4';
+    window.saveYVYEntry(); await wait();
+    out.savedYesterday = !!DB.yvyDaily[yesterday] && DB.yvyDaily[yesterday].studyMin === 150 &&
+      DB.yvyDaily[yesterday].planPct === 75 && DB.yvyDaily[yesterday].topics === 4;
+    out.notToday = !DB.yvyDaily[todayISO()];
+
+    /* the cards read the entry back and the records follow it automatically */
+    const cards = document.getElementById('yvyYesterdayCards').textContent;
+    out.cards = cards.includes('۲ ساعت و ۳۰ دقیقه') && cards.includes('۷۵٪') && cards.includes('۴ مبحث') &&
+      cards.includes('ثبت شده برای دیروز');
+    const recText = document.getElementById('yvyOverallRecords').textContent;
+    /* the record dates are shown the way the app writes dates: Jalali digits */
+    out.autoRecords = recText.includes('۲ ساعت و ۳۰ دقیقه') && recText.includes('۴ مبحث') &&
+      recText.includes(isoToJalaliText(yesterday));
+
+    /* saving again edits the same yesterday entry instead of adding one */
+    document.getElementById('yvyStudyH').value = '1';
+    document.getElementById('yvyStudyM').value = '0';
+    window.saveYVYEntry(); await wait();
+    out.edited = Object.keys(DB.yvyDaily).length === 1 && DB.yvyDaily[yesterday].studyMin === 60;
+
+    /* the all-time records really are maxima over every logged day */
+    DB.yvyDaily['2026-01-05'] = { studyMin: 90, planPct: 100, topics: 9 };
+    DB.yvyDaily['2026-01-06'] = { studyMin: 300, planPct: 10, topics: 2 };
+    window.renderYVY(); await wait();
+    const bestText = document.getElementById('yvyOverallRecords').textContent;
+    out.maxStudy = bestText.includes('۵ ساعت') && bestText.includes(isoToJalaliText('2026-01-06'));
+    out.maxTopics = bestText.includes('۹ مبحث') && bestText.includes(isoToJalaliText('2026-01-05'));
+
+    /* clearing yesterday's entry empties the cards but keeps older records */
+    window.clearYVYEntry(); await wait();
+    out.cleared = !DB.yvyDaily[yesterday] && document.getElementById('yvyEmptyNote').style.display !== 'none' &&
+      document.getElementById('yvyOverallRecords').textContent.includes('۵ ساعت');
+
+    /* the guide CTA lands on the entry tab, and the section guide explains it */
+    window.openGuide('yvy');
+    out.guideCta = document.getElementById('guideCta').textContent;
+    document.getElementById('guideCta').click(); await wait();
+    out.guideLands = document.getElementById('view-yvy').classList.contains('active') &&
+      document.querySelector('#yvyTabs .chip-opt.sel').dataset.yvyTab === 'entry';
+    /* a long sentence may be wrapped by prettier-style markup, so the guide is
+       checked by its durable phrases, not by one exact line */
+    window.openGuide('yvy');
+    const yvyPanel = document.querySelector('#guideModalBg .guide-panel[data-g="yvy"]');
+    out.guideText = yvyPanel.textContent.includes('رکورد کلی') && yvyPanel.textContent.includes('فقط دستی') &&
+      yvyPanel.textContent.includes('بیشترین زمان مطالعه در یک روز') &&
+      yvyPanel.querySelectorAll('.guide-row').length === 4;
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+
+    /* the rewards section finally has its own guide, button, slot and action */
+    window.showView('rewards'); await wait();
+    out.rewardsGuide = !!document.querySelector('#view-rewards .guide-btn[onclick="openGuide(\'rewards\')"]') &&
+      !!document.getElementById('guideSlot-rewards');
+    window.openGuide('rewards');
+    out.rewardsPanel = document.querySelector('#guideModalBg .guide-panel.sel').dataset.g === 'rewards' &&
+      document.querySelectorAll('#guideModalBg .guide-panel[data-g="rewards"] .guide-row').length === 4;
+    out.rewardsCta = document.getElementById('guideCta').textContent;
+    document.getElementById('guideCta').click(); await wait();
+    out.rewardsOpens = document.getElementById('rewardModalBg').classList.contains('open');
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+    out.rewardsInSettings = !!document.querySelector('#view-settings [onclick="openGuide(\'rewards\')"]');
+
+    /* the guides of the other sections name what those sections grew */
+    out.dashboardGuide = document.querySelector('#guideModalBg .guide-panel[data-g="dashboard"]').textContent.includes('🎁') &&
+      document.querySelectorAll('#guideModalBg .guide-panel[data-g="dashboard"] .guide-row').length === 5;
+    out.calendarGuide = document.querySelector('#guideModalBg .guide-panel[data-g="calendar"]').textContent.includes('سختی بلوک');
+    out.pomodoroGuide = document.querySelector('#guideModalBg .guide-panel[data-g="pomodoro"]').textContent.includes('ثبت داده');
+    out.settingsGuide = document.querySelector('#guideModalBg .guide-panel[data-g="settings"]').textContent.includes('آفلاین');
+
+    /* backups carry the manual entries, older backups open without them */
+    const payload = window.buildBackupPayload();
+    out.inBackup = !!payload.yvyDaily && !!payload.yvyDaily['2026-01-05'];
+    delete DB.yvyDaily;
+    window.renderYVY(); await wait();
+    out.missingSafe = !!DB.yvyDaily && typeof DB.yvyDaily === 'object' && document.getElementById('yvyYesterdayCards').children.length === 3;
+
+    /* the old record engine is really gone */
+    out.oldEngineGone = typeof window.checkNewRecords === 'undefined' && typeof window.YVY_METRICS === 'undefined' &&
+      !('newRecordFlags' in DB) && typeof window.yvyWeekRange === 'undefined';
+    DB.yvyDaily = JSON.parse(before || '{}');
+    window.renderYVY();
+    return out;
+  });
+  check('v24.11 You VS You drops the old records and shows yesterday only', v2411.oldGone && v2411.hero && v2411.tabs === 'view,entry' && v2411.emptyCards && v2411.records, JSON.stringify(v2411));
+  check('v24.11 yesterday stats are manual-only, stored under yesterday and editable', v2411.entryVisible && v2411.refusedEmpty && v2411.savedYesterday && v2411.notToday && v2411.cards && v2411.edited, JSON.stringify(v2411));
+  check('v24.11 the two all-time records are automatic maxima of the logged days', v2411.autoRecords && v2411.maxStudy && v2411.maxTopics && v2411.cleared, JSON.stringify(v2411));
+  check('v24.11 the YVY guide matches the new design and its action lands on the entry tab', v2411.guideCta === '✍️ ثبت آمار دیروز' && v2411.guideLands && v2411.guideText, JSON.stringify(v2411));
+  check('v24.11 the rewards section gained the guide it was missing', v2411.rewardsGuide && v2411.rewardsPanel && v2411.rewardsCta === '➕ جایزه جدید' && v2411.rewardsOpens && v2411.rewardsInSettings, JSON.stringify(v2411));
+  check('v24.11 the other section guides describe what the app really does now', v2411.dashboardGuide && v2411.calendarGuide && v2411.pomodoroGuide && v2411.settingsGuide, JSON.stringify(v2411));
+  check('v24.11 manual entries survive backup and a store without them', v2411.inBackup && v2411.missingSafe && v2411.oldEngineGone, JSON.stringify(v2411));
 
   await browser.close();
 } else {
@@ -2870,9 +3014,11 @@ if (!useFallback) {
   check('v21.3 one guide modal holds one panel per section, four short rows each',
     ['dashboard', 'tasks', 'daily-checklist', 'calendar', 'habits', 'goals', 'notes']
       .every(g => indexHtml.includes(`data-g="${g}" role="tabpanel"`)) &&
-    /* v23.5 added one row to the tasks guide and one to the boss guide */
-    (indexHtml.match(/class="guide-row"/g) || []).length === 62 &&
-    (indexHtml.match(/class="guide-lead"/g) || []).length === 15 &&
+    /* v23.5 added one row to the tasks guide and one to the boss guide;
+       v24.11 added rows for the rewards / dashboard / calendar / pomodoro /
+       settings features and rewrote the YVY one */
+    (indexHtml.match(/class="guide-row"/g) || []).length === 70 &&
+    (indexHtml.match(/class="guide-lead"/g) || []).length === 16 &&
     v213Js.includes("var SECTIONS = ['dashboard', 'tasks', 'daily-checklist', 'calendar'") &&
     v213Js.includes("'pomodoro', 'shop', 'skills', 'boss', 'yvy', 'city', 'profile', 'settings'"));
   check('v21.3 each guide ends in the action it explains, not in more reading',
@@ -2931,8 +3077,10 @@ if (!useFallback) {
   check('v21.4 habits, goals and notes carry the same single ❓, slot and panel',
     v214Sections.every(v => indexHtml.includes(`onclick="openGuide('${v}')"`) &&
       indexHtml.includes(`id="guideSlot-${v}"`) && indexHtml.includes(`data-g="${v}" role="tab"`)) &&
-    (indexHtml.match(/class="guide-btn"/g) || []).length === 14 &&
-    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 30 &&
+    /* v24.11: the rewards section added the fifteenth ❓ and two more entry points
+       (its own button + the Settings card), so the shared guide counts grew. */
+    (indexHtml.match(/class="guide-btn"/g) || []).length === 15 &&
+    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 32 &&
     v213Js.includes("habits: { label: '➕ عادت جدید', fn: 'openHabitModal' }") &&
     v213Js.includes("goals: { label: '➕ هدف جدید', fn: 'openGoalModal' }") &&
     v213Js.includes("notes: { label: '➕ یادداشت جدید', fn: 'openNoteModal' }"));
@@ -2949,8 +3097,8 @@ if (!useFallback) {
 
   check('v21.4 the guides in Settings grew with the sections',
     /* v21.7: the sentence no longer lists the sections one by one — there are ten */
-    indexHtml.includes('راهنمای کوتاهِ پانزده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.') &&
-    langJs.includes('"راهنمای کوتاهِ پانزده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود."'));
+    indexHtml.includes('راهنمای کوتاهِ شانزده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.') &&
+    langJs.includes('"راهنمای کوتاهِ شانزده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود."'));
 
   check('v21.4 every new string has an English translation',
     ['راهنمای عادت‌ها', 'راهنمای اهداف', 'راهنمای یادداشت‌ها', 'عادت جدید', 'هدف جدید', 'یادداشت جدید',
@@ -3022,9 +3170,11 @@ if (!useFallback) {
     v215Sections.every(v => indexHtml.includes(`onclick="openGuide('${v}')"`) &&
       indexHtml.includes(`id="guideSlot-${v}"`) && indexHtml.includes(`data-g="${v}" role="tab"`) &&
       indexHtml.includes(`data-g="${v}" role="tabpanel"`)) &&
-    (indexHtml.match(/class="guide-btn"/g) || []).length === 14 &&
-    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 30 &&
-    (indexHtml.match(/data-g="/g) || []).length === 30 &&
+    /* v24.11: the rewards guide added one ❓, two entry points and two tabs
+       (the section's own button + the Settings card, tab + panel). */
+    (indexHtml.match(/class="guide-btn"/g) || []).length === 15 &&
+    (indexHtml.match(/onclick="openGuide\('/g) || []).length === 32 &&
+    (indexHtml.match(/data-g="/g) || []).length === 32 &&
     v213Js.includes("pomodoro: '📖 راهنمای پومودورو'") && v213Js.includes("shop: '📖 راهنمای XP Shop'") &&
     v213Js.includes("skills: '📖 راهنمای درخت مهارت'") && v213Js.includes("boss: '📖 راهنمای باس هفتگی'"));
 
@@ -3161,7 +3311,7 @@ if (!useFallback) {
     !readmePomo.includes('اعلان‌های معکوس زنده') &&
     readmePomo.includes('اعلان‌ها فقط سه‌جا می‌آیند') && readmePomo.includes('کلید روشن/خاموش اعلان‌ها') &&
     readmeGuides.includes('پومودورو، XP Shop، درخت مهارت، باس هفتگی') &&
-    readmeGuides.includes('هر پانزده راهنما') &&
+    readmeGuides.includes('شانزده تب داخل پنجره') &&
     readme.includes('ساختِ تسک داخل صفحه‌ی باس') && readme.includes('life-planner-cache-v88'));
 
   const v213CssCode = v213Css.replace(/\/\*[\s\S]*?\*\//g, '');   /* comments may talk about blur */
@@ -3339,6 +3489,41 @@ if (!useFallback) {
     langJs.includes('var EXTRA_V243') && langJs.includes('Daily checklist guide') &&
     langJs.includes('Description (optional)') && langJs.includes('Past days') &&
     langJs.includes('.daily-checklist-title,.daily-checklist-details-note,#dailyChecklistDetailsTitle'));
+
+  // ---------- v24.11: manual You VS You + the missing rewards guide ----------
+  check('v24.11 You VS You is manual-only: yesterday cards, an entry tab and two auto records',
+    indexHtml.includes('id="yvyYesterdayCards"') && indexHtml.includes('id="yvyOverallRecords"') &&
+    indexHtml.includes('id="yvyStudyH"') && indexHtml.includes('id="yvyStudyM"') &&
+    indexHtml.includes('id="yvyPlanPct"') && indexHtml.includes('id="yvyTopics"') &&
+    indexHtml.includes("setYVYTab('view')") && indexHtml.includes("setYVYTab('entry')") &&
+    indexHtml.includes('onclick="saveYVYEntry()"') && indexHtml.includes('onclick="clearYVYEntry()"') &&
+    coreJs.includes('function saveYVYEntry()') && coreJs.includes('function clearYVYEntry()') &&
+    coreJs.includes('function setYVYTab(tab)') && coreJs.includes('function yvyBestEver(field)') &&
+    coreJs.includes('function yesterdayISO()'));
+  check('v24.11 the old records, the week compare and the record engine are gone',
+    !indexHtml.includes('id="yvyFeatured"') && !indexHtml.includes('id="yvyRecordsList"') &&
+    !indexHtml.includes('id="yvyWeekCompare"') && !coreJs.includes('YVY_METRICS') &&
+    !coreJs.includes('function checkNewRecords') && !coreJs.includes('function renderYVYWeekCompare') &&
+    !coreJs.includes('newRecordFlags') && !coreJs.includes('function yvyWeekRange'));
+  check('v24.11 yesterday stats are stored by date and an old store cannot break the section',
+    coreJs.includes('db.yvyDaily') &&
+    coreJs.includes("if(!DB.yvyDaily || typeof DB.yvyDaily !== 'object' || Array.isArray(DB.yvyDaily)) DB.yvyDaily = {};") &&
+    coreJs.includes("yvyStore()[d] = { studyMin, planPct:pct, topics, updatedAt: Date.now() }") &&
+    coreJs.includes("if(!yvyStore()[d]) return;"));
+  check('v24.11 the YVY guide was rewritten and the rewards section finally has a guide',
+    indexHtml.includes('data-g="rewards" role="tabpanel"') && indexHtml.includes('data-g="rewards" role="tab"') &&
+    indexHtml.includes('id="guideSlot-rewards"') && indexHtml.includes("openGuide('rewards')") &&
+    indexHtml.includes('راهنمای کوتاهِ شانزده بخشِ برنامه') &&
+    v213Js.includes("rewards: '📖 راهنمای جایزه'") &&
+    v213Js.includes("rewards: { label: '➕ جایزه جدید', fn: 'openRewardModal' }") &&
+    v213Js.includes("window.setYVYTab('entry')") && v213Js.includes("label: '✍️ ثبت آمار دیروز'"));
+  check('v24.11 the other guides now describe what the app really does',
+    indexHtml.includes('سختی بلوک') && indexHtml.includes('آفلاین و اینترنت ملی') &&
+    indexHtml.includes('ثبت داده') && indexHtml.includes('جایزه‌ی بعدی با شمارش معکوس زنده') &&
+    langJs.includes('var EXTRA_V2411 = {') && langJs.includes('EXACT[_k2411] = EXTRA_V2411[_k2411];') &&
+    ['Longest study day', 'Most topics in one day', 'Rewards guide', 'Daily plan progress',
+     'not logged', 'Boss tab', 'Create your first reward'].every(en => langJs.includes(en)) &&
+    readme.includes('### ✨ نسخه 24.11') && readme.includes('راهنمای شانزده بخش'));
 
   // The release version has to move consistently in the app, package metadata, docs and cache.
   const coreVer = (coreJs.match(/const LP_APP_VERSION='([^']+)'/) || [])[1];

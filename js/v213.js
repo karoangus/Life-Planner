@@ -63,12 +63,14 @@
 
   /* Sections that own a guide. The Daily Checklist joins the shared guide engine. The Calendar has one too, it just never shows
      a first-visit hint (its intro line already sits above the grid). */
-  var SECTIONS = ['dashboard', 'tasks', 'daily-checklist', 'calendar', 'habits', 'goals', 'notes',
+  var SECTIONS = ['dashboard', 'tasks', 'daily-checklist', 'calendar', 'habits', 'goals', 'rewards', 'notes',
                   'pomodoro', 'shop', 'skills', 'boss', 'yvy', 'city', 'profile', 'settings'];
   var HINTED = {
     dashboard: true, tasks: true, 'daily-checklist': true, habits: true, goals: true, notes: true,
     /* v21.7 */ pomodoro: true, shop: true, skills: true, boss: true,
-    yvy: true, city: true, profile: true, settings: true
+    yvy: true, city: true, profile: true, settings: true,
+    /* v24.11 — the rewards section gets its guide one release late */
+    rewards: true
   };
 
   var TITLES = {
@@ -78,6 +80,7 @@
     calendar: '📖 راهنمای تقویم',
     habits: '📖 راهنمای عادت‌ها',
     goals: '📖 راهنمای اهداف',
+    /* v24.11 */ rewards: '📖 راهنمای جایزه',
     notes: '📖 راهنمای یادداشت‌ها',
     /* v21.7 */
     pomodoro: '📖 راهنمای پومودورو',
@@ -98,6 +101,7 @@
     /* v21.4 */
     habits: { label: '➕ عادت جدید', fn: 'openHabitModal' },
     goals: { label: '➕ هدف جدید', fn: 'openGoalModal' },
+    /* v24.11 */ rewards: { label: '➕ جایزه جدید', fn: 'openRewardModal' },
     notes: { label: '➕ یادداشت جدید', fn: 'openNoteModal' },
     /* v21.7 — `fn` is a global name, `local` a function of this file: the two
        sections below have no sheet of their own to open. */
@@ -106,7 +110,14 @@
     skills: { label: '🛍️ برو به XP Shop', local: function () {
       if (typeof window.showView === 'function') window.showView('shop');
     } },
-    yvy: { label: '🏅 دیدن رکوردها', local: function () { window.showView('yvy'); document.getElementById('yvyRecordsList').scrollIntoView({behavior: 'smooth', block: 'center'}); } },
+    /* v24.11 — the records list is gone; the useful next tap is the entry tab
+       that feeds the two automatic all-time records. */
+    yvy: { label: '✍️ ثبت آمار دیروز', local: function () {
+      window.showView('yvy');
+      if (typeof window.setYVYTab === 'function') window.setYVYTab('entry');
+      var pane = document.getElementById('yvyPaneEntry');
+      if (pane && pane.scrollIntoView) pane.scrollIntoView({behavior: 'smooth', block: 'center'});
+    } },
     city: { label: '🧱 دیدن مراحل شهر', local: function () { window.showView('city'); document.getElementById('cityStageList').scrollIntoView({behavior: 'smooth', block: 'center'}); } },
     profile: { label: '🌟 دیدن روز کامل', local: function () { window.showView('profile'); if (document.getElementById('perfectDayGuide').style.display !== 'block') call('togglePerfectDayGuide'); document.getElementById('perfectDayCard').scrollIntoView({behavior: 'smooth', block: 'center'}); } },
     settings: { label: '📱 تنظیم نوار پایین', local: function () { window.showView('settings'); call('openSettingsNav'); } },
@@ -127,7 +138,7 @@
   };
 
   var HINTS = {
-    yvy: { ic: '🪞', txt: 'رکوردهایت و آمار این هفته را با گذشته مقایسه کن.' },
+    yvy: { ic: '🪞', txt: 'آمار دیروزت را دستی ثبت کن؛ دو رکورد کلی خودکار از همین‌ها ساخته می‌شود.' },
     city: { ic: '🏙️', txt: 'با بالا رفتن سطح، شهرت رشد می‌کند.' },
     profile: { ic: '👤', txt: 'سطح، آمار و شرط‌های روز کامل را اینجا ببین.' },
     settings: { ic: '⚙️', txt: 'ظاهر، زبان و پشتیبان برنامه را اینجا تنظیم کن.' },
@@ -168,6 +179,10 @@
     goals: {
       ic: '🎯',
       txt: 'یک هدف بساز و هر روز با +۲٪ یا +۱۰٪ جلویش ببر — همین.'
+    },
+    rewards: {
+      ic: '🎁',
+      txt: 'یک جایزه بساز و تکرارش را بگو؛ شمارش معکوس تا لحظه‌ی گرفتنش خودکار است.'
     },
     notes: {
       ic: '📝',
