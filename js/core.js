@@ -1697,6 +1697,7 @@ function showPomoTab(tab){
   if(tab==='stats'){ renderPomoStats(); renderPomoChart(); }
   if(tab==='manual'){ renderManualPomoData(); }
   if(tab==='settings') fillPomoSettingsForm();
+  if(tab==='social' && typeof window.renderSocialHub === 'function') window.renderSocialHub();
 }
 
 function fmtMMSS(ms){
@@ -6428,7 +6429,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.9';
+const LP_APP_VERSION='25.0';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
