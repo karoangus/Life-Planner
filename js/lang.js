@@ -1206,7 +1206,9 @@
     [new RegExp("^جلسه\\ ([\\s\\S]*)$"), "Session $1"],
     [new RegExp("^هفته\\ ([\\s\\S]*)$"), "Week $1"],
     [new RegExp("^([\\s\\S]*?)\\ از\\ ([\\s\\S]*)$"), "$1 of $2"],
-    [new RegExp("^([\\s\\S]*?)\\ روز$"), "$1 days"],
+    /* v24.11: a countable prefix only — «بیشترین زمان مطالعه در یک روز» is a
+       record title, not a count, and must reach its own dictionary entry. */
+    [new RegExp("^([\\d۰-۹][\\d۰-۹\\s\\/٪%.,-]*?)\\ روز$"), "$1 days"],
     [new RegExp("^فقط\\ ([\\s\\S]*)$"), "only $1"],
     [new RegExp("^([\\s\\S]*?)٪$"), "$1%"],
   ];
@@ -1445,7 +1447,9 @@
     [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*روز$/,       'day',      'days'],
     /* v16.2: notes counter ("۱۰ یادداشت") and word count ("📄 ۱۲ کلمه") */
     [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*یادداشت$/,   'note',     'notes'],
-    [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*کلمه$/,      'word',     'words']
+    [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*کلمه$/,      'word',     'words'],
+    /* v24.11: You VS You counts finished topics ("۳ مبحث") */
+    [/^([\d۰-۹][\d۰-۹\s\/٪%.,-]*?)\s*مبحث$/,      'topic',    'topics']
   ];
   function countUnit(s){
     for(var i = 0; i < COUNT_UNITS.length; i++){
@@ -1666,6 +1670,121 @@
     "کار انجام شد": "items completed"
   };
   for(var _k243 in EXTRA_V243){ if(Object.prototype.hasOwnProperty.call(EXTRA_V243, _k243)) EXACT[_k243] = EXTRA_V243[_k243]; }
+
+  /* v24.11 — You VS You became manual-only: yesterday's study / plan / topics
+     plus two automatic all-time records. The rewards section finally has a
+     guide too, and the calendar guide learned about difficulty chips. */
+  var EXTRA_V2411 = {
+    /* --- You VS You: hero, tabs, cards --- */
+    "دیروز... از آن خط بگذر یا او از تو می‌گذرد": "Yesterday… step over that line, or it steps over you",
+    "رقابت با دیروزِ خودت": "Compete with your yesterday",
+    "تب‌های You VS You": "You VS You tabs",
+    "📅 دیروز": "📅 Yesterday",
+    "✍️ ثبت آمار دیروز": "✍️ Log yesterday's stats",
+    "آمار دیروز": "Yesterday's stats",
+    "هنوز برای دیروز چیزی ثبت نشده — از تب «✍️ ثبت آمار دیروز» وارد کن.": "Nothing is logged for yesterday yet — use the “✍️ Log yesterday's stats” tab.",
+    "رکورد کلی": "All-time records",
+    "📈 پیشروی برنامه روزانه": "📈 Daily plan progress",
+    "📖 مباحث تمام‌شده": "📖 Topics finished",
+    "📖 تعداد مباحث تمام‌شده": "📖 Topics finished",
+    "مبحث": "topic",
+    "ثبت نشده": "not logged",
+    "ثبت شده برای دیروز": "logged for yesterday",
+    "تمام‌شده": "finished",
+    "از برنامه‌ی دیروز": "of yesterday's plan",
+    "بیشترین زمان مطالعه در یک روز": "Longest study day",
+    "بیشترین تعداد مباحث تمام‌شده در یک روز": "Most topics in one day",
+    /* --- You VS You: the entry tab --- */
+    "این آمار فقط دستی ثبت می‌شود و برای دیروز است؛ رکوردهای کلی خودکار از همین ثبت‌ها حساب می‌شوند.":
+      "These numbers are entered by hand and always belong to yesterday; the all-time records are built from them automatically.",
+    "ساعت": "Hours",
+    "دقیقه": "Minutes",
+    "ساعت مطالعه": "Study hours",
+    "دقیقه مطالعه": "Study minutes",
+    "📈 پیشروی برنامه روزانه (٪)": "📈 Daily plan progress (%)",
+    "۰ تا ۱۰۰": "0 to 100",
+    "📖 تعداد مباحث تمام‌شده": "📖 Topics finished",
+    "تعداد": "Count",
+    "💾 ذخیره": "💾 Save",
+    "🗑️ پاک کردن ثبت دیروز": "🗑️ Clear yesterday's entry",
+    "ذخیره‌ی دوباره، ثبت قبلی دیروز را ویرایش می‌کند.": "Saving again edits the existing entry for yesterday.",
+    "✅ آمار دیروز ذخیره شد": "✅ Yesterday's stats were saved",
+    "🗑️ ثبت دیروز پاک شد": "🗑️ Yesterday's entry was cleared",
+    "⚠️ حداقل یکی از سه عدد را وارد کن": "⚠️ Enter at least one of the three numbers",
+    /* --- You VS You: guide --- */
+    "📖 راهنمای رقابت با خود": "📖 You VS You guide",
+    "دیروزت را با خودت بسنج: سه عدد دستی برای دیروز، و دو رکورد کلی که خودکار از همان‌ها ساخته می‌شوند.":
+      "Measure yesterday against yourself: three numbers you log by hand, plus two all-time records built from them automatically.",
+    "سه کارت بالا فقط آمار دیروز را نشان می‌دهند: مطالعه، پیشروی برنامه‌ی روزانه و تعداد مباحث تمام‌شده. اگر هنوز ثبت نشده، صفر می‌بینی.":
+      "The three cards show yesterday only: study time, daily plan progress and topics finished. Until you log them they stay at zero.",
+    "در تب «✍️ ثبت آمار دیروز» مطالعه را با ساعت و دقیقه، پیشروی را با درصد و مباحث را با تعداد وارد می‌کنی و ذخیره می‌زنی. فقط دستی ثبت می‌شود و همیشه برای دیروز است؛ ذخیره‌ی دوباره ویرایشش می‌کند.":
+      "In the “✍️ Log yesterday's stats” tab you enter study time in hours and minutes, plan progress as a percentage and topics as a count, then save. It is manual only and always for yesterday; saving again edits it.",
+    "دو رکورد کلی خودکار از همه‌ی ثبت‌ها حساب می‌شوند: بیشترین زمان مطالعه در یک روز و بیشترین تعداد مباحث تمام‌شده در یک روز — با تاریخی که رکورد در آن ثبت شده.":
+      "Two all-time records are calculated automatically from every entry: the longest study day and the most topics finished in one day — each with the date it was set.",
+    "بخش دو تب دارد: «📅 دیروز» برای دیدن آمار و «✍️ ثبت آمار دیروز» برای وارد کردن دستی.":
+      "The section has two tabs: “📅 Yesterday” to see the stats and “✍️ Log yesterday's stats” to enter them by hand.",
+    "آمار دیروزت را دستی ثبت کن؛ دو رکورد کلی خودکار از همین‌ها ساخته می‌شود.":
+      "Log yesterday's numbers by hand; the two all-time records are built from them automatically.",
+    /* --- rewards: guide (v24.8 section, guide added in v24.11) --- */
+    "🎁 جایزه": "🎁 Rewards",
+    "جایزه": "Rewards",
+    /* v23.5 heading that had no translation yet (seen in the tasks and boss guides) */
+    "تب باس": "Boss tab",
+    "تب باس در بخش تسک‌ها": "The boss tab in Tasks",
+    /* the rewards section itself (v24.8 strings, English since v24.11) */
+    "به خودت قول تفریح و استراحت بده": "Promise yourself some fun and rest",
+    "جایزه‌ات را مشخص کن؛ شمارش معکوس با ماست.": "Pick your reward; the countdown is on us.",
+    "هر هفته، هر ماه یا بعد از چند ساعت و روز. وقتی زمانش رسید، جایزه را بگیر تا چرخه‌ی بعدی خودکار شروع شود.":
+      "Every week, every month, or after a number of hours or days. When it is time, claim the reward and the next cycle starts automatically.",
+    "هنوز جایزه‌ای نساختی": "No rewards yet",
+    "یه تفریح کوچیک برای خودت مشخص کن و بذار شمارش معکوسش شروع بشه.": "Pick a small treat for yourself and let its countdown begin.",
+    "➕ ساخت اولین جایزه": "➕ Create your first reward",
+    /* guide row headings and card labels (short headings are translated too,
+       otherwise the English guide keeps Persian titles) */
+    "ثبت آمار": "Log the stats",
+    "دو تب": "Two tabs",
+    "جایزه جدید": "New reward",
+    "تکرار": "Repeat",
+    "گرفتن جایزه": "Claiming the reward",
+    "ویرایش و حذف": "Edit and delete",
+    "بیشترین زمان مطالعه در یک روز": "Longest study day",
+    "بیشترین تعداد مباحث تمام‌شده در یک روز": "Most topics in one day",
+    "راهنمای جایزه": "Rewards guide",
+    "📖 راهنمای جایزه": "📖 Rewards guide",
+    "برای تفریح و استراحتت یک جایزه مشخص کن؛ شمارش معکوس با ماست.":
+      "Pick yourself a treat to rest and have fun; the countdown is on us.",
+    "«➕ جایزه جدید» را بزن؛ اسم جایزه اجباری است و توضیح اختیاری. شمارش معکوس از لحظه‌ی تأیید شروع می‌شود.":
+      "Tap “➕ New reward”; the name is required and the note is optional. The countdown starts the moment you save.",
+    "تکرار را انتخاب کن: هفتگی (هر ۷ روز)، ماهانه (هر ماه تقویمی) یا دلخواه (هر چند ساعت/روز). با ویرایش، شمارش از نو شروع می‌شود.":
+      "Choose a repeat: weekly (every 7 days), monthly (each calendar month) or custom (every N hours/days). Editing restarts the countdown.",
+    "وقتی زمان برسد کارت آماده می‌شود و اعلان می‌آید؛ «🎉 جایزه‌ام رو گرفتم» چرخه‌ی بعدی را خودکار شروع می‌کند. جایزه‌ی بعدی همیشه در داشبورد هم دیده می‌شود.":
+      "When the time comes the card turns ready and a notification arrives; “🎉 I claimed my reward” starts the next cycle automatically. The next reward also shows on the dashboard.",
+    "با ✏️ اسم، توضیح و تکرار عوض می‌شود و شمارش از نو شروع می‌شود؛ 🗑️ با تأیید حذف می‌کند. بالای لیست هم تعداد فعال، آماده و گرفته‌شده را می‌بینی.":
+      "✏️ changes the name, note and repeat and restarts the countdown; 🗑️ deletes after a confirmation. Above the list you see how many are active, ready and claimed.",
+    "یک جایزه بساز و تکرارش را بگو؛ شمارش معکوس تا لحظه‌ی گرفتنش خودکار است.":
+      "Create a reward and say how often it repeats; the countdown to claiming it runs automatically.",
+    "➕ جایزه جدید": "➕ New reward",
+    "🎁 جایزه‌ی بعدی": "🎁 Next reward",
+    /* --- dashboard / calendar / pomodoro / settings guide updates --- */
+    "داشبورد یعنی «امروز چه‌کار داری؟» — جمله‌ی امروز، مأموریت، برنامه‌ی امروز و جایزه‌ات.":
+      "The dashboard answers “what do I have to do today?” — your quote, mission, today's plan and reward.",
+    "تاریخ امروز و یک جمله‌ی انگیزشی؛ با «تغییر حال‌وهوا» لحن جمله عوض می‌شود و با «پیام سفارشی» جمله‌ی خودت را می‌نویسی.":
+      "Today's date and a motivational line; “Change the mood” switches its tone and “Custom message” lets you write your own.",
+    "جایزه‌ی بعدی با شمارش معکوس زنده دیده می‌شود؛ وقتی زمانش برسد کارت آماده می‌شود و با «جایزه‌ام رو گرفتم» چرخه‌ی بعدی خودکار شروع می‌شود. مدیریت کامل در بخش «🎁 جایزه» است.":
+      "The next reward shows a live countdown; when it is due the card turns ready and “I claimed my reward” starts the next cycle. Full management lives in the “🎁 Rewards” section.",
+    "سختی بلوک": "Block difficulty",
+    "در فرم رویداد، سختی را انتخاب کن: آسون (کادر سبز)، متوسط (زرد)، سخت (قرمز)؛ بدون انتخاب بلوک عادی می‌ماند. رنگ بدنهٔ بلوک همان رنگ دسته یا انتخابی‌ات است.":
+      "In the event sheet pick a difficulty: easy (green frame), medium (yellow), hard (red); without one the block stays normal. The block body keeps your category or chosen colour.",
+    "ثبت داده": "Log data",
+    "اگر بیرون از تایمر مطالعه یا استراحت کردی، در تب «📝 ثبت داده» دستی ثبتش کن تا آمار روزت از قلم نیفتد؛ نوع، مدت، تاریخ و تسک مرتبط را انتخاب می‌کنی.":
+      "If you studied or rested outside the timer, log it by hand in the “📝 Log data” tab so the day's stats are not lost; pick the type, length, date and related task.",
+    "آفلاین و اینترنت ملی": "Offline and national internet",
+    "کارت «📴 آفلاین و اینترنت ملی» وضعیت ذخیره‌ی آفلاین، تست آفلاین و نصب روی گوشی را دارد؛ بعد از یک بار لود، برنامه برای همیشه بدون اینترنت کار می‌کند.":
+      "The “📴 Offline and national internet” card holds the offline cache status, an offline test and the install button; after one load the app keeps working without internet.",
+    "راهنمای کوتاهِ شانزده بخشِ برنامه. داخل خود هر بخش هم با دکمه‌ی ❓ باز می‌شود.":
+      "A short guide for each of the app's sixteen sections. Inside every section the same guide opens with its ❓ button."
+  };
+  for(var _k2411 in EXTRA_V2411){ if(Object.prototype.hasOwnProperty.call(EXTRA_V2411, _k2411)) EXACT[_k2411] = EXTRA_V2411[_k2411]; }
 
   function compose(s, depth){
     if(depth > 3) return null;

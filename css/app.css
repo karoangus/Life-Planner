@@ -601,20 +601,17 @@ html.crisis-mode body{
 /* you vs you */
 .yvy-hero{text-align:center; padding:22px 16px; border-radius:var(--radius); background:linear-gradient(150deg, rgba(139,107,255,.10), var(--panel) 60%); border:1px solid rgba(139,107,255,.25);}
 .yvy-quote{font-size:17px; font-weight:900;}
-.yvy-subquote{font-size:12.5px; color:var(--txt-dim); margin-top:6px; font-weight:600;}
+.yvy-hero-sub{font-size:12.5px; color:var(--txt-dim); margin-top:8px; font-weight:600;}
 .yvy-record-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 8px; border-bottom:1px solid var(--line);}
 .yvy-record-row:last-child{border-bottom:none;}
 .yvy-record-name{font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px;}
 .yvy-record-val{font-size:13.5px; font-weight:900; color:var(--neon); font-family:'Consolas','JetBrains Mono',monospace;}
-.yvy-week-row{display:flex; align-items:center; justify-content:space-between; padding:9px 4px; font-size:12.5px;}
-.yvy-week-row .lbl{color:var(--txt-dim); font-weight:600;}
-.yvy-week-row .vals{font-family:'Consolas','JetBrains Mono',monospace; font-weight:800;}
-.yvy-arrow-up{color:var(--ok);}
-.yvy-arrow-down{color:var(--txt-dim2);}
-.yvy-summary-msg{text-align:center; font-size:13.5px; font-weight:800; padding:12px; border-radius:12px; margin-bottom:12px;}
-.yvy-summary-msg.pos{background:rgba(46,230,166,.10); color:var(--ok);}
-.yvy-summary-msg.neu{background:rgba(255,255,255,.05); color:var(--txt-dim);}
-.yvy-new-record-badge{background:rgba(255,204,51,.14); color:#ffcc33; font-size:11px; font-weight:800; padding:3px 9px; border-radius:20px; margin-right:6px;}
+.yvy-tabs{margin-top:14px;}
+.yvy-stat-card{text-align:center;}
+.yvy-stat-card .stat-val{font-size:16px; font-weight:900; color:var(--neon); line-height:1.5;}
+.yvy-stat-card .stat-lbl{font-size:11.5px; word-break:break-word;}
+.yvy-empty-note{font-size:12px; margin-top:10px; text-align:center;}
+.yvy-entry-note{font-size:12px; margin:0 0 12px; line-height:1.9;}
 
 /* jalali date picker */
 .modal.jalali-modal{max-width:300px; padding:16px 16px 14px;}
@@ -1505,7 +1502,6 @@ html[data-lang="en"] .ev-ghost-time{direction:ltr;}
 html[data-lang="en"] .lp-cat-chip .lp-cat-dot{margin-left:0;margin-right:7px;}
 html[data-lang="en"] .lp-tdot{margin-left:0;margin-right:6px;}
 html[data-lang="en"] .reward-boost{margin-right:0;margin-left:6px;}
-html[data-lang="en"] .yvy-new-record-badge{margin-right:0;margin-left:6px;}
 html[data-lang="en"] .lp-cal-head,
 html[data-lang="en"] .lp-cal-day{border-left:0;border-right:1px solid var(--line);}
 /* Latin text needs a slightly different stack than the Persian one. */

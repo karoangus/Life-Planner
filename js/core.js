@@ -79,6 +79,8 @@ function loadStore(){
   if(!Array.isArray(db.events))  db.events  = [];
   /* v24.8 — personal recurring rewards. Older stores/backups start empty. */
   if(!Array.isArray(db.rewards)) db.rewards = [];
+  /* v24.11 — You VS You manual yesterday stats. Older stores/backups start empty. */
+  if(!db.yvyDaily || typeof db.yvyDaily !== 'object' || Array.isArray(db.yvyDaily)) db.yvyDaily = {};
   if(typeof db.history !== 'object' || Array.isArray(db.history)) db.history = {};
   if(typeof db.xp    !== 'number') db.xp    = 0;
   if(typeof db.level !== 'number' || db.level < 1) db.level = 1;
@@ -135,7 +137,6 @@ if(!Array.isArray(DB.cityBonusItems)) DB.cityBonusItems = [];
 if(!DB.skillTiers || typeof DB.skillTiers!=='object') DB.skillTiers = {pomoXp:0,questXp:0,shopDiscount:0,luckyBox:0,criticalBonus:0,streakGuard:0,questCooldown:0};
 if(!DB.boss || typeof DB.boss!=='object') DB.boss = {active:null,nextAvailableAt:Date.now()};
 if(!DB.crisis || typeof DB.crisis!=='object') DB.crisis = {active:false,deadlineAt:0,cooldownUntil:0};
-if(!DB.newRecordFlags || typeof DB.newRecordFlags!=='object') DB.newRecordFlags = {};
 if(!DB.perfectDayHistory || typeof DB.perfectDayHistory!=='object') DB.perfectDayHistory = {};
 if(!DB.dailyGoalProgress || typeof DB.dailyGoalProgress!=='object') DB.dailyGoalProgress = {};
 if(!DB.streakShields || typeof DB.streakShields!=='number') DB.streakShields = 0;
@@ -175,7 +176,6 @@ if(!DB.skillTiers) DB.skillTiers = { pomoXp:0, questXp:0, shopDiscount:0, luckyB
 if(DB.skillTiers.questCooldown===undefined) DB.skillTiers.questCooldown = 0;
 if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
 if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
-if(!DB.newRecordFlags) DB.newRecordFlags = {};
 function persist(){ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
 /* PERF (v16): the repaint is coalesced into one animation frame instead of
    running synchronously inside every save(). Saving itself is unchanged —
@@ -764,7 +764,6 @@ function addXP(n){
       const t = getLevelTitle(DB.level);
       toast(`🎉 تبریک! رسیدی به سطح ${DB.level} — ${t.icon} ${t.title} · +۱ امتیاز مهارت 🌳`);
     }
-    checkNewRecords();
   } else {
     DB.xp = Math.max(0, DB.xp + n);
   }
@@ -1482,7 +1481,6 @@ function completeQuest(){
   addXP(xpGain);
   toast(`✅ آفرین! +${xpGain} XP گرفتی`);
   checkPerfectDay();
-  checkNewRecords();
   save();
   renderXP();
 }
@@ -1776,7 +1774,6 @@ function addPomoMinutes(kind, minutes, date=todayISO(), opts={}){
   const bonus = 1 + 0.1*(DB.skillTiers.pomoXp||0);
   const xp = Math.round(minutes * POMO_XP_PER_MIN * bonus);
   addXP(xp);
-  checkNewRecords();
   return xp;
 }
 const POMO_GOAL_BONUS_XP = 30;
@@ -2174,133 +2171,163 @@ function tickCrisis(){
 }
 setInterval(tickCrisis, 1000);
 
-/* ============ YOU VS YOU ============ */
-const YVY_METRICS = [
-  { key:'xp',           label:'XP روزانه',            icon:'⚡', unit:'XP',        get:(d)=> (DB.history[d]?.xp)||0 },
-  { key:'tasks',        label:'تسک‌های انجام‌شده',    icon:'✅', unit:'تسک',       get:(d)=> (DB.history[d]?.tasks)||0 },
-  { key:'pomoMin',      label:'مدت مطالعه',           icon:'⏱️', unit:'دقیقه',     get:(d)=> getPomoTotal(d,'focus') },
-  { key:'pomoSessions', label:'تعداد پومودورو',       icon:'🍅', unit:'پومودورو',  get:(d)=> (DB.pomodoro.history[d]?.sessions)||0 },
-  { key:'quests',       label:'کوئست‌های انجام‌شده',  icon:'🎯', unit:'کوئست',     get:(d)=> (DB.stats.questsCompletedByDate?.[d])||0 },
-];
+/* ============ YOU VS YOU (v24.11) ============
+   The section is manual-only now: the user writes yesterday's study time,
+   daily-plan progress and finished topics by hand in the entry tab, and the
+   two all-time records are derived automatically from those entries. */
+function yesterdayISO(){
+  const d = new Date();
+  d.setDate(d.getDate()-1);
+  return dateToLocalISO(d);
+}
+/* The store is re-read on every call: an old backup, or an import that drops
+   the key, must never make the section throw. */
+function yvyStore(){
+  if(!DB.yvyDaily || typeof DB.yvyDaily !== 'object' || Array.isArray(DB.yvyDaily)) DB.yvyDaily = {};
+  return DB.yvyDaily;
+}
+function yvyEntry(dateISO){
+  const e = yvyStore()[dateISO];
+  if(!e || typeof e !== 'object') return null;
+  return {
+    studyMin: Math.max(0, Math.round(Number(e.studyMin)||0)),
+    planPct:  Math.min(100, Math.max(0, Math.round(Number(e.planPct)||0))),
+    topics:   Math.max(0, Math.round(Number(e.topics)||0)),
+  };
+}
+function yvyHasEntry(dateISO){
+  const e = yvyEntry(dateISO);
+  return !!e && (e.studyMin>0 || e.planPct>0 || e.topics>0);
+}
 function yvyAllDates(){
-  const dates = new Set();
-  Object.keys(DB.history||{}).forEach(d=>dates.add(d));
-  Object.keys(DB.pomodoro.history||{}).forEach(d=>dates.add(d));
-  (DB.pomodoro.manualData||[]).forEach(x=>dates.add(x.date));
-  Object.keys(DB.stats.questsCompletedByDate||{}).forEach(d=>dates.add(d));
-  return [...dates];
+  return Object.keys(yvyStore()).filter(d=>yvyHasEntry(d)).sort();
 }
-function yvyBestEver(metric, excludeDate){
-  let best = 0;
+function yvyBestEver(field){
+  let best = 0, bestDate = null;
   yvyAllDates().forEach(d=>{
-    if(d===excludeDate) return;
-    const v = metric.get(d);
-    if(v>best) best = v;
+    const v = yvyEntry(d)[field] || 0;
+    if(v > best){ best = v; bestDate = d; }
   });
-  return best;
+  return { value: best, date: bestDate };
 }
-function checkNewRecords(){
-  const today = todayISO();
-  YVY_METRICS.forEach(m=>{
-    const todayVal = m.get(today);
-    if(todayVal<=0) return;
-    const bestExcl = yvyBestEver(m, today);
-    const flagKey = `${today}:${m.key}`;
-    if(todayVal>bestExcl && !DB.newRecordFlags[flagKey]){
-      DB.newRecordFlags[flagKey] = true;
-      toast(`🏆 رکورد شخصی جدید! ${m.icon} ${m.label}: ${todayVal} ${m.unit}`);
-    }
+function setYVYTab(tab){
+  const t = tab==='entry' ? 'entry' : 'view';
+  document.querySelectorAll('#yvyTabs .chip-opt').forEach(b=>{
+    const on = b.dataset.yvyTab===t;
+    b.classList.toggle('sel', on);
+    b.setAttribute('aria-selected', on?'true':'false');
   });
+  const view = document.getElementById('yvyPaneView');
+  const entry = document.getElementById('yvyPaneEntry');
+  if(view) view.style.display = t==='view' ? '' : 'none';
+  if(entry) entry.style.display = t==='entry' ? '' : 'none';
+  if(t==='entry') fillYVYEntryForm();
 }
-function yvyWeekRange(offsetWeeks){
-  const now = new Date();
-  const todayIdx = (now.getDay()+1)%7;
-  const sat = new Date(now); sat.setDate(now.getDate()-todayIdx-offsetWeeks*7);
-  const fri = new Date(sat); fri.setDate(sat.getDate()+6);
-  return [dateToLocalISO(sat), dateToLocalISO(fri)];
+function fillYVYEntryForm(){
+  const d = yesterdayISO();
+  const e = yvyEntry(d) || { studyMin:0, planPct:0, topics:0 };
+  const hEl = document.getElementById('yvyStudyH');
+  const mEl = document.getElementById('yvyStudyM');
+  const pEl = document.getElementById('yvyPlanPct');
+  const tEl = document.getElementById('yvyTopics');
+  if(hEl) hEl.value = e.studyMin ? Math.floor(e.studyMin/60) || '' : '';
+  if(mEl) mEl.value = e.studyMin ? e.studyMin%60 || '' : '';
+  if(pEl) pEl.value = yvyHasEntry(d) ? e.planPct : '';
+  if(tEl) tEl.value = yvyHasEntry(d) ? e.topics : '';
+  const clearBtn = document.getElementById('yvyClearBtn');
+  if(clearBtn) clearBtn.style.display = yvyHasEntry(d) ? '' : 'none';
 }
-function yvySumRange(startISO, endISO, getter){
-  let sum=0;
-  yvyAllDates().forEach(d=>{ if(d>=startISO && d<=endISO) sum+=getter(d); });
-  return sum;
-}
-function yvyCountPerfectDays(startISO, endISO){
-  let c=0;
-  Object.keys(DB.perfectDayHistory||{}).forEach(d=>{ if(d>=startISO && d<=endISO && DB.perfectDayHistory[d]) c++; });
-  return c;
-}
-function renderYVYFeatured(){
-  const today = todayISO();
-  const candidates = YVY_METRICS.map(m=>({ ...m, todayVal:m.get(today), bestVal:yvyBestEver(m, today) }));
-  const withRecords = candidates.filter(c=>c.bestVal>0);
-  const featured = withRecords.length
-    ? withRecords.sort((a,b)=> (b.todayVal/b.bestVal) - (a.todayVal/a.bestVal))[0]
-    : candidates.find(c=>c.key==='tasks');
-  const broke = featured.bestVal>0 && featured.todayVal>featured.bestVal;
-  const brandNew = featured.bestVal===0 && featured.todayVal>0;
-  const pct = featured.bestVal>0 ? Math.min(100, Math.round((featured.todayVal/featured.bestVal)*100)) : (featured.todayVal>0?100:0);
-  let msg;
-  if(broke || brandNew){
-    msg = `<div class="yvy-summary-msg pos">🎉 رکورد شخصی جدید در ${featured.label}!</div>`;
-  } else if(featured.bestVal>0){
-    const remain = featured.bestVal - featured.todayVal;
-    msg = `<div class="yvy-summary-msg neu">${remain} ${featured.unit} تا شکستن رکوردت (${featured.bestVal} ${featured.unit}) مونده</div>`;
-  } else {
-    msg = `<div class="yvy-summary-msg neu">هنوز رکوردی برای ${featured.label} نداری — امروز اولینش رو بساز!</div>`;
+/* v24.11: type=number refuses Persian digits in some browsers, so each field
+   is read as text and its Persian/Arabic digits are folded to ASCII first. */
+/* Study time reads like the rest of the app: Persian digits and the same
+   «۲ ساعت و ۳۰ دقیقه» wording the Pomodoro stats use. */
+function yvyDurationLabel(mins){
+  const m = Math.max(0, Math.round(Number(mins)||0));
+  if(typeof window.formatPomoTimeFa === 'function'){
+    try { return window.formatPomoTimeFa(m); } catch(_){ }
   }
-  document.getElementById('yvyFeatured').innerHTML = `
-    ${msg}
-    <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--txt-dim); margin-bottom:6px;">
-      <span>${featured.icon} ${featured.label}</span>
-      <span class="num">${featured.todayVal} / ${Math.max(featured.bestVal,featured.todayVal)} ${featured.unit}</span>
-    </div>
-    <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-  `;
+  const h = Math.floor(m/60), rem = m%60;
+  if(!m) return '۰ دقیقه';
+  if(!h) return `${toFaDigits(m)} دقیقه`;
+  return rem ? `${toFaDigits(h)} ساعت و ${toFaDigits(rem)} دقیقه` : `${toFaDigits(h)} ساعت`;
 }
-function renderYVYRecords(){
-  const rows = YVY_METRICS.map(m=>{
-    const best = yvyBestEver(m, null);
-    return `<div class="yvy-record-row"><div class="yvy-record-name">${m.icon} ${m.label}</div><div class="yvy-record-val">${best} ${m.unit}</div></div>`;
-  }).join('');
-  document.getElementById('yvyRecordsList').innerHTML = rows;
+function yvyFieldNum(id){
+  const el = document.getElementById(id);
+  if(!el) return 0;
+  const raw = String(el.value||'').trim()
+    .replace(/[۰-۹]/g, d=>String(d.charCodeAt(0)-0x06F0))
+    .replace(/[٠-٩]/g, d=>String(d.charCodeAt(0)-0x0660));
+  return Math.max(0, Math.round(Number(raw)||0));
 }
-function renderYVYWeekCompare(){
-  const [thisStart, thisEnd] = yvyWeekRange(0);
-  const [lastStart, lastEnd] = yvyWeekRange(1);
-  const metrics = [
-    {label:'⏱️ مدت مطالعه', thisWk: yvySumRange(thisStart,thisEnd,d=>getPomoTotal(d,'focus')), lastWk: yvySumRange(lastStart,lastEnd,d=>getPomoTotal(d,'focus'))},
-    {label:'✅ تسک‌ها', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.history[d]?.tasks)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.history[d]?.tasks)||0)},
-    {label:'🍅 پومودورو', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.pomodoro.history[d]?.sessions)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.pomodoro.history[d]?.sessions)||0)},
-    {label:'⚡ XP', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.history[d]?.xp)||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.history[d]?.xp)||0)},
-    {label:'🎯 کوئست‌ها', thisWk: yvySumRange(thisStart,thisEnd,d=>(DB.stats.questsCompletedByDate?.[d])||0), lastWk: yvySumRange(lastStart,lastEnd,d=>(DB.stats.questsCompletedByDate?.[d])||0)},
-    {label:'🌟 Perfect Day', thisWk: yvyCountPerfectDays(thisStart,thisEnd), lastWk: yvyCountPerfectDays(lastStart,lastEnd)},
+function saveYVYEntry(){
+  const d = yesterdayISO();
+  const h = yvyFieldNum('yvyStudyH');
+  const m = yvyFieldNum('yvyStudyM');
+  const pct = Math.min(100, yvyFieldNum('yvyPlanPct'));
+  const topics = yvyFieldNum('yvyTopics');
+  const studyMin = h*60 + m;
+  if(studyMin<=0 && pct<=0 && topics<=0){
+    toast('⚠️ حداقل یکی از سه عدد را وارد کن');
+    return;
+  }
+  yvyStore()[d] = { studyMin, planPct:pct, topics, updatedAt: Date.now() };
+  save();
+  renderYVY();
+  toast('✅ آمار دیروز ذخیره شد');
+}
+function clearYVYEntry(){
+  const d = yesterdayISO();
+  if(!yvyStore()[d]) return;
+  delete yvyStore()[d];
+  save();
+  renderYVY();
+  toast('🗑️ ثبت دیروز پاک شد');
+}
+function renderYVYYesterday(){
+  const d = yesterdayISO();
+  const e = yvyEntry(d) || { studyMin:0, planPct:0, topics:0 };
+  const prettyDate = isoToJalaliText(d) || d;
+  const dateEl = document.getElementById('yvyYesterdayDate');
+  if(dateEl) dateEl.textContent = prettyDate;
+  const cardsEl = document.getElementById('yvyYesterdayCards');
+  if(cardsEl){
+    const cards = [
+      { icon:'📚', label:'مطالعه', value: yvyDurationLabel(e.studyMin), sub: e.studyMin>0 ? 'ثبت شده برای دیروز' : 'ثبت نشده' },
+      { icon:'📈', label:'پیشروی برنامه روزانه', value: faNum(e.planPct)+'٪', sub: e.planPct>0 ? 'از برنامه‌ی دیروز' : 'ثبت نشده' },
+      { icon:'📖', label:'مباحث تمام‌شده', value: faNum(e.topics)+' مبحث', sub: e.topics>0 ? 'تمام‌شده' : 'ثبت نشده' },
+    ];
+    cardsEl.innerHTML = cards.map(c=>`
+      <div class="stat-card yvy-stat-card">
+        <div class="stat-lbl">${c.icon} ${c.label}</div>
+        <div class="stat-val">${c.value}</div>
+        <div class="muted" style="font-size:11.5px; margin-top:4px;">${c.sub}</div>
+      </div>`).join('');
+  }
+  const emptyNote = document.getElementById('yvyEmptyNote');
+  if(emptyNote) emptyNote.style.display = yvyHasEntry(d) ? 'none' : '';
+  const entryDate = document.getElementById('yvyEntryDate');
+  if(entryDate) entryDate.textContent = prettyDate;
+}
+function renderYVYOverallRecords(){
+  const el = document.getElementById('yvyOverallRecords');
+  if(!el) return;
+  const study = yvyBestEver('studyMin');
+  const topics = yvyBestEver('topics');
+  const rows = [
+    { icon:'⏱️', label:'بیشترین زمان مطالعه در یک روز', rec: study, fmt:(v)=>v>0 ? yvyDurationLabel(v) : '—' },
+    { icon:'📖', label:'بیشترین تعداد مباحث تمام‌شده در یک روز', rec: topics, fmt:(v)=>v>0 ? `${faNum(v)} مبحث` : '—' },
   ];
-  const thisXP = metrics[3].thisWk, lastXP = metrics[3].lastWk;
-  let summaryHtml;
-  if(lastXP>0 && thisXP>lastXP){
-    const pctUp = Math.round(((thisXP-lastXP)/lastXP)*100);
-    summaryHtml = `<div class="yvy-summary-msg pos">🎉 این هفته ${pctUp}٪ بهتر از هفته‌ی قبل بودی!</div>`;
-  } else if(lastXP===0 && thisXP>0){
-    summaryHtml = `<div class="yvy-summary-msg pos">🎉 هفته‌ی قبل فعالیتی نداشتی، این هفته شروع کردی — عالیه!</div>`;
-  } else if(thisXP>0 && thisXP>=lastXP){
-    summaryHtml = `<div class="yvy-summary-msg pos">👍 همون سطح خوب هفته‌ی قبل رو حفظ کردی!</div>`;
-  } else {
-    summaryHtml = `<div class="yvy-summary-msg neu">هفته‌ی قبل یکم بهتر بود — هفته‌ی بعد دوباره تلاش کن 💪</div>`;
-  }
-  const rows = metrics.map(m=>{
-    const up = m.thisWk >= m.lastWk;
-    return `<div class="yvy-week-row">
-      <span class="lbl">${m.label}</span>
-      <span class="vals num">${m.thisWk} ${up?'<span class="yvy-arrow-up">▲</span>':'<span class="yvy-arrow-down">▼</span>'} <span style="color:var(--txt-dim2);">(قبل: ${m.lastWk})</span></span>
-    </div>`;
-  }).join('');
-  document.getElementById('yvyWeekCompare').innerHTML = summaryHtml + rows;
+  el.innerHTML = rows.map(r=>`
+    <div class="yvy-record-row">
+      <div class="yvy-record-name">${r.icon} ${r.label}</div>
+      <div class="yvy-record-val">${r.fmt(r.rec.value)}${r.rec.date ? `<span class="muted" style="font-size:11px; display:block;">${isoToJalaliText(r.rec.date)}</span>` : ''}</div>
+    </div>`).join('');
 }
 function renderYVY(){
-  if(!document.getElementById('yvyFeatured')) return;
-  renderYVYFeatured();
-  renderYVYRecords();
-  renderYVYWeekCompare();
+  if(!document.getElementById('yvyYesterdayCards')) return;
+  renderYVYYesterday();
+  renderYVYOverallRecords();
+  fillYVYEntryForm();
 }
 
 /* ============ WEEKLY BOSS FIGHT ============ */
@@ -3150,7 +3177,6 @@ function applyTaskCompletion(t){
   DB.stats.tasksCompleted = (DB.stats.tasksCompleted||0) + 1;
   checkPerfectDay();
   hitBossFromTask(t.id);
-  checkNewRecords();
   if(t.priority==='critical' && DB.crisis.active) resolveCrisisSuccess();
 }
 function applyTaskUncompletion(t){
@@ -6226,6 +6252,8 @@ document.getElementById('importFile').onchange = (e)=>{
       DB = parsed;
       DB.rewards = Array.isArray(DB.rewards) ? DB.rewards : [];
       DB.dailyChecklists = normalizeDailyChecklists(DB.dailyChecklists);
+      /* v24.11: manual You VS You entries — older backups simply have none */
+      if(!DB.yvyDaily || typeof DB.yvyDaily !== 'object' || Array.isArray(DB.yvyDaily)) DB.yvyDaily = {};
       const restoredUI = (parsed.uiSettings && typeof parsed.uiSettings==='object') ? parsed.uiSettings : null;
       if(restoredUI){
         if(restoredUI.fontSize) localStorage.setItem('lifePlannerFontSize_v2',restoredUI.fontSize);
@@ -6291,7 +6319,6 @@ document.getElementById('importFile').onchange = (e)=>{
       if(DB.skillTiers.questCooldown===undefined) DB.skillTiers.questCooldown = 0;
       if(!DB.boss) DB.boss = { active:null, nextAvailableAt: Date.now() };
       if(!DB.crisis) DB.crisis = { active:false, deadlineAt:0, cooldownUntil:0 };
-      if(!DB.newRecordFlags) DB.newRecordFlags = {};
       // ensure tasks have extraDeadlines, subtasks, workflow status and inbox flag
       (DB.tasks||[]).forEach(t=>{
         if(!Array.isArray(t.extraDeadlines)) t.extraDeadlines=[];
@@ -6428,7 +6455,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.10';
+const LP_APP_VERSION='24.11';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
