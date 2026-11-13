@@ -8,15 +8,14 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=25.0">
-<link rel="stylesheet" href="css/design-system.css?v=25.0">
-<link rel="stylesheet" href="css/v20.css?v=25.0">
-<link rel="stylesheet" href="css/v213.css?v=25.0">
-<link rel="stylesheet" href="css/v22.css?v=25.0">
-<link rel="stylesheet" href="css/ui-refresh.css?v=25.0">
-<link rel="stylesheet" href="css/offline.css?v=25.0">
-<link rel="stylesheet" href="css/rewards.css?v=25.0">
-<link rel="stylesheet" href="css/social.css?v=25.0">
+<link rel="stylesheet" href="css/app.css?v=24.10">
+<link rel="stylesheet" href="css/design-system.css?v=24.10">
+<link rel="stylesheet" href="css/v20.css?v=24.10">
+<link rel="stylesheet" href="css/v213.css?v=24.10">
+<link rel="stylesheet" href="css/v22.css?v=24.10">
+<link rel="stylesheet" href="css/ui-refresh.css?v=24.10">
+<link rel="stylesheet" href="css/offline.css?v=24.10">
+<link rel="stylesheet" href="css/rewards.css?v=24.10">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -346,7 +345,6 @@ try{
         <div class="chip-opt" data-pt="stats">📊 آمار پومو</div>
         <div class="chip-opt" data-pt="manual">📝 ثبت داده</div>
         <div class="chip-opt" data-pt="settings">⚙️ تنظیمات</div>
-        <div class="chip-opt" data-pt="social">🎓 اجتماعی</div>
       </div>
 
       <!-- FOCUS TAB -->
@@ -457,12 +455,6 @@ try{
         </div>
       </div>
     </div>
-
-    <!-- SOCIAL TAB (Life Planner Social v25.0) -->
-    <div class="pomo-pane" id="pomoPane-social">
-      <div style="padding:14px; color:var(--txt-dim); font-size:13px;">بخش اجتماعی در حال بارگذاری…</div>
-    </div>
-
 
     <div class="view" id="view-profile">
       <div class="topbar"><div><h1>پروفایل</h1><div class="sub">پیشرفت کلی و دستاوردهات</div></div><button class="guide-btn" type="button" onclick="openGuide('profile')" title="راهنمای پروفایل" aria-label="راهنمای پروفایل">❓</button></div>
@@ -1062,17 +1054,8 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">25.0</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.10</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
-      </div>
-
-      <!-- v25: Life Planner Social tour entry point -->
-      <div class="card settings-card">
-        <div class="card-head"><h3>🎓 تور راهنمای بخش پومودوروی اجتماعی</h3></div>
-        <p class="muted settings-help">معرفی تعاملی ۲۶ مرحله‌ای از تمام قابلیت‌های بخش اجتماعی با Highlight روی هر قسمت. قابل اجرا دوباره هر زمان از داشبورد اجتماعی.</p>
-        <div class="settings-actions">
-          <button class="btn ghost" type="button" onclick="window.lpsStartTour && lpsStartTour()">شروع تور راهنما 🎓</button>
-        </div>
       </div>
     </div>
 
@@ -1651,15 +1634,9 @@ try{
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
 <script src="js/v22.js?v=24.9"></script>
 <!-- v24.8: recurring personal rewards + dashboard countdown -->
-<script src="js/rewards.js?v=25.0"></script>
+<script src="js/rewards.js?v=24.10"></script>
 <!-- v24.7: offline / national-internet persistence + PWA install -->
-<script src="js/offline.js?v=25.0"></script>
-
-<!-- Life Planner Social v25.0 (Supabase-backed, lazy-loaded on first use) -->
-<script src="js/vendor/supabase.js?v=25.0"></script>
-<script src="js/social.js?v=25.0"></script>
-<script src="js/social-ui.js?v=25.0"></script>
-<script src="js/social-tour.js?v=25.0"></script>
+<script src="js/offline.js?v=24.10"></script>
 
 </body>
 </html>
