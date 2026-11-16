@@ -1055,6 +1055,16 @@ html[data-theme="light"] .ev-block .ev-title{text-shadow:0 1px 0 rgba(255,255,25
    than three cut letters in an 11px strip. */
 .ev-block.event-tiny{padding:0;overflow:visible;z-index:7;border-radius:999px;}
 .ev-block.event-tiny .ev-title{display:block;-webkit-line-clamp:none;font-size:10.5px;line-height:12px;white-space:nowrap;overflow:visible;text-overflow:clip;background:rgba(8,12,24,.92);color:#f2f5ff;border-radius:999px;padding:0 6px;max-width:none;box-shadow:0 1px 5px rgba(0,0,0,.45);}
+/* v24.12 — a deactivated event stays in the grid but faded out («محو»):
+   dim body, dashed outline, no glow, and always BELOW every active block so
+   an event dropped on top of it stacks cleanly. Where nothing covers it —
+   a peeking edge or corner — the faded block is still fully tappable and its
+   name stays readable. */
+.ev-block.ev-inactive{z-index:2;opacity:.5;filter:grayscale(.55);border-style:dashed;box-shadow:none;background:linear-gradient(160deg,rgba(120,130,150,.22),rgba(90,100,130,.16));}
+.ev-block.ev-inactive:hover{filter:grayscale(.35) brightness(1.05);box-shadow:none;}
+.ev-block.ev-inactive.event-tiny{z-index:2;}
+.ev-block.ev-inactive.event-tiny .ev-title{background:rgba(40,46,64,.85);}
+html[data-theme="light"] .ev-block.ev-inactive{opacity:.62;}
 .ev-block .ev-time{display:none!important;}.ev-block .ev-reminder{font-size:9px;line-height:1;margin-top:2px;opacity:.95;}
 @media(max-width:700px){
 .lp-cal-header{grid-template-columns:32px repeat(7,minmax(0,1fr));}
