@@ -121,7 +121,7 @@ function loadStore(){
 }
 let DB = loadStore();
 DB.notes.forEach(n=>{ if(typeof n.pinned!=='boolean') n.pinned=false; if(!n.updatedAt) n.updatedAt=n.date||todayISO(); });
-DB.events.forEach(e=>{ if(typeof e.reminder!=='boolean') e.reminder=false; });
+DB.events.forEach(e=>{ if(typeof e.reminder!=='boolean') e.reminder=false; /* v24.12 */ if(typeof e.active!=='boolean') e.active=true; });
 // v12.1 — user-defined categories with a default color (used by events & tasks)
 if(!Array.isArray(DB.categories)) DB.categories=[];
 DB.categories.forEach(c=>{ if(!c.id) c.id=uid(); if(!c.color) c.color='#00e5ff'; if(typeof c.name!=='string') c.name=''; });
@@ -4376,6 +4376,7 @@ async function saveEvent(){
     else { DB.events=DB.events.filter(x=>x.id!==ev.id); }
     DB.events.push({
       id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,difficulty,
+      active:lpEventActive(ev), // v24.12 — a split-off day keeps the series' status
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
     window.__editingEventId=null;
@@ -4409,6 +4410,7 @@ async function saveEvent(){
   }else{
     DB.events.push({
       id:uid(),title,desc,days,startMin,endMin,reminder,cat,color,difficulty,
+      active:true, // v24.12 — a brand-new event is always active
       startHour:Math.floor(startMin/60),endHour:Math.min(24,Math.floor(endMin/60))
     });
     toast(reminder?'📅 رویداد اضافه شد؛ یادآورش فعاله':'📅 رویداد اضافه شد');
@@ -4464,7 +4466,7 @@ function nextEventOccurrence(ev){
   return best;
 }
 function scheduleEventReminder(ev){
-  if(!ev.reminder)return;
+  if(!ev.reminder||!lpEventActive(ev))return; // v24.12: a deactivated event never rings
   const old=reminderTimers.get(ev.id); if(old)clearTimeout(old);
   const target=nextEventOccurrence(ev); if(!target)return;
   const delay=Math.max(1000,target.getTime()-Date.now());
@@ -4480,12 +4482,12 @@ function scheduleEventReminder(ev){
   },Math.min(delay,2147483647));
   reminderTimers.set(ev.id,timer);
 }
-function rescheduleAllEventReminders(){ reminderTimers.forEach(t=>clearTimeout(t)); reminderTimers.clear(); DB.events.filter(e=>e.reminder).forEach(scheduleEventReminder); }
+function rescheduleAllEventReminders(){ reminderTimers.forEach(t=>clearTimeout(t)); reminderTimers.clear(); DB.events.filter(e=>e.reminder&&lpEventActive(e)).forEach(scheduleEventReminder); }
 async function checkEventReminders(){
   if(Notification.permission!=='granted') return;
   const now=new Date(); const day=(now.getDay()+1)%7; const minute=now.getHours()*60+now.getMinutes(); const date=todayISO();
   for(const ev of DB.events){
-    if(!ev.reminder||!eventDays(ev).includes(day)||eventStartMinutes(ev)!==minute)continue;
+    if(!ev.reminder||!lpEventActive(ev)||!eventDays(ev).includes(day)||eventStartMinutes(ev)!==minute)continue;
     const key=reminderStorageKey(date,ev.id,day); if(reminderAlreadySent(key))continue;
     markReminderSent(key); await sendNotification('🔔 یادآوری Life Planner',`${ev.title} — شروع شد`,{tag:`lp-${ev.id}-${date}`,renotify:true});
   }
@@ -4497,6 +4499,10 @@ function startEventReminderScheduler(){
 }
 function deleteEvent(id){ DB.events = DB.events.filter(x=>x.id!==id); save(); rescheduleAllEventReminders(); }
 function eventDays(e){ return e.days || (e.day!==undefined ? [e.day] : []); }
+/* v24.12 — a deactivated event stays in the data but is faded out of the week
+   view («محو»). `active` defaults to true; only an explicit false deactivates,
+   so every older event keeps working exactly as before. */
+function lpEventActive(ev){ return !(ev && ev.active === false); }
 /* v16.6 — optional free-text description for a calendar block. */
 const LP_EVENT_DESC_MAX=1000;
 function eventDesc(e){ return (e && typeof e.desc==='string') ? e.desc.trim() : ''; }
@@ -4526,6 +4532,13 @@ function onEventBlockClick(eventId, dayIdx){
     meta.innerHTML=`🕒 <b style="color:var(--neon);direction:ltr;display:inline-block">${formatTimeMinutes(s%1440)} → ${formatTimeMinutes(e%1440)}</b> · ⏱️ ${dur}${cat?` · 🏷️ ${esc(cat.name)}`:''}`;
     const difficulty=lpEventDifficulty(ev);
     if(difficulty) meta.innerHTML+=`<div class="lp-event-trait-summary"><span class="lp-difficulty-dot" style="background:${difficulty.color}" aria-hidden="true"></span>سختی: ${difficulty.label}</div>`;
+    if(!lpEventActive(ev)) meta.innerHTML+=`<div class="lp-event-trait-summary lp-event-inactive-note"><span class="lp-difficulty-dot" style="background:var(--txt-dim)" aria-hidden="true"></span>💤 غیر فعال — در تقویم محو است و یادآوری ندارد</div>`;
+  }
+  // v24.12: the status toggle follows the event's current state
+  const statusBtn=document.getElementById('toggleEventActiveBtn');
+  if(statusBtn){
+    statusBtn.textContent = lpEventActive(ev) ? '💤 غیر فعال کردن رویداد' : '✅ فعال کردن رویداد';
+    statusBtn.classList.toggle('lp-act-on', !lpEventActive(ev));
   }
   // v16.6: the block's optional description, shown only when one was written
   const descEl=document.getElementById('eventActionDesc');
@@ -4604,6 +4617,40 @@ function deleteWholeEvent(){
   save();
   rescheduleAllEventReminders();
   toast('🗑️ کل رویداد حذف شد');
+}
+/* v24.12 — activate / deactivate an event from its action menu.
+   Deactivating keeps the event (and its time slot) in the data but fades it
+   out of the week view; its reminder stops ringing.
+   Activating is guarded against the mixing bug: if the event's own time now
+   overlaps a live (active) event — e.g. because another event was dropped on
+   top of it while it was deactivated — activation is refused with a clear
+   message instead of silently merging the two. */
+function toggleEventActive(){
+  const ctx = window.__eventActionCtx; if(!ctx) return;
+  const ev = DB.events.find(x=>x.id===ctx.eventId); if(!ev) return;
+  if(lpEventActive(ev)){
+    ev.active=false;
+    window.__eventActionCtx=null;
+    closeModal('eventActionModalBg');
+    save();
+    rescheduleAllEventReminders();
+    renderCalendar();
+    toast(`💤 «${esc(ev.title)}» غیر فعال شد — در تقویم محو است`);
+    return;
+  }
+  const conflict=lpCandidateConflicts({title:ev.title,days:eventDays(ev),startMin:eventStartMinutes(ev),endMin:eventEndMinutes(ev)},
+    DB.events.filter(x=>x.id!==ev.id && lpEventActive(x)));
+  if(conflict){
+    toast(`⚠️ این زمان با «${esc(conflict.title)}» تداخل دارد؛ اول آن رویداد را جابه‌جا کن یا غیر فعال کن`);
+    return;
+  }
+  ev.active=true;
+  window.__eventActionCtx=null;
+  closeModal('eventActionModalBg');
+  save();
+  rescheduleAllEventReminders();
+  renderCalendar();
+  toast(`✅ «${esc(ev.title)}» فعال شد — دوباره در تقویم دیده می‌شود`);
 }
 
 /* ============ v12.1 — EVENT/TASK COLORS, CATEGORIES & DRAG-AND-DROP ============ */
@@ -4992,7 +5039,16 @@ function lpFreeGapAt(dayIdx, gridStart, eventId){
   }
   return gapEnd>gapStart ? {start:gapStart, end:gapEnd} : null;
 }
+/* v24.12 — is this grid minute inside a DEACTIVATED block's span in this
+   column? Such a stretch is never «free space» to fit a drop into: the user
+   dropped onto the faded event, so the drop must stack onto it (lpApplyEventDrag
+   snaps onto its exact start) instead of sliding into the gap around it. */
+function lpInactiveBlockAt(dayIdx, gridStart){
+  return (DB.events||[]).some(ev=>!lpEventActive(ev) &&
+    calEventPlacements(ev).some(p=>p.col===dayIdx && p.from<=gridStart && gridStart<p.to));
+}
 function lpFitEventInGap(dayIdx, gridStart, duration, eventId){
+  if(lpInactiveBlockAt(dayIdx,gridStart)) return null; // v24.12 — stack, don't gap-fill
   const gap=lpFreeGapAt(dayIdx,gridStart,eventId);
   if(!gap) return null;
   const room=gap.end-gap.start;
@@ -5280,7 +5336,11 @@ function lpRelocateEventOccurrence(ev,fromDay,toDay,startMin,endMin){
   ev.startHour=Math.floor(startMin/60); ev.endHour=Math.min(24,Math.floor(endMin/60));
   return ev;
 }
-function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
+/* v24.12 — stackOnId / stackMsg: when a block is dropped straight onto a
+   DEACTIVATED event, the caller snaps the block onto the faded one's exact
+   start and hands the move to the normal path with the faded event excluded
+   from the collision check. stackMsg replaces the usual «moved» announcement. */
+function lpApplyEventDrag(evRef, fromDay, toCol, newStart, stackOnId, stackMsg){
   const ev=DB.events.find(x=>x.id===evRef.id)||evRef;
   const dur=Math.max(15, eventEndMinutes(ev)-eventStartMinutes(ev));
   const requested=Math.max(CAL_START_HOUR*60, Math.min(CAL_END_HOUR*60-Math.min(dur,CAL_SPAN_MIN), newStart));
@@ -5303,13 +5363,40 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
   const candidate = (!sameDay && multiDay)
     ? {title:ev.title, days:[toDay], startMin:ns, endMin:ne}
     : {title:ev.title, days:(!sameDay?[toDay]:days), startMin:ns, endMin:ne};
-  const others=DB.events.filter(x=>x.id!==ev.id);
+  const others=DB.events.filter(x=>x.id!==ev.id&&x.id!==stackOnId);
   if(!sameDay && multiDay){
     const rem=days.filter(dd=>dd!==fromDay);
     if(rem.length) others.push({title:ev.title, days:rem, startMin:eventStartMinutes(ev), endMin:eventEndMinutes(ev)});
   }
   const conflict=lpCandidateConflicts(candidate,others);
   if(conflict){
+    /* v24.12 — dropping a block straight onto a DEACTIVATED event is not a
+       collision to swap. The block snaps onto the faded one's exact start and
+       stacks above it, so the two go on top of each other fixed and clean
+       instead of getting mixed. The faded event keeps its own time, so
+       reactivating it later is guarded separately (see toggleEventActive) and
+       the two can never merge into one another. */
+    if(lpEventActive(ev) && !lpEventActive(conflict) && !stackOnId){
+      const placement=calEventPlacements(conflict).find(p=>p.col===toCol && p.to>p.from);
+      if(placement){
+        const snapped=placement.from;
+        const stackSlot=calNormalizeSlot(toCol,snapped);
+        const stackDur=Math.max(15,eventEndMinutes(ev)-eventStartMinutes(ev));
+        const stackOthers=DB.events.filter(x=>x.id!==ev.id && x.id!==conflict.id);
+        const stackConflict=lpCandidateConflicts({title:ev.title,days:[stackSlot.day],startMin:stackSlot.min,endMin:stackSlot.min+stackDur},stackOthers);
+        if(!stackConflict){
+          lpApplyEventDrag(evRef,fromDay,toCol,snapped,conflict.id,
+            `📌 «${esc(ev.title)}» دقیقاً روی رویداد غیرفعال «${esc(conflict.title)}» قرار گرفت`);
+          /* v24.12 — the menu that opens is the one for the event that just
+             landed, never a mix of it with the faded one under it. */
+          onEventBlockClick(evRef.id,stackSlot.day);
+          return;
+        }
+        toast(`⚠️ این جایگاه با «${esc(stackConflict.title)}» تداخل دارد`);
+        renderCalendar();
+        return;
+      }
+    }
     // A direct collision is a swap: the block under the pointer takes the exact
     // slot that the dragged occurrence just left. Both keep their own duration.
     // A repeated target is intentionally left alone: swapping one occurrence
@@ -5356,6 +5443,7 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
     DB.events.push({
       id:newId, title:ev.title, desc:eventDesc(ev), days:[toDay], startMin:ns, endMin:ne,
       reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null, difficulty:ev.difficulty||null,
+      active:lpEventActive(ev), // v24.12 — the split day keeps the series' status
       startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
     if(undo) undo.removedIds.push(newId); // undoing the move must take the split day back
@@ -5373,6 +5461,7 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart){
   }else if(fit && fit.moved){
     msg=`🪄 «${esc(ev.title)}» داخل فضای خالی جا گرفت — ${calClockLabel(ns)} تا ${calClockLabel(ne)}`;
   }
+  if(stackMsg) msg=stackMsg; // v24.12 — the stack-on-inactive announcement
   lpEventUndoRecord=undo;
   save();
   rescheduleAllEventReminders();
@@ -5734,6 +5823,7 @@ function lpApplyEventResize(evRef, dayIdx, shift, gridFrom, gridTo, edge){
     DB.events.push({
       id:newId, title:ev.title, desc:eventDesc(ev), days:[dayIdx], startMin:ns, endMin:ne,
       reminder:ev.reminder, cat:ev.cat||null, color:ev.color||null, difficulty:ev.difficulty||null,
+      active:lpEventActive(ev), // v24.12 — the split day keeps the series' status
       startHour:Math.floor(ns/60), endHour:Math.min(24,Math.floor(ne/60))
     });
     if(undo) undo.removedIds.push(newId); // undoing must take the split day back
@@ -5878,7 +5968,12 @@ function renderCalendar(){
   // v20: day headers are display-only
   updateCalendarNowMarker(now);
   const offGrid=[]; // blocks that fall in the 03:00–06:00 gap the grid does not draw
-  DB.events.forEach(e=>{
+  /* v24.12 — deactivated events are drawn FIRST, faded and behind, so every
+     active block paints above them. Tapping a fully covered region therefore
+     opens the active event on top; a peeking corner of the faded one is still
+     tappable on its own. */
+  const orderedEvents=[...DB.events.filter(e=>!lpEventActive(e)), ...DB.events.filter(e=>lpEventActive(e))];
+  orderedEvents.forEach(e=>{
     const s=eventStartMinutes(e),en=eventEndMinutes(e);
     if(!Number.isFinite(s)||!Number.isFinite(en)||en<=s)return;
     const placements=calEventPlacements(e);
@@ -5891,7 +5986,10 @@ function renderCalendar(){
       const duration=to-from;
       const sizeClass=duration<15?' event-tiny':(duration<30?' event-short':'');
       const blockH=Math.max(10,(to-from)/60*PX_HOUR-2);
-      el.className='ev-block'+sizeClass+(from>=CAL_DAY_MIN?' ev-night':'');
+      /* v24.12 — a deactivated block is faded («محو») and sits behind every
+         active block; its own name stays readable where nothing covers it. */
+      const inactive=!lpEventActive(e);
+      el.className='ev-block'+(inactive?' ev-inactive':'')+sizeClass+(from>=CAL_DAY_MIN?' ev-night':'');
       el.style.top=((from-START*60)/60*PX_HOUR)+'px';
       el.style.height=blockH+'px';
       /* v24.5 — the box is only the box: the bite emoji, the reminder dot and
@@ -5907,7 +6005,8 @@ function renderCalendar(){
          edge still shows that word whole. */
       el.style.setProperty('--ev-lines', titleLines>1?String(titleLines):'none');
       const hint=[]
-      if(e.reminder) hint.push('یادآور فعال');
+      if(inactive) hint.push('💤 غیر فعال');
+      else if(e.reminder) hint.push('یادآور فعال');
       if(eventDesc(e)) hint.push('توضیح دارد');
       el.title=`${e.title} — ${dayNames[d]} ${calClockLabel(s)} تا ${calClockLabel(en)}${hint.length?` · ${hint.join(' · ')}`:''} · لبه را نگه دار و بکش تا زمانش عوض شود؛ وسط را بکش تا جابه‌جا شود`;
       const difficulty=lpEventDifficulty(e);
@@ -6290,7 +6389,7 @@ document.getElementById('importFile').onchange = (e)=>{
       DB.notes = Array.isArray(DB.notes)?DB.notes:[];
       DB.events = Array.isArray(DB.events)?DB.events:[];
       DB.notes.forEach(n=>{ if(typeof n.pinned!=='boolean') n.pinned=false; if(!n.updatedAt) n.updatedAt=n.date||todayISO(); });
-      DB.events.forEach(e=>{ if(typeof e.reminder!=='boolean') e.reminder=false; });
+      DB.events.forEach(e=>{ if(typeof e.reminder!=='boolean') e.reminder=false; if(typeof e.active!=='boolean') e.active=true; });
       // run migration guards (same as after loadStore)
       if(!DB.quest){ DB.quest = { current:null, nextAt: Date.now()+2*60*1000, waitStart: Date.now(), bags:{} }; }
       if(DB.quest.waitStart===undefined) DB.quest.waitStart = Date.now();
@@ -6455,7 +6554,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.11';
+const LP_APP_VERSION='24.12';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

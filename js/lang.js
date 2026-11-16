@@ -1786,6 +1786,27 @@
   };
   for(var _k2411 in EXTRA_V2411){ if(Object.prototype.hasOwnProperty.call(EXTRA_V2411, _k2411)) EXACT[_k2411] = EXTRA_V2411[_k2411]; }
 
+  /* ---- v24.12: deactivated calendar events ---- */
+  var EXTRA_V2412 = {
+    "🚀 وضعیت": "🚀 Status",
+    "💤 غیر فعال کردن رویداد": "💤 Deactivate the event",
+    "✅ فعال کردن رویداد": "✅ Activate the event",
+    "💤 غیر فعال — در تقویم محو است و یادآوری ندارد": "💤 Inactive — faded out of the calendar and its reminder is off",
+    /* the toasts carry the event title inside «…»; SEP_STRONG splits there, so
+       the static islands are what gets translated */
+    "غیر فعال شد": "was deactivated",
+    "در تقویم محو است": "faded out of the calendar",
+    "فعال شد": "was activated",
+    "دوباره در تقویم دیده می‌شود": "it is visible in the calendar again",
+    "این زمان با": "This time overlaps with",
+    "تداخل دارد": "has a clash",
+    "اول آن رویداد را جابه‌جا کن یا غیر فعال کن": "move or deactivate that event first",
+    "این جایگاه با": "This spot overlaps with",
+    "دقیقاً روی رویداد غیرفعال": "exactly on the deactivated event",
+    "قرار گرفت": "landed"
+  };
+  for(var _k2412 in EXTRA_V2412){ if(Object.prototype.hasOwnProperty.call(EXTRA_V2412, _k2412)) EXACT[_k2412] = EXTRA_V2412[_k2412]; }
+
   function compose(s, depth){
     if(depth > 3) return null;
 

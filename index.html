@@ -8,14 +8,14 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=24.11">
-<link rel="stylesheet" href="css/design-system.css?v=24.11">
-<link rel="stylesheet" href="css/v20.css?v=24.11">
-<link rel="stylesheet" href="css/v213.css?v=24.11">
-<link rel="stylesheet" href="css/v22.css?v=24.11">
-<link rel="stylesheet" href="css/ui-refresh.css?v=24.11">
-<link rel="stylesheet" href="css/offline.css?v=24.11">
-<link rel="stylesheet" href="css/rewards.css?v=24.11">
+<link rel="stylesheet" href="css/app.css?v=24.12">
+<link rel="stylesheet" href="css/design-system.css?v=24.12">
+<link rel="stylesheet" href="css/v20.css?v=24.12">
+<link rel="stylesheet" href="css/v213.css?v=24.12">
+<link rel="stylesheet" href="css/v22.css?v=24.12">
+<link rel="stylesheet" href="css/ui-refresh.css?v=24.12">
+<link rel="stylesheet" href="css/offline.css?v=24.12">
+<link rel="stylesheet" href="css/rewards.css?v=24.12">
 
 <script>
 /* v16.2 — apply the saved Performance Mode before the first paint, so a phone
@@ -1079,7 +1079,7 @@ try{
       </div>
 
       <div class="card settings-card settings-version-card">
-        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.11</strong></div>
+        <div><div class="muted">🏷️ نسخه برنامه</div><strong id="settingsVersion">24.12</strong></div>
         <div class="muted">همه‌جا هماهنگ با نسخه فعلی</div>
       </div>
     </div>
@@ -1287,6 +1287,10 @@ try{
     <div class="lp-act-group-lbl">✏️ ویرایش</div>
     <button class="btn" id="editThisDayBtn" style="width:100%; justify-content:center; display:none;" onclick="startEditEventThisDay()">✏️ ویرایش فقط این روز</button>
     <button class="btn ghost" id="editWholeEventBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="startEditEvent()">✏️ ویرایش کل رویداد (همه‌ی روزها)</button>
+    <div class="lp-action-sep"></div>
+    <!-- v24.12: deactivate / reactivate the event; its label follows the state -->
+    <div class="lp-act-group-lbl">🚀 وضعیت</div>
+    <button class="btn ghost" id="toggleEventActiveBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="toggleEventActive()">💤 غیر فعال کردن رویداد</button>
     <div class="lp-action-sep"></div>
     <div class="lp-act-group-lbl">🗑️ حذف</div>
     <button class="btn danger" id="deleteThisDayBtn" style="width:100%; justify-content:center; margin-top:10px;" onclick="deleteEventDay()">🗑️ حذف فقط این روز</button>
@@ -1661,24 +1665,24 @@ try{
 
 <div class="toast" id="toast"></div>
 
-<script src="js/core.js?v=24.11"></script>
-<script src="js/enhancements.js?v=24.11"></script>
-<script src="js/sw-register.js?v=24.11"></script>
+<script src="js/core.js?v=24.12"></script>
+<script src="js/enhancements.js?v=24.12"></script>
+<script src="js/sw-register.js?v=24.12"></script>
 
-<script src="js/pomodoro.js?v=24.11"></script>
+<script src="js/pomodoro.js?v=24.12"></script>
 <!-- v20: v19 script removed -->
-<script src="js/lang.js?v=24.11"></script>
-<script src="js/v16.js?v=24.11"></script>
-<script src="js/v162.js?v=24.11"></script>
-<script src="js/v21.js?v=24.11"></script>
+<script src="js/lang.js?v=24.12"></script>
+<script src="js/v16.js?v=24.12"></script>
+<script src="js/v162.js?v=24.12"></script>
+<script src="js/v21.js?v=24.12"></script>
 <!-- v21.3: section guides + «سه قدم اول» for a brand-new user -->
-<script src="js/v213.js?v=24.11"></script>
+<script src="js/v213.js?v=24.12"></script>
 <!-- v22: Liquid Glass switch + Aurora Prism celebration -->
-<script src="js/v22.js?v=24.11"></script>
+<script src="js/v22.js?v=24.12"></script>
 <!-- v24.8: recurring personal rewards + dashboard countdown -->
-<script src="js/rewards.js?v=24.11"></script>
+<script src="js/rewards.js?v=24.12"></script>
 <!-- v24.7: offline / national-internet persistence + PWA install -->
-<script src="js/offline.js?v=24.11"></script>
+<script src="js/offline.js?v=24.12"></script>
 
 </body>
 </html>
