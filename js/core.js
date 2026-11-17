@@ -4437,6 +4437,7 @@ function findEventConflict(candidate,ignoreId=null){
   const cSeg=eventSegments(candidate);
   for(const other of DB.events){
     if(other.id===ignoreId)continue;
+    if(!lpEventActive(other))continue; // v24.13 — a deactivated event counts for nothing
     for(const a of cSeg){
       for(const b of eventSegments(other)){
         if(a.day===b.day&&a.start<b.end&&b.start<a.end)return other;
@@ -4903,11 +4904,14 @@ function updateCalendarNowMarker(now=new Date()){
 }
 /* Treat events already drawn in the tapped calendar column as booked ranges.
    Placements are used instead of the stored clock fields so overnight events
-   occupy the same night-tail minutes the user sees on the grid. */
-function calEventIntervalsInColumn(dayIdx, excludeId=null){
+   occupy the same night-tail minutes the user sees on the grid.
+   v24.13 — `activeOnly` drops deactivated events: a faded block no longer
+   reserves time, so quick-add and the gap-fit system never see it. */
+function calEventIntervalsInColumn(dayIdx, excludeId=null, activeOnly=false){
   const intervals=[];
   (DB.events||[]).forEach(ev=>{
     if(excludeId && ev.id===excludeId) return; // the block being dragged does not block itself
+    if(activeOnly && !lpEventActive(ev)) return;
     calEventPlacements(ev).forEach(p=>{
       if(p.col===dayIdx&&p.to>p.from) intervals.push({start:p.from,end:p.to});
     });
@@ -4927,7 +4931,7 @@ function calEventIntervalsInColumn(dayIdx, excludeId=null){
 function calQuickAddWindow(dayIdx,gridHour){
   const day=Number(dayIdx), hour=Number(gridHour);
   if(!Number.isInteger(day)||day<0||day>6||!Number.isInteger(hour)||hour<CAL_START_HOUR||hour>=CAL_END_HOUR)return null;
-  const intervals=calEventIntervalsInColumn(day);
+  const intervals=calEventIntervalsInColumn(day,null,true);
   let start=hour*60, i=0;
   while(i<intervals.length&&intervals[i].end<=start)i++;
   while(i<intervals.length&&intervals[i].start<=start){
@@ -5031,7 +5035,8 @@ const lpDragState={ drag:null, resize:null, edgeGrab:null, holdTimer:null, suppr
 function lpFreeGapAt(dayIdx, gridStart, eventId){
   const lo=CAL_START_HOUR*60, hi=CAL_END_HOUR*60;
   let gapStart=lo, gapEnd=hi;
-  const intervals=calEventIntervalsInColumn(dayIdx, eventId);
+  // v24.13 — deactivated events are not obstacles: the gap only sees live blocks
+  const intervals=calEventIntervalsInColumn(dayIdx, eventId, true);
   for(const it of intervals){
     if(it.end<=gridStart){ gapStart=Math.max(gapStart,it.end); continue; }
     if(it.start>=gridStart){ gapEnd=Math.min(gapEnd,it.start); break; }
@@ -5039,18 +5044,43 @@ function lpFreeGapAt(dayIdx, gridStart, eventId){
   }
   return gapEnd>gapStart ? {start:gapStart, end:gapEnd} : null;
 }
-/* v24.12 — is this grid minute inside a DEACTIVATED block's span in this
-   column? Such a stretch is never «free space» to fit a drop into: the user
-   dropped onto the faded event, so the drop must stack onto it (lpApplyEventDrag
-   snaps onto its exact start) instead of sliding into the gap around it. */
-function lpInactiveBlockAt(dayIdx, gridStart){
-  return (DB.events||[]).some(ev=>!lpEventActive(ev) &&
-    calEventPlacements(ev).some(p=>p.col===dayIdx && p.from<=gridStart && gridStart<p.to));
+/* v24.13 — the faded block under a pointer minute (for the drag ghost) and the
+   faded block a drop range overlaps (for the drop itself). Deactivated events
+   count for nothing anywhere else, but a deliberate drop onto the faded block
+   still stacks onto its exact start. */
+function lpInactivePlacementAt(dayIdx, gridMinute){
+  let best=null;
+  (DB.events||[]).forEach(ev=>{
+    if(lpEventActive(ev)) return;
+    calEventPlacements(ev).forEach(p=>{
+      if(p.col!==dayIdx) return;
+      if(gridMinute>=p.from && gridMinute<p.to && (!best || p.from<best.placement.from)) best={ev,placement:p};
+    });
+  });
+  return best;
 }
+function lpInactiveOverlapAt(dayIdx, gridStart, gridEnd){
+  let best=null;
+  (DB.events||[]).forEach(ev=>{
+    if(lpEventActive(ev)) return;
+    calEventPlacements(ev).forEach(p=>{
+      if(p.col!==dayIdx) return;
+      if(gridStart<p.to && p.from<gridEnd && (!best || p.from<best.placement.from)) best={ev,placement:p};
+    });
+  });
+  return best;
+}
+/* v24.13 — the fit-into-gap system only turns on for a REAL hole BETWEEN TWO
+   events: the gap must be bounded by a live block on both sides and the
+   pointer must sit at the gap's start or inside it. Dropping at the start
+   edge of a block (a move/swap) or into the open stretch at the top/bottom of
+   the column is a plain drop — the block keeps its own size and lands where
+   the finger put it, exactly like before v24.5. */
 function lpFitEventInGap(dayIdx, gridStart, duration, eventId){
-  if(lpInactiveBlockAt(dayIdx,gridStart)) return null; // v24.12 — stack, don't gap-fill
   const gap=lpFreeGapAt(dayIdx,gridStart,eventId);
   if(!gap) return null;
+  if(gap.start<=CAL_START_HOUR*60 || gap.end>=CAL_END_HOUR*60) return null; // not between two events
+  if(gridStart>=gap.end) return null;     // at the next block's start edge → swap, don't fit
   const room=gap.end-gap.start;
   if(room<CAL_SNAP_MIN) return null;      // no usable hole — leave the old behaviour
   const dur=Math.min(Math.max(CAL_SNAP_MIN,duration),room);
@@ -5062,6 +5092,7 @@ function lpFitEventInGap(dayIdx, gridStart, duration, eventId){
 function lpCandidateConflicts(candidate,events){
   const cSeg=eventSegments(candidate);
   for(const other of events){
+    if(!lpEventActive(other))continue; // v24.13 — a deactivated event counts for nothing
     for(const b of eventSegments(other)){
       for(const a of cSeg){
         if(a.day===b.day && a.start<b.end && b.start<a.end) return other;
@@ -5230,14 +5261,19 @@ function lpDragMove(e){
   d.curDay=target;
   /* v24.5 — the ghost previews the same «fit into the gap» the drop applies, so
      the block is already the size and position it will land in. Cached per
-     snapped slot: crossing the grid costs a few comparisons, not a DB scan. */
+     snapped slot: crossing the grid costs a few comparisons, not a DB scan.
+     v24.13 — when the pointer sits on a FADED block, the drop will snap onto
+     its exact start, so the ghost shows that same snapped position. */
   const fitKey=`${target}:${min}`;
   if(!d.fitCache||d.fitCache.key!==fitKey){
-    d.fitCache={key:fitKey, value:(target==null||!d.dur)?null:lpFitEventInGap(target,min,d.dur,d.evRef.id)};
+    const inactiveHit=(target==null||!d.dur)?null:lpInactivePlacementAt(target,min);
+    d.fitCache={key:fitKey, inactiveHit,
+      value:(target==null||!d.dur)?null:lpFitEventInGap(target,min,d.dur,d.evRef.id)};
   }
   const fit=d.fitCache.value;
-  const shownStart=fit?fit.start:min;
-  const shownDur=fit?fit.duration:Math.min(d.dur,CAL_SPAN_MIN);
+  const faded=d.fitCache.inactiveHit;
+  const shownStart=faded?faded.placement.from:(fit?fit.start:min);
+  const shownDur=faded?d.dur:(fit?fit.duration:Math.min(d.dur,CAL_SPAN_MIN));
   d.curStart=shownStart;
   d.moved=true;
   if(target==null){
@@ -5346,8 +5382,10 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart, stackOnId, stackMsg){
   const requested=Math.max(CAL_START_HOUR*60, Math.min(CAL_END_HOUR*60-Math.min(dur,CAL_SPAN_MIN), newStart));
   /* v24.5 — dropping into the free stretch between two blocks takes that whole
      stretch: the event shrinks to the hole and/or slides inside it. A drop that
-     lands straight ON a block still falls through to the swap/refusal below. */
-  const fit=lpFitEventInGap(toCol, requested, dur, ev.id);
+     lands straight ON a block still falls through to the swap/refusal below.
+     v24.13 — a stack-on-inactive drop skips the fit entirely so the block lands
+     exactly on the faded one's start with its own size. */
+  const fit=stackOnId?null:lpFitEventInGap(toCol, requested, dur, ev.id);
   const gridStart=fit?fit.start:requested;
   const duration=fit?fit.duration:dur;
   /* The grid column keeps running past midnight, so a drop at 25:00 of column
@@ -5368,35 +5406,32 @@ function lpApplyEventDrag(evRef, fromDay, toCol, newStart, stackOnId, stackMsg){
     const rem=days.filter(dd=>dd!==fromDay);
     if(rem.length) others.push({title:ev.title, days:rem, startMin:eventStartMinutes(ev), endMin:eventEndMinutes(ev)});
   }
-  const conflict=lpCandidateConflicts(candidate,others);
-  if(conflict){
-    /* v24.12 — dropping a block straight onto a DEACTIVATED event is not a
-       collision to swap. The block snaps onto the faded one's exact start and
-       stacks above it, so the two go on top of each other fixed and clean
-       instead of getting mixed. The faded event keeps its own time, so
-       reactivating it later is guarded separately (see toggleEventActive) and
-       the two can never merge into one another. */
-    if(lpEventActive(ev) && !lpEventActive(conflict) && !stackOnId){
-      const placement=calEventPlacements(conflict).find(p=>p.col===toCol && p.to>p.from);
-      if(placement){
-        const snapped=placement.from;
-        const stackSlot=calNormalizeSlot(toCol,snapped);
-        const stackDur=Math.max(15,eventEndMinutes(ev)-eventStartMinutes(ev));
-        const stackOthers=DB.events.filter(x=>x.id!==ev.id && x.id!==conflict.id);
-        const stackConflict=lpCandidateConflicts({title:ev.title,days:[stackSlot.day],startMin:stackSlot.min,endMin:stackSlot.min+stackDur},stackOthers);
-        if(!stackConflict){
-          lpApplyEventDrag(evRef,fromDay,toCol,snapped,conflict.id,
-            `📌 «${esc(ev.title)}» دقیقاً روی رویداد غیرفعال «${esc(conflict.title)}» قرار گرفت`);
-          /* v24.12 — the menu that opens is the one for the event that just
-             landed, never a mix of it with the faded one under it. */
-          onEventBlockClick(evRef.id,stackSlot.day);
-          return;
-        }
-        toast(`⚠️ این جایگاه با «${esc(stackConflict.title)}» تداخل دارد`);
-        renderCalendar();
+  /* v24.13 — dropping a block onto a DEACTIVATED event is not a collision to
+     swap. The block snaps onto the faded one's exact start and stacks above it,
+     so the two go on top of each other fixed and clean. This is detected from
+     the drop range itself (deactivated events no longer count as obstacles
+     anywhere else), and it only fires when the snapped slot is free of LIVE
+     events — otherwise the normal collision/swap path below takes over. */
+  if(lpEventActive(ev) && !stackOnId){
+    const inactiveHit=lpInactiveOverlapAt(toCol, gridStart, gridStart+duration);
+    if(inactiveHit){
+      const snapped=inactiveHit.placement.from;
+      const stackSlot=calNormalizeSlot(toCol,snapped);
+      const stackDur=Math.max(15,eventEndMinutes(ev)-eventStartMinutes(ev));
+      const stackConflict=lpCandidateConflicts({title:ev.title,days:[stackSlot.day],startMin:stackSlot.min,endMin:stackSlot.min+stackDur},
+        DB.events.filter(x=>x.id!==ev.id && x.id!==inactiveHit.ev.id));
+      if(!stackConflict){
+        lpApplyEventDrag(evRef,fromDay,toCol,snapped,inactiveHit.ev.id,
+          `📌 «${esc(ev.title)}» دقیقاً روی رویداد غیرفعال «${esc(inactiveHit.ev.title)}» قرار گرفت`);
+        /* the menu that opens is the one for the event that just landed,
+           never a mix of it with the faded one under it */
+        onEventBlockClick(evRef.id,stackSlot.day);
         return;
       }
     }
+  }
+  const conflict=lpCandidateConflicts(candidate,others);
+  if(conflict){
     // A direct collision is a swap: the block under the pointer takes the exact
     // slot that the dragged occurrence just left. Both keep their own duration.
     // A repeated target is intentionally left alone: swapping one occurrence
@@ -5919,12 +5954,35 @@ function lpTuneEventTitles(root){
     if(Math.abs(size-base)>0.01) title.style.fontSize=size+'px';   // …then write
   });
 }
+/* v24.13 — a cheap signature of everything that affects how the grid is
+   painted. renderCalendar() is called on every save() and every 30s tick;
+   when nothing about the events or the theme changed, rebuilding ~130 nodes
+   (and re-measuring every title) is pure jank. The guard skips the rebuild
+   and only refreshes the «now» marker. */
+let lpCalRenderSig='';
+function lpCalendarSig(){
+  try{
+    return (DB.events||[]).map(e=>[e.id,e.title,eventStartMinutes(e),eventEndMinutes(e),
+      eventDays(e).join(','),e.cat||'',e.color||'',e.difficulty||'',
+      lpEventActive(e)?'1':'0',e.reminder?'1':'0'].join(':')).join('|')
+      + '#' + (document.documentElement.getAttribute('data-theme')||'')
+      + '#' + window.innerWidth;
+  }catch(_){ return ''; } // never let the guard break a render
+}
 function renderCalendar(){
   /* v21.9: never rebuild the grid while a drag/resize owns the pointer.
      save()'s coalesced renderAll used to replace #weekGrid mid-gesture,
      orphaning the lifted clone's cached column geometry so cross-day drops
      silently failed. The gesture's own apply/cancel renders once it ends. */
   if(lpGestureBusy()) return;
+  /* v24.13 — nothing changed since the last paint: skip the rebuild, keep the
+     «now» marker in sync. */
+  const sig=lpCalendarSig();
+  if(sig && sig===lpCalRenderSig){
+    updateCalendarNowMarker(new Date());
+    return;
+  }
+  lpCalRenderSig=sig;
   const START=CAL_START_HOUR,END=CAL_END_HOUR,PX_HOUR=CAL_PX_HOUR;
   const now=new Date();
   const thisWeek = true;   /* v24.1: the calendar is always this week */
@@ -6554,7 +6612,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.12';
+const LP_APP_VERSION='24.13';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;
