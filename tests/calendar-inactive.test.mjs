@@ -115,13 +115,14 @@ try{
   assert.ok(deactivated.opacity<0.75,`the block is faded (opacity ${deactivated.opacity})`);
   ok('an event can be deactivated from its action menu and its block fades out');
 
-  /* the faded event still reserves its slot: quick-add skips over it */
+  /* v24.13 — a deactivated event counts for nothing: quick-add no longer
+     skips over it, the window simply starts at the tapped hour */
   const quickAdd = await page.evaluate(()=>{
     const w=calQuickAddWindow(1,10); // 10:00 hour, faded block at 10:00–11:30
     return w?{start:w.start.min,day:w.start.day}:null;
   });
-  assert.deepEqual(quickAdd,{start:690,day:1});
-  ok('the faded event keeps its time slot — quick-add skips over it');
+  assert.deepEqual(quickAdd,{start:600,day:1});
+  ok('a deactivated event counts for nothing — quick-add starts right at its hour');
 
   /* ---------- 2. drag another event onto the faded one: clean stack ---------- */
   await page.evaluate(()=>{ document.querySelector('#weekGrid .lp-cal-wrap').scrollIntoView({block:'start'}); });
@@ -267,13 +268,94 @@ try{
   assert.equal(reminders.active,true,'an active event still gets one');
   ok('deactivated events stop ringing; active ones are unaffected');
 
+  /* ---------- 8. v24.13: a deactivated event counts for nothing ---------- */
+  /* resizing an event over a faded block is allowed — no conflict */
+  const resizeOverFaded = await page.evaluate(async ()=>{
+    DB.events=[
+      {id:'fade-resize',title:'غیرفعال‌resize',days:[1],startMin:600,endMin:690,active:false},
+      {id:'live-resize',title:'تغییر اندازه',days:[1],startMin:540,endMin:600,active:true}
+    ];
+    save(); renderCalendar();
+    lpApplyEventResize(DB.events.find(e=>e.id==='live-resize'),1,0,540,660,'end');
+    const e=DB.events.find(x=>x.id==='live-resize');
+    const toast=document.getElementById('toast').textContent;
+    return {end:e.endMin,toast};
+  });
+  assert.equal(resizeOverFaded.end,660,'the resize extends over the faded block');
+  assert.ok(!resizeOverFaded.toast.includes('تداخل'),`no conflict toast (got ${resizeOverFaded.toast})`);
+  ok('resizing over a deactivated event is allowed — it counts for nothing');
+
+  /* creating an event that overlaps a faded block is allowed — no conflict */
+  const createOverFaded = await page.evaluate(async ()=>{
+    DB.events=[{id:'fade-create',title:'غیرفعال‌ساخت',days:[1],startMin:600,endMin:690,active:false}];
+    save(); renderCalendar();
+    openEventModal();
+    document.getElementById('eTitle').value='رویداد روی‌فاده';
+    document.getElementById('eHourStart').value='10:30';
+    document.getElementById('eHourEnd').value='11:30';
+    document.querySelectorAll('#eDays .chip-opt').forEach(b=>b.classList.toggle('sel',Number(b.dataset.v)===1));
+    await saveEvent();
+    const created=DB.events.find(e=>e.title==='رویداد روی‌فاده');
+    const toast=document.getElementById('toast').textContent;
+    return {created:!!created,start:created?created.startMin:null,toast};
+  });
+  assert.ok(createOverFaded.created,'the overlapping event is saved');
+  assert.equal(createOverFaded.start,630);
+  assert.ok(!createOverFaded.toast.includes('تداخل'),`no conflict toast (got ${createOverFaded.toast})`);
+  ok('creating an event over a deactivated event is allowed — it counts for nothing');
+
+  /* ---------- 9. v24.13: the fit-into-gap system only fires between two events ---------- */
+  /* dropping at the START EDGE of a live block swaps with it — the gap-fit
+     system must not swallow the drop into the gap before the block */
+  const edgeSwap = await page.evaluate(()=>{
+    DB.events=[
+      {id:'gap-prev',title:'قبل‌چال‌زدن',days:[1],startMin:480,endMin:570,active:true},
+      {id:'gap-target',title:'هدف‌چال‌زدن',days:[1],startMin:600,endMin:660,active:true},
+      {id:'gap-source',title:'منبع‌چال‌زدن',days:[1],startMin:840,endMin:900,active:true}
+    ];
+    save(); renderCalendar();
+    lpApplyEventDrag(DB.events.find(e=>e.id==='gap-source'),1,1,600);
+    const src=DB.events.find(e=>e.id==='gap-source');
+    const tgt=DB.events.find(e=>e.id==='gap-target');
+    return {src:{start:src.startMin,end:src.endMin},tgt:{start:tgt.startMin,end:tgt.endMin}};
+  });
+  assert.deepEqual(edgeSwap.src,{start:600,end:660},'the dropped block takes the target slot');
+  assert.deepEqual(edgeSwap.tgt,{start:840,end:900},'the target block takes the source slot');
+  ok('dropping at a live block start edge swaps — the gap-fit system stays out of the way');
+
+  /* a real hole between two events still fits (the system still works there) */
+  const realHole = await page.evaluate(()=>{
+    DB.events=[
+      {id:'hole-before',title:'قبل‌چال',days:[1],startMin:480,endMin:600,active:true},
+      {id:'hole-after',title:'بعد‌چال',days:[1],startMin:660,endMin:720,active:true},
+      {id:'hole-mover',title:'محرک‌چال',days:[1],startMin:840,endMin:930,active:true}
+    ];
+    save(); renderCalendar();
+    lpApplyEventDrag(DB.events.find(e=>e.id==='hole-mover'),1,1,615);
+    const m=DB.events.find(e=>e.id==='hole-mover');
+    return {start:m.startMin,end:m.endMin};
+  });
+  assert.deepEqual(realHole,{start:600,end:660},'a drop into a real hole still fits');
+  ok('dropping into a real gap between two events still shrinks into it');
+
+  /* ---------- 10. v24.13: the calendar skips redundant re-renders ---------- */
+  const smooth = await page.evaluate(()=>{
+    renderCalendar();
+    const e1=document.querySelector('#weekGrid .lp-cal-wrap');
+    renderCalendar();
+    const e2=document.querySelector('#weekGrid .lp-cal-wrap');
+    return {same:e1===e2};
+  });
+  assert.ok(smooth.same,'renderCalendar keeps the grid when nothing changed');
+  ok('the calendar skips redundant re-renders — no periodic jank');
+
   /* ---------- 7. version + offline shell stay intact ---------- */
   const version = await page.evaluate(async ()=>{
     const r=await fetch('app-version.json?t='+Date.now(),{cache:'no-store'});
     return (await r.json()).version;
   });
-  assert.equal(version,'24.12');
-  ok('the app reports version 24.12');
+  assert.equal(version,'24.13');
+  ok('the app reports version 24.13');
 
   const offlinePage = await browser.newPage();
   const offlineErrors=[];
