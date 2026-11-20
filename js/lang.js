@@ -1807,6 +1807,14 @@
   };
   for(var _k2412 in EXTRA_V2412){ if(Object.prototype.hasOwnProperty.call(EXTRA_V2412, _k2412)) EXACT[_k2412] = EXTRA_V2412[_k2412]; }
 
+  /* v24.14: copying a calendar occurrence */
+  EXACT['📋 کپی این رویداد'] = '📋 Copy this event';
+  EXACT['⚠️ زمان آزاد قابل نمایشی برای کپی این رویداد پیدا نشد'] = '⚠️ No visible free time was found for this copy';
+  [['شنبه','Saturday'],['یکشنبه','Sunday'],['دوشنبه','Monday'],['سه‌شنبه','Tuesday'],
+   ['چهارشنبه','Wednesday'],['پنجشنبه','Thursday'],['جمعه','Friday']].forEach(function(day){
+    PATTERNS.unshift([new RegExp('^📋 کپی در '+day[0]+' ساعت (\\d{2}:\\d{2}) قرار گرفت$'), '📋 Copy placed on '+day[1]+' at $1']);
+  });
+
   function compose(s, depth){
     if(depth > 3) return null;
 

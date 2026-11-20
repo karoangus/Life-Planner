@@ -354,8 +354,8 @@ try{
     const r=await fetch('app-version.json?t='+Date.now(),{cache:'no-store'});
     return (await r.json()).version;
   });
-  assert.equal(version,'24.13');
-  ok('the app reports version 24.13');
+  assert.equal(version,'24.14');
+  ok('the app reports version 24.14');
 
   const offlinePage = await browser.newPage();
   const offlineErrors=[];
