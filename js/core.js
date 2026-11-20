@@ -4550,6 +4550,56 @@ function onEventBlockClick(eventId, dayIdx){
   }
   openModal('eventActionModalBg');
 }
+/* Copy just the selected occurrence, not the whole recurring series. Search
+   minute by minute in both directions around its start, preferring later on a
+   tie. The week repeats, so the search wraps across Friday/Saturday. */
+function calNearestCopySlot(ev, day){
+  const start=eventStartMinutes(ev), duration=eventEndMinutes(ev)-start;
+  if(!Number.isInteger(day)||day<0||day>6||!Number.isInteger(start)||start<0||start>=1440||
+     !Number.isInteger(duration)||duration<=0||duration>1440) return null;
+  const week=7*1440, origin=day*1440+start;
+  // Inactive blocks normally don't reserve time, but the source itself must
+  // remain visible and distinct from its copy even when it is inactive.
+  const occupied=(DB.events||[]).filter(other=>lpEventActive(other)||other.id===ev.id)
+    .flatMap(eventSegments);
+  for(let distance=1;distance<=week/2;distance++){
+    for(const delta of [distance,-distance]){
+      const point=((origin+delta)%week+week)%week;
+      const candidate={days:[Math.floor(point/1440)],startMin:point%1440,endMin:point%1440+duration};
+      // 03:00–06:00 is not drawn; don't create a copy the user cannot find.
+      if(candidate.startMin>=180 && candidate.startMin<360) continue;
+      const segments=eventSegments(candidate);
+      if(!segments.some(a=>occupied.some(b=>a.day===b.day && a.start<b.end && b.start<a.end)))
+        return candidate;
+    }
+  }
+  return null;
+}
+function copyEventOccurrence(){
+  const ctx=window.__eventActionCtx; if(!ctx)return;
+  const ev=DB.events.find(x=>x.id===ctx.eventId); if(!ev)return;
+  const slot=calNearestCopySlot(ev,ctx.dayIdx);
+  if(!slot){ toast('⚠️ زمان آزاد قابل نمایشی برای کپی این رویداد پیدا نشد'); return; }
+  let id=uid();
+  while(DB.events.some(other=>other.id===id)) id=uid();
+  const copy={...ev,id,days:slot.days,startMin:slot.startMin,endMin:slot.endMin,
+    startHour:Math.floor(slot.startMin/60),endHour:Math.min(24,Math.floor(slot.endMin/60))};
+  delete copy.day;
+  DB.events.push(copy);
+  window.__eventActionCtx=null;
+  closeModal('eventActionModalBg');
+  save();
+  renderCalendar();
+  rescheduleAllEventReminders();
+  const block=[...document.querySelectorAll('#weekGrid .ev-block')].find(el=>el.dataset.eventId===id);
+  if(block){
+    block.classList.add('lp-event-copy-highlight');
+    const rect=block.getBoundingClientRect();
+    lpSmoothScrollToY(window.scrollY+rect.top-window.innerHeight*0.38);
+    setTimeout(()=>block.classList.remove('lp-event-copy-highlight'),4000);
+  }
+  toast(`📋 کپی در ${dayNames[slot.days[0]]} ساعت ${formatTimeMinutes(slot.startMin)} قرار گرفت`);
+}
 function startEditEvent(){
   const ctx=window.__eventActionCtx;if(!ctx)return;
   const ev=DB.events.find(x=>x.id===ctx.eventId);if(!ev)return;
@@ -6041,6 +6091,7 @@ function renderCalendar(){
       const col=cols[colIdx];if(!col)return;
       const el=document.createElement('button');
       el.type='button';
+      el.dataset.eventId=e.id;
       const duration=to-from;
       const sizeClass=duration<15?' event-tiny':(duration<30?' event-short':'');
       const blockH=Math.max(10,(to-from)/60*PX_HOUR-2);
@@ -6612,7 +6663,7 @@ applyCrisisTheme(DB.crisis.active);
 checkCriticalCrisis();
 
 /* ============ APP UPDATE CHECK ============ */
-const LP_APP_VERSION='24.13';
+const LP_APP_VERSION='24.14';
 let lpUpdateShown=false;
 function showLifePlannerUpdate(v){
   if(lpUpdateShown)return;

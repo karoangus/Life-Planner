@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/نسخه-24.13-00e5ff?style=for-the-badge&logoColor=white" alt="Version 24.13" />
+  <img src="https://img.shields.io/badge/نسخه-24.14-00e5ff?style=for-the-badge&logoColor=white" alt="Version 24.14" />
   <img src="https://img.shields.io/badge/نوع_برنامه-PWA_آفلاین-2ee6a6?style=for-the-badge" alt="PWA Offline" />
   <img src="https://img.shields.io/badge/وابستگی-صفر_(Pure_JS)-8b6bff?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/حریم_خصوصی-LocalFirst_(100%25)-ff5470?style=for-the-badge" alt="Privacy First" />
@@ -330,6 +330,12 @@ npm test
 ---
 
 ## 🆕 تاریخچه تغییرات نسخه‌های اخیر
+
+### ✨ نسخه 24.14 — کپی رویداد تقویم
+
+- 📋 از منوی هر بلوک، همان نوبت را با حفظ جزئیات و مدت آن به نزدیک‌ترین زمان آزاد قابل‌نمایش کپی کنید. در فاصلهٔ برابر، زمان بعدی انتخاب می‌شود؛ رویدادهای غیرفعال دیگر جای خالی را مسدود نمی‌کنند.
+- 📍 تقویم به محل کپی می‌رود و بلوک تازه را برجسته می‌کند. اگر زمان مناسبی در هفته نباشد، پیامی نمایش داده می‌شود.
+- ☁️ نسخه به `24.14` و کش به `const CACHE_NAME = 'life-planner-cache-v113';` تغییر کرد.
 
 ### ✨ نسخه 24.13 — «هیچ‌که انگار نیست، و تقویم روون»
 
